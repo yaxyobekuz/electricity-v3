@@ -29,23 +29,36 @@ export function DataTable({
   columns,
   rows,
   className,
+  compact = false,
 }: {
   columns: TableColumn[];
   rows: TableRow[];
   className?: string;
+  /**
+   * Zich variant (bosh sahifadagi kichik kartalar uchun): sarlavha 10px,
+   * qator balandliklari 26/24/28. Fider sahifasidagi jadvallar maketdagi
+   * 30/29/35 o’lchamda qoladi.
+   */
+  compact?: boolean;
 }) {
   return (
     <div className={cn("flex min-h-0 w-full flex-col overflow-hidden", className)}>
       {/* Qator balandliklari maketdan aynan o'lchangan: sarlavha 30, oddiy
           qator 29, oxirgisi 35 (pastda kengroq bo'shliq). Balandlikni matn
           qutisiga qoldirilsa, shrift metrikasi tufayli 1px surilib ketadi. */}
-      <div className="flex h-[30px] w-full shrink-0 items-center rounded-t-md border-b border-solid border-[#f0f0f0] bg-brand px-1.5">
+      <div
+        className={cn(
+          "flex w-full shrink-0 items-center rounded-t-md border-b border-solid border-[#f0f0f0] bg-brand px-1.5",
+          compact ? "h-[26px]" : "h-[30px]",
+        )}
+      >
         {columns.map((column) => (
           <span
             key={column.key}
             style={{ flex: `${column.grow ?? 1} 0 0` }}
             className={cn(
-              "min-w-0 truncate text-[11px] leading-[14px] font-semibold text-white",
+              "min-w-0 truncate leading-[14px] font-semibold text-white",
+              compact ? "text-[10px]" : "text-[11px]",
               ALIGN[column.align ?? "center"],
             )}
           >
@@ -61,9 +74,15 @@ export function DataTable({
             key={row.key}
             className={cn(
               "flex w-full shrink-0 items-center px-1.5",
-              last
-                ? "h-[35px] rounded-b-md bg-canvas"
-                : "h-[29px] border-b border-solid border-[#f0f0f0]",
+              last && "rounded-b-md bg-canvas",
+              !last && "border-b border-solid border-[#f0f0f0]",
+              compact
+                ? last
+                  ? "h-[28px]"
+                  : "h-[24px]"
+                : last
+                  ? "h-[35px]"
+                  : "h-[29px]",
             )}
           >
             {row.cells.map((cell, cellIndex) => {
@@ -73,7 +92,8 @@ export function DataTable({
                   key={column?.key ?? cellIndex}
                   style={{ flex: `${column?.grow ?? 1} 0 0` }}
                   className={cn(
-                    "min-w-0 truncate text-xs text-ink",
+                    "min-w-0 truncate text-ink",
+                    compact ? "text-[11px]" : "text-xs",
                     ALIGN[column?.align ?? "center"],
                   )}
                 >
