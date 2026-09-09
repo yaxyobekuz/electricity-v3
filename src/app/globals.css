@@ -1,25 +1,77 @@
 @import "tailwindcss";
 
-/* Tizim mavzusi - doim oq (light).
-   Tungi mavzu hozircha qo'shilmagan: qo'shilganda shu yerga `@custom-variant
-   dark` va `:root[data-theme="dark"]` bloki qo'shiladi, html'ga `data-theme`
-   qo'yiladi. Foydalanuvchi OS'da tungi rejimda bo'lsa ham sayt oq qoladi. */
+/* ---------------------------------------------------------------------------
+   Dizayn tokenlari - Figma "Assets (Softlance)" faylidan olingan.
+   Tizim mavzusi doim oq (light); tungi mavzu hozircha yo'q.
+   --------------------------------------------------------------------------- */
 :root {
   color-scheme: light;
-
-  --background: #ffffff;
-  --foreground: #171717;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* Yuzalar */
+  --color-canvas: #f3f3f3; /* sahifa foni va "muted" tugma foni */
+  --color-surface: #ffffff; /* karta foni */
+  --color-rail: #2c2c2c; /* chap ikonka paneli */
+  --color-rail-active: #444445; /* ikonka panelidagi faol element */
+
+  /* Matn */
+  --color-ink: #333333; /* asosiy matn */
+  --color-ink-muted: #555555; /* ikkilamchi matn */
+  --color-ink-soft: #767676; /* uchinchi darajali matn / bo'lim sarlavhasi */
+
+  /* Brend */
+  --color-brand: #007cd2;
+  --color-brand-deep: #44006c;
+
+  /* Aksentlar (Figma o'zgaruvchilari) */
+  --color-accent-blue: #3b82f6;
+  --color-accent-green: #22c55e;
+  --color-accent-red: #ff383c;
+  --color-accent-purple: #cb30e0;
+  --color-accent-indigo: #6155f5;
+  --color-accent-brown: #ac7f5e;
+
+  /* Aksent kartalarining yumshoq foni */
+  --color-tint-blue: #eff6ff;
+  --color-tint-green: #effff0;
+  --color-tint-red: #ffefef;
+  --color-tint-purple: #feefff;
+  --color-tint-indigo: #f3efff;
+  --color-tint-brown: #fff5ef;
+
+  /* Trend (o'sish yomon, kamayish yaxshi - yo'qotish konteksti) */
+  --color-trend-up: #cf4646;
+  --color-trend-down: #31ae5f;
+
+  /* Holat ranglari (jadval "status" ustunlari) */
+  --color-state-ok: #16a34a;
+  --color-state-warn: #d97706;
+  --color-state-bad: #dc2626;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+@layer base {
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Figma maketida hech bir kartada ko'rinadigan skrollbar yo'q. */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
 }
