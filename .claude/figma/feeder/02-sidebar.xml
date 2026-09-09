@@ -1,0 +1,59 @@
+<frame id="4029:957" name="Black" x="80" y="0" width="340" height="1064">
+  <frame id="4089:748" name="Frame 268" x="16" y="16" width="308" height="637">
+    <frame id="4029:958" name="Frame 184" x="0" y="0" width="308" height="21">
+      <text id="4029:959" name="Xaqulobod fideri" x="0" y="0" width="130" height="21" />
+    </frame>
+    <frame id="4029:964" name="Link wrapper" x="0" y="29" width="308" height="48">
+      <frame id="4029:961" name="lucide/layout-dashboard" x="20" y="12" width="24" height="24" />
+      <text id="4029:967" name="Asosiy" x="60" y="13.5" width="52" height="21" />
+    </frame>
+    <frame id="4029:968" name="Link wrapper" x="0" y="85" width="308" height="48">
+      <frame id="4029:965" name="lucide/factory" x="20" y="12" width="24" height="24" />
+      <text id="4029:971" name="Podstansiyalar" x="60" y="13.5" width="115" height="21" />
+    </frame>
+    <frame id="4029:960" name="Link wrapper" x="0" y="141" width="308" height="48">
+      <frame id="4029:969" name="lucide/workflow" x="20" y="12" width="24" height="24" />
+      <text id="4029:963" name="Fiderlar" x="60" y="13.5" width="60" height="21" />
+    </frame>
+    <frame id="4029:972" name="Link wrapper" x="0" y="197" width="308" height="48">
+      <frame id="4029:973" name="lucide/circuit-board" x="20" y="12" width="24" height="24" />
+      <text id="4029:975" name="Transformatorlar" x="60" y="13.5" width="129" height="21" />
+    </frame>
+    <frame id="4029:976" name="Link wrapper" x="0" y="253" width="308" height="48">
+      <frame id="4029:977" name="lucide/users" x="20" y="12" width="24" height="24" />
+      <text id="4029:979" name="Abonentlar" x="60" y="13.5" width="86" height="21" />
+    </frame>
+    <frame id="4029:980" name="Link wrapper" x="0" y="309" width="308" height="48">
+      <frame id="4029:981" name="lucide/hand" x="20" y="12" width="24" height="24" />
+      <text id="4029:983" name="Qoidabuzarliklar" x="60" y="13.5" width="127" height="21" />
+    </frame>
+    <frame id="4099:796" name="Link wrapper" x="0" y="365" width="308" height="48">
+      <frame id="4099:801" name="lucide/chart-no-axes-column" x="20" y="12" width="24" height="24" />
+      <text id="4099:799" name="Statistika" x="60" y="13.5" width="75" height="21" />
+    </frame>
+    <frame id="4099:780" name="Link wrapper" x="0" y="421" width="308" height="48">
+      <frame id="4099:812" name="lucide/list-checks" x="20" y="12" width="24" height="24" />
+      <text id="4099:783" name="Ishlar" x="60" y="13.5" width="44" height="21" />
+    </frame>
+    <frame id="4099:807" name="Link wrapper" x="0" y="477" width="308" height="48">
+      <frame id="4099:808" name="lucide/user-group" x="20" y="12" width="24" height="24" />
+      <text id="4099:810" name="Ma’sul xodimlar" x="60" y="13.5" width="122" height="21" />
+    </frame>
+    <frame id="4097:767" name="Link wrapper" x="0" y="533" width="308" height="48">
+      <frame id="4097:777" name="lucide/file-text" x="20" y="12" width="24" height="24" />
+      <text id="4097:770" name="Hisobotlar" x="60" y="13.5" width="80" height="21" />
+    </frame>
+    <frame id="4101:12" name="Link wrapper" x="0" y="589" width="308" height="48">
+      <frame id="4101:17" name="lucide/settings" x="20" y="12" width="24" height="24" />
+      <text id="4101:15" name="Sozlamalar" x="60" y="13.5" width="87" height="21" />
+    </frame>
+  </frame>
+  <frame id="4089:750" name="Frame 270" x="16" y="922" width="308" height="126">
+    <rounded-rectangle id="4089:752" name="image 25" x="0" y="0" width="308" height="148" />
+    <text id="4089:766" name="Sun’iy intellekt funksiyalarini sinab ko’ring va ishingizni tezlashtiring!" x="16" y="16" width="276" height="42" />
+    <frame id="4089:754" name="Frame 271" x="16" y="74" width="274" height="36">
+      <frame id="4089:759" name="lucide/sparkles" x="79" y="8" width="20" height="20" />
+      <text id="4089:758" name="Sinab ko’rish" x="111" y="9" width="84" height="18" />
+    </frame>
+  </frame>
+</frame>

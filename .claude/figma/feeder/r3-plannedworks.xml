@@ -1,0 +1,50 @@
+<frame id="4082:577" name="Card" x="494.6666564941406" y="650" width="651.5555419921875" height="209">
+  <frame id="4082:578" name="Header" x="16" y="16" width="619.5555419921875" height="32">
+    <text id="4082:579" name="Rejalashtirilgan ishlar" x="0" y="7" width="151" height="18" />
+    <frame id="4082:580" name="Right" x="587.5555419921875" y="0" width="32" height="32">
+      <frame id="4082:581" name="Toggle btn" x="0" y="0" width="32" height="32">
+        <frame id="4082:582" name="Frame 241" x="2" y="2" width="28" height="28">
+          <frame id="4082:583" name="lucide/external-link" x="5" y="5" width="18" height="18" />
+        </frame>
+      </frame>
+    </frame>
+  </frame>
+  <frame id="4082:585" name="Frame 243" x="16" y="48" width="619.5555419921875" height="145">
+    <frame id="4082:586" name="Frame" x="0" y="8" width="619.5555419921875" height="30">
+      <text id="4082:587" name="Transformtator" x="6" y="8" width="96" height="14" />
+      <text id="4082:588" name="Ish" x="102" y="8" width="319.5555419921875" height="14" />
+      <text id="4082:589" name="Holat" x="421.5555419921875" y="8" width="96" height="14" />
+      <text id="4082:603" name="Sana" x="517.5555419921875" y="8" width="96" height="14" />
+    </frame>
+    <frame id="4082:590" name="Frame" x="0" y="38" width="619.5555419921875" height="30">
+      <text id="4082:591" name="TP-A303" x="6" y="7" width="96" height="16" />
+      <text id="4082:592" name="Transformatorni tekshirish" x="102" y="7" width="319.5555419921875" height="16" />
+      <frame id="4082:615" name="Frame 259" x="421.5555419921875" y="6" width="96" height="18">
+        <frame id="4082:616" name="Frame" x="27" y="0" width="42" height="18">
+          <text id="4082:617" name="Yangi" x="8" y="2.5" width="26" height="13" />
+        </frame>
+      </frame>
+      <text id="4082:604" name="7-sentabr, 2026" x="517.5555419921875" y="7" width="96" height="16" />
+    </frame>
+    <frame id="4082:594" name="Frame" x="0" y="68" width="619.5555419921875" height="30">
+      <text id="4082:595" name="TP-33" x="6" y="7" width="96" height="16" />
+      <text id="4082:596" name="Toka transformatorni ta’mirlash" x="102" y="7" width="319.5555419921875" height="16" />
+      <frame id="4082:619" name="Frame 259" x="421.5555419921875" y="6" width="96" height="18">
+        <frame id="4082:620" name="Frame" x="8" y="0" width="80" height="18">
+          <text id="4082:621" name="Bajarilmoqda" x="8" y="2.5" width="64" height="13" />
+        </frame>
+      </frame>
+      <text id="4082:605" name="23-avgust, 2026" x="517.5555419921875" y="7" width="96" height="16" />
+    </frame>
+    <frame id="4082:598" name="Frame" x="0" y="98" width="619.5555419921875" height="34">
+      <text id="4082:599" name="TP-08" x="6" y="9" width="96" height="16" />
+      <text id="4082:600" name="Hisoblagich chipini almashtirish. Hamda, qayta texnik ko’rikdan o’tkazish" x="102" y="9" width="319.5555419921875" height="16" />
+      <frame id="4082:623" name="Frame 259" x="421.5555419921875" y="8" width="96" height="18">
+        <frame id="4082:624" name="Frame" x="23" y="0" width="50" height="18">
+          <text id="4082:625" name="Rejada" x="8" y="2.5" width="34" height="13" />
+        </frame>
+      </frame>
+      <text id="4082:606" name="Bugun" x="517.5555419921875" y="9" width="96" height="16" />
+    </frame>
+  </frame>
+</frame>

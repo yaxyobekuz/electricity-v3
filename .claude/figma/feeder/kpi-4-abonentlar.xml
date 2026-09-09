@@ -1,0 +1,36 @@
+<frame id="4029:1130" name="Frame 202" x="742" y="0" width="239.3333282470703" height="196">
+  <frame id="4029:1131" name="Frame 200" x="16" y="16" width="207.3333282470703" height="32">
+    <text id="4029:1132" name="Abonentlar" x="0" y="0" width="73" height="18" />
+    <frame id="4029:1133" name="Frame 201" x="175.3333282470703" y="0" width="32" height="32">
+      <frame id="4029:1134" name="lucide/users" x="6" y="6" width="20" height="20" />
+    </frame>
+  </frame>
+  <frame id="4029:1136" name="Frame 202" x="16" y="48" width="207.3333282470703" height="41">
+    <text id="4029:1137" name="2,253" x="0" y="4" width="69" height="31" />
+    <text id="4029:1138" name="ta umumiy" x="73" y="10.5" width="69" height="18" />
+  </frame>
+  <frame id="4029:1139" name="Frame 203" x="16" y="89" width="207.3333282470703" height="26">
+    <frame id="4029:1140" name="lucide/user-minus" x="0" y="0" width="20" height="20" />
+    <text id="4029:1142" name="25 ta aloqada emas" x="24" y="1" width="130" height="18" />
+  </frame>
+  <frame id="4029:1143" name="Frame 204" x="16" y="115" width="207.3333282470703" height="26">
+    <text id="4029:1144" name="O’tgan oy: 2,227 ta" x="0" y="0" width="122" height="18" />
+  </frame>
+  <frame id="4029:1145" name="Chart" x="16" y="141" width="207.3333282470703" height="39">
+    <frame id="4029:1146" name="Frame 205" x="0" y="0" width="166.3333282470703" height="39">
+      <frame id="4029:1147" name="Frame 206" x="0" y="0" width="12.027777671813965" height="39" />
+      <frame id="4029:1148" name="Frame 207" x="14.027777671813965" y="0" width="12.027777671813965" height="39" />
+      <frame id="4029:1149" name="Frame 218" x="28.05555534362793" y="0" width="12.027777671813965" height="39" />
+      <frame id="4029:1150" name="Frame 227" x="42.08333206176758" y="10" width="12.027777671813965" height="29" />
+      <frame id="4029:1151" name="Frame 228" x="56.11111068725586" y="13" width="12.027777671813965" height="26" />
+      <frame id="4029:1152" name="Frame 229" x="70.13888549804688" y="0" width="12.027777671813965" height="39" />
+      <frame id="4029:1153" name="Frame 230" x="84.16666412353516" y="7" width="12.027777671813965" height="32" />
+      <frame id="4029:1154" name="Frame 231" x="98.19444274902344" y="10" width="12.027777671813965" height="29" />
+      <frame id="4029:1155" name="Frame 232" x="112.22222137451172" y="28" width="12.027777671813965" height="11" />
+      <frame id="4029:1156" name="Frame 233" x="126.25" y="13" width="12.027777671813965" height="26" />
+      <frame id="4029:1157" name="Frame 234" x="140.27777099609375" y="0" width="12.027777671813965" height="39" />
+      <frame id="4029:1158" name="Frame 235" x="154.3055419921875" y="0" width="12.027777671813965" height="39" />
+    </frame>
+    <text id="4029:1159" name="12 oy" x="174.3333282470703" y="21" width="33" height="18" />
+  </frame>
+</frame>

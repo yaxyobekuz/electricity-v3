@@ -1,0 +1,68 @@
+<frame id="4055:1007" name="Card" x="329.77777099609375" y="306" width="321.77777099609375" height="336">
+  <frame id="4055:1008" name="Header" x="16" y="16" width="289.77777099609375" height="32">
+    <text id="4055:1009" name="Yo’qotish zarari" x="0" y="7" width="107" height="18" />
+    <frame id="4055:1010" name="Right" x="187.77777099609375" y="0" width="102" height="32">
+      <frame id="4055:1011" name="Toggle btn" x="0" y="0" width="62" height="32">
+        <frame id="4055:1012" name="Frame 240" x="2" y="2" width="28" height="28">
+          <frame id="4055:1013" name="lucide/chart-no-axes-column" x="5" y="5" width="18" height="18" />
+        </frame>
+        <frame id="4055:1015" name="Frame 241" x="32" y="2" width="28" height="28">
+          <frame id="4055:1016" name="lucide/table" x="5" y="5" width="18" height="18" />
+        </frame>
+      </frame>
+      <frame id="4055:1018" name="Toggle btn" x="70" y="0" width="32" height="32">
+        <frame id="4055:1019" name="Frame 241" x="2" y="2" width="28" height="28">
+          <frame id="4055:1020" name="lucide/file-down" x="5" y="5" width="18" height="18" />
+        </frame>
+      </frame>
+    </frame>
+  </frame>
+  <frame id="4055:1022" name="Main" x="16" y="56" width="289.77777099609375" height="264">
+    <frame id="4060:1177" name="RadialChart-SVG" x="0" y="0" width="289.77777099609375" height="169">
+      <frame id="4066:1354" name="Frame 248" x="55.22216796875" y="0" width="180" height="169">
+        <frame id="4060:1180" name="PolarGrid" x="0" y="0" width="180" height="169">
+          <text id="4060:1181" name="0" x="91.45408630371094" y="0" width="8.007680892944336" height="13.731678009033203" />
+          <text id="4060:1182" name="25" x="135.40687561035156" y="12.237105369567871" width="14.871406555175781" height="13.731678009033203" />
+          <text id="4060:1183" name="50" x="162.14183044433594" y="44.823768615722656" width="14.871406555175781" height="13.731678009033203" />
+          <text id="4060:1184" name="75" x="166.27255249023438" y="92.49742126464844" width="13.72745132446289" height="13.731678009033203" />
+          <text id="4060:1185" name="100" x="146.4066925048828" y="135.39633178710938" width="20.59117889404297" height="13.731678009033203" />
+          <text id="4060:1186" name="125" x="99.57379150390625" y="155.26832580566406" width="19.447223663330078" height="13.731678009033203" />
+          <text id="4060:1187" name="150" x="47.56502914428711" y="151.13638305664062" width="19.447223663330078" height="13.731678009033203" />
+          <text id="4060:1188" name="175" x="14.649947166442871" y="124.39313507080078" width="19.447223663330078" height="13.731678009033203" />
+          <text id="4060:1189" name="200" x="0" y="78.33174896240234" width="21.735130310058594" height="13.731678009033203" />
+          <vector id="4060:1190" name="Vector" x="16.57206916809082" y="11.251294136047363" width="155.50848388671875" height="155.55641174316406" />
+          <vector id="4060:1191" name="Vector" x="25.71489143371582" y="20.396921157836914" width="137.3839569091797" height="137.4262237548828" />
+          <vector id="4060:1192" name="Vector" x="25.715248107910156" y="20.15128517150879" width="138.71315002441406" height="138.75592041015625" />
+        </frame>
+        <frame id="4060:1193" name="Series" x="30.709148406982422" y="25.39280128479004" width="128.7244415283203" height="128.76409912109375" />
+        <frame id="4060:1206" name="DataLabels" x="42.09004211425781" y="33.96868133544922" width="43.47026062011719" height="13.731678009033203">
+          <text id="4060:1207" name="Sentabr" x="42.09004211425781" y="33.96868133544922" width="43.47026062011719" height="13.731678009033203" />
+        </frame>
+        <frame id="4060:1208" name="Annotations" x="25.71495246887207" y="20.396928787231445" width="138.71311950683594" height="138.7558135986328" />
+      </frame>
+    </frame>
+    <frame id="4055:1061" name="Frame 194" x="0" y="177" width="289.77777099609375" height="87">
+      <frame id="4055:1062" name="Chart label" x="0" y="9" width="140.88888549804688" height="35">
+        <frame id="4055:1063" name="Frame 196" x="0" y="11.5" width="12" height="12" />
+        <frame id="4055:1064" name="Frame 197" x="22" y="0" width="83" height="35">
+          <text id="4055:1065" name="Tabiiy" x="0" y="0" width="27" height="13" />
+          <text id="4055:1066" name="161,7 mln so’m" x="0" y="19" width="83" height="16" />
+        </frame>
+      </frame>
+      <frame id="4055:1067" name="Chart label" x="148.88888549804688" y="9" width="140.88888549804688" height="35">
+        <frame id="4055:1068" name="Frame 196" x="0" y="11.5" width="12" height="12" />
+        <frame id="4055:1069" name="Frame 197" x="22" y="0" width="79" height="35">
+          <text id="4055:1070" name="Texnologik" x="0" y="0" width="51" height="13" />
+          <text id="4055:1071" name="61,6 mln so’m" x="0" y="19" width="79" height="16" />
+        </frame>
+      </frame>
+      <frame id="4055:1072" name="Chart label" x="0" y="52" width="289.77777099609375" height="35">
+        <frame id="4055:1073" name="Frame 196" x="0" y="11.5" width="12" height="12" />
+        <frame id="4055:1074" name="Frame 197" x="22" y="0" width="79" height="35">
+          <text id="4055:1075" name="O’g’irlik" x="0" y="0" width="36" height="13" />
+          <text id="4055:1076" name="50,1 mln so’m" x="0" y="19" width="79" height="16" />
+        </frame>
+      </frame>
+    </frame>
+  </frame>
+</frame>

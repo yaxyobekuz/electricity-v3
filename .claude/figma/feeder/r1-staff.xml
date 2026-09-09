@@ -1,0 +1,20 @@
+<frame id="4029:1371" name="Card" x="0" y="158" width="486.6666564941406" height="140">
+  <frame id="4029:1372" name="Header" x="16" y="16" width="454.6666564941406" height="18">
+    <text id="4029:1373" name="Ma’sul xodim" x="0" y="0" width="91" height="18" />
+  </frame>
+  <frame id="4029:1374" name="Content" x="16" y="34" width="454.6666564941406" height="73">
+    <frame id="4060:1221" name="Frame 245" x="0" y="12.5" width="193" height="48">
+      <frame id="4029:1375" name="Profile Pic" x="0" y="0" width="48" height="48" />
+      <frame id="4029:1376" name="Frame 242" x="60" y="1" width="133" height="46">
+        <text id="4029:1377" name="Karimov Egamberdi" x="0" y="0" width="133" height="18" />
+        <text id="4029:1378" name="+998 20 007 77 83" x="0" y="28" width="125" height="18" />
+      </frame>
+    </frame>
+    <frame id="4060:1223" name="Frame 189" x="353.6666564941406" y="20.5" width="101" height="32">
+      <text id="4060:1226" name="Bog’lanish" x="20" y="8" width="61" height="16" />
+    </frame>
+  </frame>
+  <frame id="4029:1379" name="Footer" x="16" y="107" width="454.6666564941406" height="25">
+    <text id="4029:1380" name="Ba’tafsil" x="204.3333282470703" y="9" width="46" height="16" />
+  </frame>
+</frame>

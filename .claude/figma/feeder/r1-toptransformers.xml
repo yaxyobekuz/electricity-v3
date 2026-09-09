@@ -1,0 +1,98 @@
+<frame id="4051:89" name="Card" x="989.3333740234375" y="0" width="486.6666564941406" height="298">
+  <frame id="4051:138" name="Header" x="16" y="16" width="454.6666564941406" height="32">
+    <text id="4051:139" name="Eng ko’p sarfga ega transformatorlar" x="0" y="7" width="253" height="18" />
+    <frame id="4051:140" name="Right" x="352.6666564941406" y="0" width="102" height="32">
+      <frame id="4051:141" name="Toggle btn" x="0" y="0" width="62" height="32">
+        <frame id="4051:145" name="Frame 241" x="2" y="2" width="28" height="28">
+          <frame id="4051:143" name="lucide/chart-no-axes-column" x="5" y="5" width="18" height="18" />
+        </frame>
+        <frame id="4051:142" name="Frame 240" x="32" y="2" width="28" height="28">
+          <frame id="4051:146" name="lucide/table" x="5" y="5" width="18" height="18" />
+        </frame>
+      </frame>
+      <frame id="4051:148" name="Toggle btn" x="70" y="0" width="32" height="32">
+        <frame id="4051:149" name="Frame 241" x="2" y="2" width="28" height="28">
+          <frame id="4051:150" name="lucide/file-down" x="5" y="5" width="18" height="18" />
+        </frame>
+      </frame>
+    </frame>
+  </frame>
+  <frame id="4051:153" name="Frame 243" x="16" y="48" width="454.6666564941406" height="218">
+    <frame id="4051:95" name="Frame" x="0" y="8" width="454.6666564941406" height="30">
+      <text id="4051:96" name="Nomi" x="6" y="8" width="88.53333282470703" height="14" />
+      <text id="4051:97" name="Holat" x="94.53333282470703" y="8" width="88.53333282470703" height="14" />
+      <text id="4051:98" name="Hisoblangan" x="183.06666564941406" y="8" width="88.53333282470703" height="14" />
+      <text id="4051:154" name="Iste’mol" x="271.6000061035156" y="8" width="88.53334045410156" height="14" />
+      <text id="4051:166" name="Yo’qotish" x="360.13336181640625" y="8" width="88.53334045410156" height="14" />
+    </frame>
+    <frame id="4051:100" name="Frame" x="0" y="38" width="454.6666564941406" height="29">
+      <text id="4051:101" name="TP-001" x="6" y="6.5" width="88.53333282470703" height="16" />
+      <frame id="4051:102" name="Frame" x="94.53333282470703" y="6" width="88.53333282470703" height="17">
+        <frame id="4051:103" name="Frame" x="25.766666412353516" y="0" width="37" height="17">
+          <text id="4051:104" name="Faol" x="8" y="2" width="21" height="13" />
+        </frame>
+      </frame>
+      <text id="4051:105" name="51,5 ming" x="183.06666564941406" y="6.5" width="88.53333282470703" height="16" />
+      <text id="4051:155" name="41,4 ming" x="271.6000061035156" y="6.5" width="88.53334045410156" height="16" />
+      <text id="4051:167" name="10,1 ming" x="360.13336181640625" y="6.5" width="88.53334045410156" height="16" />
+    </frame>
+    <frame id="4051:107" name="Frame" x="0" y="67" width="454.6666564941406" height="29">
+      <text id="4051:108" name="TP-002" x="6" y="6.5" width="88.53333282470703" height="16" />
+      <frame id="4051:109" name="Frame" x="94.53333282470703" y="6" width="88.53333282470703" height="17">
+        <frame id="4051:110" name="Frame" x="25.766666412353516" y="0" width="37" height="17">
+          <text id="4051:111" name="Faol" x="8" y="2" width="21" height="13" />
+        </frame>
+      </frame>
+      <text id="4051:112" name="51,0 ming" x="183.06666564941406" y="6.5" width="88.53333282470703" height="16" />
+      <text id="4051:156" name="41,0 ming" x="271.6000061035156" y="6.5" width="88.53334045410156" height="16" />
+      <text id="4051:168" name="10,0 ming" x="360.13336181640625" y="6.5" width="88.53334045410156" height="16" />
+    </frame>
+    <frame id="4051:114" name="Frame" x="0" y="96" width="454.6666564941406" height="29">
+      <text id="4051:115" name="TP-003" x="6" y="6.5" width="88.53333282470703" height="16" />
+      <frame id="4051:116" name="Frame" x="94.53333282470703" y="6" width="88.53333282470703" height="17">
+        <frame id="4051:117" name="Frame" x="20.266666412353516" y="0" width="48" height="17">
+          <text id="4051:118" name="Nofaol" x="8" y="2" width="32" height="13" />
+        </frame>
+      </frame>
+      <text id="4051:119" name="40,6 ming" x="183.06666564941406" y="6.5" width="88.53333282470703" height="16" />
+      <text id="4051:157" name="30,0 ming" x="271.6000061035156" y="6.5" width="88.53334045410156" height="16" />
+      <text id="4051:169" name="10,6 ming" x="360.13336181640625" y="6.5" width="88.53334045410156" height="16" />
+    </frame>
+    <frame id="4051:121" name="Frame" x="0" y="125" width="454.6666564941406" height="29">
+      <text id="4051:122" name="TP-004" x="6" y="6.5" width="88.53333282470703" height="16" />
+      <frame id="4051:123" name="Frame" x="94.53333282470703" y="6" width="88.53333282470703" height="17">
+        <frame id="4051:124" name="Frame" x="25.766666412353516" y="0" width="37" height="17">
+          <text id="4051:125" name="Faol" x="8" y="2" width="21" height="13" />
+        </frame>
+      </frame>
+      <text id="4051:126" name="31,3 ming" x="183.06666564941406" y="6.5" width="88.53333282470703" height="16" />
+      <text id="4051:158" name="21,3 ming" x="271.6000061035156" y="6.5" width="88.53334045410156" height="16" />
+      <text id="4051:170" name="10,0 ming" x="360.13336181640625" y="6.5" width="88.53334045410156" height="16" />
+    </frame>
+    <frame id="4055:998" name="Frame" x="0" y="154" width="454.6666564941406" height="29">
+      <text id="4055:999" name="TP-004" x="6" y="6.5" width="88.53333282470703" height="16" />
+      <frame id="4055:1000" name="Frame" x="94.53333282470703" y="6" width="88.53333282470703" height="17">
+        <frame id="4055:1001" name="Frame" x="25.766666412353516" y="0" width="37" height="17">
+          <text id="4055:1002" name="Faol" x="8" y="2" width="21" height="13" />
+        </frame>
+      </frame>
+      <text id="4055:1003" name="31,3 ming" x="183.06666564941406" y="6.5" width="88.53333282470703" height="16" />
+      <text id="4055:1004" name="21,3 ming" x="271.6000061035156" y="6.5" width="88.53334045410156" height="16" />
+      <text id="4055:1005" name="10,0 ming" x="360.13336181640625" y="6.5" width="88.53334045410156" height="16" />
+    </frame>
+    <frame id="4051:128" name="Frame" x="0" y="183" width="454.6666564941406" height="33">
+      <text id="4051:129" name="TP-005" x="6" y="8.5" width="88.53333282470703" height="16" />
+      <frame id="4051:130" name="Frame" x="94.53333282470703" y="8" width="88.53333282470703" height="17">
+        <frame id="4051:131" name="Frame" x="15.766666412353516" y="0" width="57" height="17">
+          <text id="4051:132" name="Ta&#39;mirda" x="8" y="2" width="41" height="13" />
+        </frame>
+      </frame>
+      <text id="4051:133" name="15,1 ming" x="183.06666564941406" y="8.5" width="88.53333282470703" height="16" />
+      <text id="4051:159" name="8,1 ming" x="271.6000061035156" y="8.5" width="88.53334045410156" height="16" />
+      <text id="4051:171" name="7,0 ming" x="360.13336181640625" y="8.5" width="88.53334045410156" height="16" />
+    </frame>
+  </frame>
+  <frame id="4051:135" name="Footer" x="16" y="266" width="454.6666564941406" height="24">
+    <text id="4051:136" name="Ba&#39;tafsil" x="204.3333282470703" y="8" width="46" height="16" />
+  </frame>
+</frame>

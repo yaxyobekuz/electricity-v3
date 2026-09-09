@@ -1,0 +1,54 @@
+<frame id="4029:986" name="Frame 199" x="0" y="0" width="239.3333282470703" height="196">
+  <frame id="4029:987" name="Frame 200" x="16" y="16" width="207.3333282470703" height="32">
+    <text id="4029:988" name="Hisoblangan" x="0" y="0" width="82" height="18" />
+    <frame id="4029:989" name="Frame 201" x="175.3333282470703" y="0" width="32" height="32">
+      <frame id="4029:990" name="lucide/zap" x="6" y="6" width="20" height="20" />
+    </frame>
+  </frame>
+  <frame id="4029:992" name="Frame 202" x="16" y="48" width="207.3333282470703" height="41">
+    <text id="4029:993" name="220,1" x="0" y="4" width="63" height="31" />
+    <text id="4029:994" name="ming kWh" x="67" y="10.5" width="66" height="18" />
+  </frame>
+  <frame id="4029:995" name="Frame 203" x="16" y="89" width="207.3333282470703" height="26">
+    <frame id="4029:996" name="lucide/arrow-up" x="0" y="0" width="20" height="20" />
+    <text id="4029:998" name="28,2 ming kWh ga ko’p" x="24" y="1" width="150" height="18" />
+  </frame>
+  <frame id="4029:999" name="Frame 204" x="16" y="115" width="207.3333282470703" height="26">
+    <text id="4029:1000" name="O’tgan oy: 198,1 kWh" x="0" y="0" width="132" height="18" />
+  </frame>
+  <frame id="4029:1001" name="Chart" x="16" y="141" width="207.3333282470703" height="39">
+    <frame id="4029:1002" name="Frame 205" x="0" y="0" width="153.3333282470703" height="39">
+      <frame id="4029:1003" name="Frame 206" x="0" y="0" width="3.1777775287628174" height="39" />
+      <frame id="4029:1004" name="Frame 207" x="5.177777290344238" y="0" width="3.1777775287628174" height="39" />
+      <frame id="4029:1005" name="Frame 208" x="10.355554580688477" y="10" width="3.1777775287628174" height="29" />
+      <frame id="4029:1006" name="Frame 209" x="15.533331871032715" y="0" width="3.1777775287628174" height="39" />
+      <frame id="4029:1007" name="Frame 210" x="20.711109161376953" y="19" width="3.1777775287628174" height="20" />
+      <frame id="4029:1008" name="Frame 211" x="25.888887405395508" y="7" width="3.1777775287628174" height="32" />
+      <frame id="4029:1009" name="Frame 212" x="31.066665649414062" y="7" width="3.1777775287628174" height="32" />
+      <frame id="4029:1010" name="Frame 213" x="36.244441986083984" y="0" width="3.1777775287628174" height="39" />
+      <frame id="4029:1011" name="Frame 214" x="41.422218322753906" y="30" width="3.1777775287628174" height="9" />
+      <frame id="4029:1012" name="Frame 215" x="46.59999465942383" y="0" width="3.1777775287628174" height="39" />
+      <frame id="4029:1013" name="Frame 216" x="51.77777099609375" y="17" width="3.1777775287628174" height="22" />
+      <frame id="4029:1014" name="Frame 217" x="56.95554733276367" y="15" width="3.1777775287628174" height="24" />
+      <frame id="4029:1015" name="Frame 218" x="62.133323669433594" y="0" width="3.1777775287628174" height="39" />
+      <frame id="4029:1016" name="Frame 219" x="67.31110382080078" y="0" width="3.1777775287628174" height="39" />
+      <frame id="4029:1017" name="Frame 220" x="72.48888397216797" y="0" width="3.1777775287628174" height="39" />
+      <frame id="4029:1018" name="Frame 221" x="77.66666412353516" y="0" width="3.1777775287628174" height="39" />
+      <frame id="4029:1019" name="Frame 222" x="82.84444427490234" y="0" width="3.1777775287628174" height="39" />
+      <frame id="4029:1020" name="Frame 223" x="88.02222442626953" y="15" width="3.1777775287628174" height="24" />
+      <frame id="4029:1021" name="Frame 224" x="93.20000457763672" y="10" width="3.1777775287628174" height="29" />
+      <frame id="4029:1022" name="Frame 225" x="98.3777847290039" y="7" width="3.1777775287628174" height="32" />
+      <frame id="4029:1023" name="Frame 226" x="103.5555648803711" y="0" width="3.1777775287628174" height="39" />
+      <frame id="4029:1024" name="Frame 227" x="108.73334503173828" y="25" width="3.1777775287628174" height="14" />
+      <frame id="4029:1025" name="Frame 228" x="113.91112518310547" y="13" width="3.1777775287628174" height="26" />
+      <frame id="4029:1026" name="Frame 229" x="119.08890533447266" y="0" width="3.1777775287628174" height="39" />
+      <frame id="4029:1027" name="Frame 230" x="124.26668548583984" y="7" width="3.1777775287628174" height="32" />
+      <frame id="4029:1028" name="Frame 231" x="129.4444580078125" y="10" width="3.1777775287628174" height="29" />
+      <frame id="4029:1029" name="Frame 232" x="134.6222381591797" y="28" width="3.1777775287628174" height="11" />
+      <frame id="4029:1030" name="Frame 233" x="139.80001831054688" y="13" width="3.1777775287628174" height="26" />
+      <frame id="4029:1031" name="Frame 234" x="144.97779846191406" y="0" width="3.1777775287628174" height="39" />
+      <frame id="4029:1032" name="Frame 235" x="150.15557861328125" y="0" width="3.1777775287628174" height="39" />
+    </frame>
+    <text id="4029:1033" name="30 kun" x="161.3333282470703" y="21" width="46" height="18" />
+  </frame>
+</frame>

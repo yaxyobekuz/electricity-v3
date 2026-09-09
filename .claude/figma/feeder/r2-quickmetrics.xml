@@ -1,0 +1,59 @@
+<frame id="4060:1304" name="Card" x="1154.2222900390625" y="306" width="321.77777099609375" height="336">
+  <frame id="4060:1305" name="Header" x="16" y="16" width="289.77777099609375" height="32">
+    <text id="4060:1306" name="Tezkor ko’rsatgichlar" x="0" y="7" width="145" height="18" />
+    <frame id="4060:1307" name="Right" x="257.77777099609375" y="0" width="32" height="32">
+      <frame id="4060:1315" name="Toggle btn" x="0" y="0" width="32" height="32">
+        <frame id="4060:1316" name="Frame 241" x="2" y="2" width="28" height="28">
+          <frame id="4060:1317" name="lucide/file-down" x="5" y="5" width="18" height="18" />
+        </frame>
+      </frame>
+    </frame>
+  </frame>
+  <frame id="4060:1319" name="Content" x="16" y="56" width="289.77777099609375" height="264">
+    <frame id="4073:2" name="Frame 254" x="0" y="0" width="289.77777099609375" height="44">
+      <frame id="4073:4" name="Frame 201" x="0" y="0" width="44" height="44">
+        <frame id="4073:8" name="lucide/zap" x="10" y="10" width="24" height="24" />
+      </frame>
+      <frame id="4073:22" name="Frame 197" x="52" y="0.5" width="237.77777099609375" height="43">
+        <text id="4073:23" name="Kunlik o’rtacha iste’mol" x="0" y="0" width="153" height="18" />
+        <text id="4073:24" name="15,2 ming kWh" x="0" y="22" width="237.77777099609375" height="21" />
+      </frame>
+    </frame>
+    <frame id="4073:379" name="Frame 255" x="0" y="54" width="289.77777099609375" height="44">
+      <frame id="4073:380" name="Frame 201" x="0" y="0" width="44" height="44">
+        <frame id="4080:447" name="lucide/arrow-big-down-dash" x="10" y="10" width="24" height="24" />
+      </frame>
+      <frame id="4073:383" name="Frame 197" x="52" y="0.5" width="237.77777099609375" height="43">
+        <text id="4073:384" name="Kunlik o’rtacha yo’qotish" x="0" y="0" width="161" height="18" />
+        <text id="4073:385" name="3,3 ming kWh" x="0" y="22" width="237.77777099609375" height="21" />
+      </frame>
+    </frame>
+    <frame id="4073:387" name="Frame 256" x="0" y="108" width="289.77777099609375" height="44">
+      <frame id="4073:388" name="Frame 201" x="0" y="0" width="44" height="44">
+        <frame id="4080:433" name="lucide/wrench-off" x="10" y="10" width="24" height="24" />
+      </frame>
+      <frame id="4073:391" name="Frame 197" x="52" y="0.5" width="237.77777099609375" height="43">
+        <text id="4073:392" name="Nofal transformatorlar" x="0" y="0" width="147" height="18" />
+        <text id="4073:393" name="1 ta" x="0" y="22" width="237.77777099609375" height="21" />
+      </frame>
+    </frame>
+    <frame id="4073:395" name="Frame 257" x="0" y="162" width="289.77777099609375" height="44">
+      <frame id="4073:396" name="Frame 201" x="0" y="0" width="44" height="44">
+        <frame id="4073:425" name="lucide/clock-arrow-up" x="10" y="10" width="24" height="24" />
+      </frame>
+      <frame id="4073:399" name="Frame 197" x="52" y="0.5" width="237.77777099609375" height="43">
+        <text id="4073:400" name="Pik iste&#39;mol vaqti" x="0" y="0" width="112" height="18" />
+        <text id="4073:401" name="19:30 - 21:00" x="0" y="22" width="237.77777099609375" height="21" />
+      </frame>
+    </frame>
+    <frame id="4073:403" name="Frame 258" x="0" y="216" width="289.77777099609375" height="44">
+      <frame id="4073:404" name="Frame 201" x="0" y="0" width="44" height="44">
+        <frame id="4080:451" name="lucide/square-check-big" x="10" y="10" width="24" height="24" />
+      </frame>
+      <frame id="4073:407" name="Frame 197" x="52" y="0.5" width="237.77777099609375" height="43">
+        <text id="4073:408" name="Reja bajarilishi" x="0" y="0" width="96" height="18" />
+        <text id="4073:409" name="89,1%" x="0" y="22" width="237.77777099609375" height="21" />
+      </frame>
+    </frame>
+  </frame>
+</frame>

@@ -1,0 +1,35 @@
+<frame id="4029:1344" name="Card" x="0" y="0" width="486.6666564941406" height="148">
+  <frame id="4029:1345" name="Header" x="16" y="16" width="454.6666564941406" height="32">
+    <text id="4029:1346" name="Qoidabuzarliklar" x="0" y="7" width="115" height="18" />
+    <frame id="4029:1347" name="Right" x="422.6666564941406" y="0" width="32" height="32">
+      <frame id="4029:1348" name="Toggle btn" x="0" y="0" width="32" height="32">
+        <frame id="4029:1349" name="Frame 241" x="2" y="2" width="28" height="28">
+          <frame id="4029:1350" name="lucide/file-down" x="5" y="5" width="18" height="18" />
+        </frame>
+      </frame>
+    </frame>
+  </frame>
+  <frame id="4029:1352" name="Content" x="16" y="56" width="454.6666564941406" height="76">
+    <frame id="4029:1353" name="Frame 190" x="0" y="0" width="146.2222137451172" height="76">
+      <text id="4029:1354" name="Ma’muriy holat" x="0" y="0" width="97" height="18" />
+      <frame id="4029:1355" name="Frame 189" x="0" y="28" width="146.2222137451172" height="48">
+        <frame id="4029:1356" name="lucide/file-exclamation-point" x="20" y="12" width="24" height="24" />
+        <text id="4029:1358" name="4 ta" x="56" y="13.5" width="31" height="21" />
+      </frame>
+    </frame>
+    <frame id="4029:1359" name="Frame 191" x="154.2222137451172" y="0" width="146.2222137451172" height="76">
+      <text id="4029:1360" name="Jinoiy holat" x="0" y="0" width="77" height="18" />
+      <frame id="4029:1361" name="Frame 189" x="0" y="28" width="146.2222137451172" height="48">
+        <frame id="4029:1362" name="lucide/gavel" x="20" y="12" width="24" height="24" />
+        <text id="4029:1364" name="1 ta" x="56" y="13.5" width="28" height="21" />
+      </frame>
+    </frame>
+    <frame id="4029:1365" name="Frame 192" x="308.4444274902344" y="0" width="146.2222137451172" height="76">
+      <text id="4029:1366" name="Aybsiz" x="0" y="0" width="44" height="18" />
+      <frame id="4029:1367" name="Frame 189" x="0" y="28" width="146.2222137451172" height="48">
+        <frame id="4029:1368" name="lucide/shield-check" x="20" y="12" width="24" height="24" />
+        <text id="4029:1370" name="3 ta" x="56" y="13.5" width="31" height="21" />
+      </frame>
+    </frame>
+  </frame>
+</frame>

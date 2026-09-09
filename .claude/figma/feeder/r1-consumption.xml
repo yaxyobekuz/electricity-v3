@@ -1,0 +1,146 @@
+<frame id="4029:1221" name="Card" x="0" y="0" width="486.6666564941406" height="298">
+  <frame id="4029:1222" name="Header" x="16" y="16" width="454.6666564941406" height="32">
+    <text id="4029:1223" name="Iste’mol dinamikasi" x="0" y="7" width="133" height="18" />
+    <frame id="4029:1224" name="Right" x="352.6666564941406" y="0" width="102" height="32">
+      <frame id="4029:1225" name="Toggle btn" x="0" y="0" width="62" height="32">
+        <frame id="4029:1226" name="Frame 240" x="2" y="2" width="28" height="28">
+          <frame id="4029:1227" name="lucide/chart-no-axes-column" x="5" y="5" width="18" height="18" />
+        </frame>
+        <frame id="4029:1229" name="Frame 241" x="32" y="2" width="28" height="28">
+          <frame id="4029:1230" name="lucide/table" x="5" y="5" width="18" height="18" />
+        </frame>
+      </frame>
+      <frame id="4029:1232" name="Toggle btn" x="70" y="0" width="32" height="32">
+        <frame id="4029:1233" name="Frame 241" x="2" y="2" width="28" height="28">
+          <frame id="4029:1234" name="lucide/file-down" x="5" y="5" width="18" height="18" />
+        </frame>
+      </frame>
+    </frame>
+  </frame>
+  <frame id="4029:1236" name="Main" x="16" y="56" width="454.6666564941406" height="200">
+    <frame id="4029:1237" name="Chart" x="0" y="0" width="345.6666564941406" height="200">
+      <frame id="4029:1238" name="Chart&amp;Axis" x="0" y="0" width="345.6666564941406" height="200">
+        <frame id="4029:1239" name="MainChart" x="0" y="0" width="345.6666564941406" height="178">
+          <frame id="4029:1240" name="yAxisLeft" x="0" y="0" width="33" height="178">
+            <text id="4029:1241" name="2000" x="4" y="0" width="25" height="12" />
+            <text id="4029:1242" name="500" x="10" y="83" width="19" height="12" />
+            <text id="4029:1243" name="0" x="22" y="166" width="7" height="12" />
+          </frame>
+          <frame id="4029:1244" name="Graphi&amp;Grid" x="33" y="0" width="312.6666564941406" height="178">
+            <frame id="4029:1245" name="xLines" x="0" y="0" width="284.6904602050781" height="178">
+              <line id="4029:1246" name="Line" x="1" y="6" width="282.6904602050781" height="0" />
+              <line id="4029:1247" name="Line" x="1" y="89" width="282.6904602050781" height="0" />
+              <line id="4029:1248" name="Line" x="1" y="172" width="282.6904602050781" height="0" />
+            </frame>
+            <frame id="4029:1249" name="yLines" x="0" y="0" width="284.6904602050781" height="178">
+              <line id="4029:1250" name="Line" x="0.7268550992012024" y="162.742919921875" width="0" height="147.4857177734375" />
+              <line id="4029:1251" name="Line" x="47.933101654052734" y="162.742919921875" width="0" height="147.4857177734375" />
+              <line id="4029:1252" name="Line" x="95.13896942138672" y="162.742919921875" width="0" height="147.4857177734375" />
+              <line id="4029:1253" name="Line" x="142.34521484375" y="162.742919921875" width="0" height="147.4857177734375" />
+              <line id="4029:1254" name="Line" x="189.5514678955078" y="162.742919921875" width="0" height="147.4857177734375" />
+              <line id="4029:1255" name="Line" x="236.75770568847656" y="162.742919921875" width="0" height="147.4857177734375" />
+              <line id="4029:1256" name="Line" x="283.9635925292969" y="162.742919921875" width="0" height="147.4857177734375" />
+            </frame>
+            <frame id="4029:1257" name="LineArea" x="0" y="7" width="284.6904602050781" height="164">
+              <frame id="4029:1258" name="LineGroup2" x="0" y="3.93603515625" width="285.47320556640625" height="157.15451049804688">
+                <vector id="4029:1259" name="singleLine2" x="0" y="3.936000168323517" width="284.6904602050781" height="155.63600158691406" />
+                <frame id="4029:1260" name="LineNodes2" x="0" y="3.93603515625" width="285.47320556640625" height="157.15451049804688">
+                  <frame id="4029:1261" name="basicNode" x="0" y="34.27599334716797" width="0.7827817797660828" height="1.5185184478759766" />
+                  <frame id="4029:1263" name="basicNode" x="47.44829177856445" y="3.935982584953308" width="0.7827817797660828" height="1.5185184478759766" />
+                  <frame id="4029:1265" name="basicNode" x="94.89695739746094" y="133.00404357910156" width="0.7827817797660828" height="1.5185184478759766" />
+                  <frame id="4029:1267" name="basicNode" x="142.34521484375" y="159.57196044921875" width="0.7827817797660828" height="1.5185184478759766" />
+                  <frame id="4029:1269" name="basicNode" x="189.7935028076172" y="46.576011657714844" width="0.7827817797660828" height="1.5185184478759766" />
+                  <frame id="4029:1271" name="basicNode" x="237.24217224121094" y="73.80000305175781" width="0.7827817797660828" height="1.5185184478759766" />
+                  <frame id="4029:1273" name="basicNode" x="284.6904296875" y="42.14797592163086" width="0.7827817797660828" height="1.5185184478759766" />
+                </frame>
+              </frame>
+              <frame id="4029:1275" name="LineGroup1" x="0" y="75.1119384765625" width="285.47320556640625" height="83.68257904052734">
+                <vector id="4029:1276" name="singleLine1" x="0" y="75.11199855804443" width="284.6904602050781" height="82.16400146484375" />
+                <frame id="4029:1277" name="LineNodes1" x="0" y="75.1119384765625" width="285.47320556640625" height="83.68257904052734">
+                  <frame id="4029:1278" name="basicNode" x="0" y="113.97999572753906" width="0.7827817797660828" height="1.5185184478759766" />
+                  <frame id="4029:1280" name="basicNode" x="47.44829177856445" y="146.28800201416016" width="0.7827817797660828" height="1.5185184478759766" />
+                  <frame id="4029:1282" name="basicNode" x="94.89695739746094" y="75.11199855804443" width="0.7827817797660828" height="1.5185184478759766" />
+                  <frame id="4029:1284" name="basicNode" x="142.34521484375" y="127.0999984741211" width="0.7827817797660828" height="1.5185184478759766" />
+                  <frame id="4029:1286" name="basicNode" x="189.7935028076172" y="90.36401748657227" width="0.7827817797660828" height="1.5185184478759766" />
+                  <frame id="4029:1288" name="basicNode" x="237.24217224121094" y="157.27600860595703" width="0.7827817797660828" height="1.5185184478759766" />
+                  <frame id="4029:1290" name="basicNode" x="284.6904296875" y="118.40793991088867" width="0.7827817797660828" height="1.5185184478759766" />
+                </frame>
+              </frame>
+              <frame id="4029:1292" name="LineGroup0" x="0" y="5.5760498046875" width="285.47320556640625" height="152.56246948242188">
+                <vector id="4029:1293" name="singleLine0" x="0" y="5.575999736785889" width="284.6904602050781" height="151.0440216064453" />
+                <frame id="4029:1294" name="LineNodes0" x="0" y="5.5760498046875" width="285.47320556640625" height="152.56246948242188">
+                  <frame id="4029:1295" name="basicNode" x="0" y="156.62002563476562" width="0.7827817797660828" height="1.5185184478759766" />
+                  <frame id="4029:1297" name="basicNode" x="47.44829177856445" y="71.83193969726562" width="0.7827817797660828" height="1.5185184478759766" />
+                  <frame id="4029:1299" name="basicNode" x="94.89695739746094" y="5.576011419296265" width="0.7827817797660828" height="1.5185184478759766" />
+                  <frame id="4029:1301" name="basicNode" x="142.34521484375" y="129.23193359375" width="0.7827817797660828" height="1.5185184478759766" />
+                  <frame id="4029:1303" name="basicNode" x="189.7935028076172" y="91.1839599609375" width="0.7827817797660828" height="1.5185184478759766" />
+                  <frame id="4029:1305" name="basicNode" x="237.24217224121094" y="58.38396072387695" width="0.7827817797660828" height="1.5185184478759766" />
+                  <frame id="4029:1307" name="basicNode" x="284.6904296875" y="104.95996856689453" width="0.7827817797660828" height="1.5185184478759766" />
+                </frame>
+              </frame>
+            </frame>
+            <instance id="4029:1309" name="ConfigAndData-Line-Don&#39;t remove!" x="0" y="0" width="8" height="8" hidden="true" />
+          </frame>
+        </frame>
+        <frame id="4029:1310" name="xAxis" x="0" y="176" width="345.6666564941406" height="24">
+          <frame id="4029:1311" name="xLabelBox" x="1.0238103866577148" y="0" width="49.23469161987305" height="12">
+            <text id="4029:1312" name="1" x="0" y="0" width="49.23469161987305" height="12" />
+          </frame>
+          <frame id="4029:1313" name="xLabelBox" x="50.25850296020508" y="0" width="49.23469543457031" height="12">
+            <text id="4029:1314" name="2" x="0" y="0" width="49.23469543457031" height="12" />
+          </frame>
+          <frame id="4029:1315" name="xLabelBox" x="99.49319458007812" y="0" width="49.23469543457031" height="12">
+            <text id="4029:1316" name="3" x="0" y="0" width="49.23469543457031" height="12" />
+          </frame>
+          <frame id="4029:1317" name="xLabelBox" x="148.72789001464844" y="0" width="49.23469543457031" height="12">
+            <text id="4029:1318" name="4" x="0" y="0" width="49.23469543457031" height="12" />
+          </frame>
+          <frame id="4029:1319" name="xLabelBox" x="197.96258544921875" y="0" width="49.23469543457031" height="12">
+            <text id="4029:1320" name="5" x="0" y="0" width="49.23469543457031" height="12" />
+          </frame>
+          <frame id="4029:1321" name="xLabelBox" x="247.19728088378906" y="0" width="49.23469543457031" height="12">
+            <text id="4029:1322" name="6" x="0" y="0" width="49.23469543457031" height="12" />
+          </frame>
+          <frame id="4029:1323" name="xLabelBox" x="296.4319763183594" y="0" width="49.23469543457031" height="12">
+            <text id="4029:1324" name="7" x="0" y="0" width="49.23469543457031" height="12" />
+          </frame>
+        </frame>
+      </frame>
+    </frame>
+    <frame id="4029:1325" name="Frame 194" x="345.6666564941406" y="39.5" width="109" height="121">
+      <frame id="4029:1326" name="Chart label" x="0" y="0" width="108" height="35">
+        <frame id="4029:1327" name="Frame 196" x="0" y="11.5" width="12" height="12" />
+        <frame id="4029:1328" name="Frame 197" x="22" y="0" width="86" height="35">
+          <text id="4029:1329" name="Hisoblangan" x="0" y="0" width="59" height="13" />
+          <text id="4029:1330" name="1,234 mln kWh" x="0" y="19" width="86" height="16" />
+        </frame>
+      </frame>
+      <frame id="4029:1331" name="Chart label" x="0" y="43" width="109" height="35">
+        <frame id="4029:1332" name="Frame 196" x="0" y="11.5" width="12" height="12" />
+        <frame id="4029:1333" name="Frame 197" x="22" y="0" width="87" height="35">
+          <text id="4029:1334" name="Iste’mol" x="0" y="0" width="38" height="13" />
+          <text id="4029:1335" name="1,020 mln kWh" x="0" y="19" width="87" height="16" />
+        </frame>
+      </frame>
+      <frame id="4029:1336" name="Chart label" x="0" y="86" width="109" height="35">
+        <frame id="4029:1337" name="Frame 196" x="0" y="11.5" width="12" height="12" />
+        <frame id="4029:1338" name="Frame 197" x="22" y="0" width="87" height="35">
+          <text id="4029:1339" name="Yo’qotish" x="0" y="0" width="43" height="13" />
+          <text id="4029:1340" name="0,214 mln kWh" x="0" y="19" width="87" height="16" />
+        </frame>
+      </frame>
+    </frame>
+  </frame>
+  <frame id="4029:1341" name="Slider" x="16" y="264" width="454.6666564941406" height="18">
+    <vector id="4082:641" name="Vector 1" x="0" y="9" width="455" height="0" />
+    <frame id="4082:635" name="Frame 260" x="6" y="0" width="114" height="18">
+      <text id="4086:648" name="7 kun" x="41.5" y="1" width="31" height="16" />
+      <frame id="4082:643" name="Frame 261" x="108" y="3" width="12" height="12">
+        <vector id="4086:644" name="Vector 2" x="6" y="4" width="0" height="4" />
+      </frame>
+      <frame id="4086:649" name="Frame 262" x="-6" y="3" width="12" height="12">
+        <vector id="4086:650" name="Vector 2" x="6" y="4" width="0" height="4" />
+      </frame>
+    </frame>
+  </frame>
+</frame>

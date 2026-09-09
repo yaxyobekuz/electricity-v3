@@ -1,0 +1,48 @@
+<frame id="4060:1285" name="Card" x="659.5555419921875" y="306" width="486.6666564941406" height="336">
+  <frame id="4060:1286" name="Header" x="16" y="16" width="454.6666564941406" height="40">
+    <text id="4060:1287" name="Interaktiv ko’rinish" x="0" y="7" width="129" height="18" />
+    <frame id="4060:1288" name="Right" x="422.6666564941406" y="0" width="32" height="32">
+      <frame id="4060:1296" name="Toggle btn" x="0" y="0" width="32" height="32">
+        <frame id="4060:1297" name="Frame 241" x="2" y="2" width="28" height="28">
+          <frame id="4066:1361" name="lucide/expand" x="5" y="5" width="18" height="18" />
+        </frame>
+      </frame>
+    </frame>
+  </frame>
+  <frame id="4060:1300" name="Content" x="16" y="56" width="454.6666564941406" height="248">
+    <frame id="4066:1349" name="Wrapper" x="0" y="0" width="454.6666564941406" height="256">
+      <rounded-rectangle id="4066:1323" name="Map" x="0.4443359375" y="0" width="454" height="248" />
+      <frame id="4066:1444" name="Frame" x="79.4443359375" y="206" width="28" height="28" />
+      <frame id="4066:1498" name="Frame" x="213.4443359375" y="219" width="28" height="28" />
+      <frame id="4066:1525" name="Frame" x="362.4443359375" y="12" width="28" height="28" />
+      <frame id="4066:1552" name="Frame" x="190.4443359375" y="40" width="28" height="28" />
+      <frame id="4066:1471" name="Frame" x="26.4443359375" y="6" width="28" height="28" />
+      <frame id="4066:1365" name="Frame 248" x="34.4443359375" y="108" width="40" height="40">
+        <frame id="4066:1366" name="transformer-power-voltage-energy-electronic-svgrepo-com 1" x="8" y="8" width="24" height="24" />
+      </frame>
+      <frame id="4066:1579" name="Frame 249" x="227.4443359375" y="99" width="215" height="135">
+        <frame id="4066:1621" name="Frame 250" x="10" y="10" width="189" height="33">
+          <text id="4066:1620" name="Yuqori sarfga ega transformator" x="0" y="0" width="189" height="16" />
+          <frame id="4066:1629" name="Frame 251" x="0" y="20" width="56" height="13">
+            <frame id="4066:1630" name="Frame 252" x="0" y="2.5" width="8" height="8" />
+            <text id="4066:1627" name="TP A303" x="16" y="0" width="40" height="13" />
+          </frame>
+        </frame>
+        <text id="4066:1631" name="Bu oygi iste’mol: 51,5 ming kWh" x="10" y="51" width="151" height="16" />
+        <frame id="4066:1633" name="Frame 253" x="10" y="75" width="195" height="50">
+          <frame id="4066:1634" name="lucide/info" x="4" y="4" width="12" height="12" />
+          <text id="4066:1641" name="Ushbu transformator o’tgan oyga nisbatan 20,1 ming kWh ga ko’p energiya iste’mol qilmoqda." x="20" y="4" width="167" height="39" />
+        </frame>
+      </frame>
+      <frame id="4066:1615" name="Location" x="21.4443359375" y="66" width="67" height="31">
+        <frame id="4066:1616" name="Address" x="0" y="0" width="67" height="25">
+          <text id="4066:1617" name="TP A303" x="10" y="6" width="47" height="13" />
+        </frame>
+        <vector id="4066:1618" name="Arrow" x="27.5" y="25" width="12" height="6" />
+      </frame>
+    </frame>
+  </frame>
+  <frame id="4060:1301" name="Footer" x="16" y="304" width="454.6666564941406" height="24">
+    <text id="4060:1302" name="Asosiy xaritani ochish" x="165.8333282470703" y="8" width="123" height="16" />
+  </frame>
+</frame>

@@ -1,0 +1,53 @@
+<frame id="4086:652" name="Card" x="1154.2222900390625" y="650" width="321.77777099609375" height="209">
+  <frame id="4086:653" name="Header" x="16" y="16" width="289.77777099609375" height="18">
+    <text id="4086:654" name="Hisobotlarni yuklab olish" x="0" y="0" width="170" height="18" />
+    <frame id="4086:655" name="Right" x="187.77777099609375" y="0" width="102" height="32" hidden="true">
+      <frame id="4086:656" name="Toggle btn" x="0" y="0" width="62" height="32">
+        <frame id="4086:657" name="Frame 240" x="2" y="2" width="28" height="28">
+          <frame id="4086:658" name="lucide/chart-no-axes-column" x="5" y="5" width="18" height="18" />
+        </frame>
+        <frame id="4086:660" name="Frame 241" x="32" y="2" width="28" height="28">
+          <frame id="4086:661" name="lucide/table" x="5" y="5" width="18" height="18" />
+        </frame>
+      </frame>
+      <frame id="4086:663" name="Toggle btn" x="70" y="0" width="32" height="32">
+        <frame id="4086:664" name="Frame 241" x="2" y="2" width="28" height="28">
+          <frame id="4086:665" name="lucide/file-down" x="5" y="5" width="18" height="18" />
+        </frame>
+      </frame>
+    </frame>
+  </frame>
+  <frame id="4086:667" name="Content" x="16" y="42" width="289.77777099609375" height="126">
+    <frame id="4089:671" name="Frame 263" x="0" y="0" width="289.77777099609375" height="64.94000244140625">
+      <frame id="4089:672" name="Frame 264" x="0" y="0" width="64.94444274902344" height="64.94000244140625">
+        <frame id="4089:673" name="lucide/file-text" x="22.47222137451172" y="11.470001220703125" width="20" height="20" />
+        <text id="4089:681" name="Kunlik" x="14.972221374511719" y="37.470001220703125" width="35" height="16" />
+      </frame>
+      <frame id="4089:682" name="Frame 265" x="74.94444274902344" y="0" width="64.94444274902344" height="64.94000244140625">
+        <frame id="4089:683" name="lucide/file-text" x="22.47222137451172" y="11.470001220703125" width="20" height="20" />
+        <text id="4089:685" name="Haftalik" x="9.972221374511719" y="37.470001220703125" width="45" height="16" />
+      </frame>
+      <frame id="4089:687" name="Frame 266" x="149.88888549804688" y="0" width="64.94444274902344" height="64.94000244140625">
+        <frame id="4089:688" name="lucide/file-text" x="22.47222137451172" y="11.470001220703125" width="20" height="20" />
+        <text id="4089:690" name="Oylik" x="17.97222137451172" y="37.470001220703125" width="29" height="16" />
+      </frame>
+      <frame id="4089:692" name="Frame 267" x="224.8333282470703" y="0" width="64.94444274902344" height="64.94000244140625">
+        <frame id="4089:693" name="lucide/file-text" x="22.47222137451172" y="11.470001220703125" width="20" height="20" />
+        <text id="4089:695" name="Yillik" x="18.97222137451172" y="37.470001220703125" width="27" height="16" />
+      </frame>
+    </frame>
+    <frame id="4089:697" name="Frame 264" x="0" y="76.94000244140625" width="289.77777099609375" height="48">
+      <frame id="4089:702" name="Frame 265" x="0" y="0" width="139.88888549804688" height="48">
+        <frame id="4089:715" name="excel-svgrepo-com 1" x="35.44444274902344" y="12" width="24" height="24" />
+        <text id="4089:705" name="Excel" x="67.44444274902344" y="15" width="37" height="18" />
+      </frame>
+      <frame id="4089:727" name="Frame 266" x="149.88888549804688" y="0" width="139.88888549804688" height="48">
+        <frame id="4089:742" name="pdf-svgrepo-com 1" x="39.94444274902344" y="12" width="24" height="24" />
+        <text id="4089:740" name="PDF" x="71.94444274902344" y="15" width="28" height="18" />
+      </frame>
+    </frame>
+  </frame>
+  <frame id="4089:745" name="Footer" x="16" y="176" width="289.77777099609375" height="25">
+    <text id="4089:746" name="Ko’proq" x="123.38888549804688" y="9" width="43" height="16" />
+  </frame>
+</frame>

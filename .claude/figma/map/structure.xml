@@ -1,0 +1,242 @@
+<!-- Figma "Map" sahifasi, node 3947:166 (1920x1080). get_metadata chiqishi. -->
+<frame id="3947:166" name="Map" x="-3299" y="975" width="1920" height="1080">
+  <frame id="3947:167" name="main" x="8" y="8" width="1904" height="1064">
+    <frame id="3947:168" name="Left" x="0" y="0" width="420" height="1064">
+      <frame id="4101:104" name="White" x="0" y="0" width="72" height="1064">
+        <frame id="4101:105" name="Frame 181" x="6" y="6" width="60" height="396">
+          <frame id="4101:106" name="Frame 178" x="0" y="0" width="60" height="56">
+            <frame id="4101:107" name="lucide/house" x="14" y="12" width="32" height="32" />
+          </frame>
+          <frame id="4101:109" name="Frame 183" x="0" y="68" width="60" height="56">
+            <frame id="4101:110" name="lucide/search" x="14" y="12" width="32" height="32" />
+          </frame>
+          <frame id="4101:112" name="Frame 180" x="0" y="136" width="60" height="56">
+            <frame id="4101:113" name="lucide/map" x="14" y="12" width="32" height="32" />
+          </frame>
+          <frame id="4101:115" name="Frame 182" x="0" y="204" width="60" height="56">
+            <frame id="4101:116" name="lucide/astroid" x="14" y="12" width="32" height="32" />
+          </frame>
+          <frame id="4101:118" name="Frame 179" x="0" y="272" width="60" height="56">
+            <frame id="4101:119" name="lucide/layout-panel-top" x="14" y="12" width="32" height="32" />
+          </frame>
+          <frame id="4101:121" name="Frame 181" x="0" y="340" width="60" height="56">
+            <frame id="4101:122" name="lucide/zap" x="14" y="12" width="32" height="32" />
+          </frame>
+        </frame>
+        <frame id="4101:124" name="Frame 182" x="6" y="934" width="60" height="124">
+          <frame id="4101:125" name="Frame 180" x="0" y="0" width="60" height="56">
+            <frame id="4101:126" name="Frame 183" x="14" y="12" width="32" height="32">
+              <rounded-rectangle id="4101:127" name="image 19" x="0" y="0" width="32" height="32" />
+            </frame>
+          </frame>
+          <frame id="4101:128" name="Frame 180" x="0" y="68" width="60" height="56">
+            <frame id="4101:129" name="lucide/settings" x="14" y="12" width="32" height="32" />
+          </frame>
+        </frame>
+      </frame>
+      <frame id="3947:193" name="White" x="80" y="0" width="340" height="1064">
+        <frame id="4089:749" name="Frame 269" x="16" y="16" width="308" height="637">
+          <frame id="3947:194" name="Frame 184" x="0" y="0" width="308" height="21">
+            <text id="3947:195" name="Joylashuvlar" x="0" y="0" width="102" height="21" />
+          </frame>
+          <frame id="4101:137" name="Link wrapper" x="0" y="29" width="308" height="48">
+            <frame id="4101:138" name="Frame 272" x="20" y="12" width="218" height="24">
+              <frame id="4101:164" name="lucide/chevron-right" x="24" y="24" width="24" height="24" />
+              <text id="4101:141" name="Podstansiya A404-SKJ" x="40" y="1.5" width="178" height="21" />
+            </frame>
+          </frame>
+          <frame id="4101:148" name="Link wrapper" x="0" y="85" width="308" height="48">
+            <frame id="4101:149" name="Frame 272" x="20" y="12" width="163" height="24">
+              <frame id="4101:150" name="lucide/workflow" x="0" y="0" width="24" height="24" />
+              <text id="4101:152" name="Xaqulobod fider" x="40" y="1.5" width="123" height="21" />
+            </frame>
+            <frame id="4101:153" name="lucide/chevron-right" x="288" y="12" width="24" height="24" />
+          </frame>
+          <frame id="4101:156" name="Link wrapper" x="0" y="141" width="308" height="48">
+            <frame id="4101:157" name="Frame 272" x="20" y="12" width="106" height="24">
+              <frame id="4101:158" name="lucide/circuit-board" x="0" y="0" width="24" height="24" />
+              <text id="4101:160" name="TP A303" x="40" y="1.5" width="66" height="21" />
+            </frame>
+            <frame id="4101:161" name="lucide/chevron-right" x="264" y="12" width="24" height="24" />
+          </frame>
+          <frame id="4101:167" name="Link wrapper" x="0" y="197" width="308" height="48">
+            <frame id="4101:168" name="Frame 272" x="20" y="12" width="85" height="24">
+              <frame id="4101:169" name="lucide/circuit-board" x="0" y="0" width="24" height="24" />
+              <text id="4101:171" name="TP A3" x="40" y="1.5" width="45" height="21" />
+            </frame>
+            <frame id="4101:172" name="lucide/chevron-right" x="264" y="12" width="24" height="24" />
+          </frame>
+          <frame id="4101:175" name="Link wrapper" x="0" y="253" width="308" height="48">
+            <frame id="4101:176" name="Frame 272" x="20" y="12" width="82" height="24">
+              <frame id="4101:177" name="lucide/circuit-board" x="0" y="0" width="24" height="24" />
+              <text id="4101:179" name="TP 01" x="40" y="1.5" width="42" height="21" />
+            </frame>
+            <frame id="4101:180" name="lucide/chevron-right" x="264" y="12" width="24" height="24" />
+          </frame>
+          <frame id="4101:183" name="Link wrapper" x="0" y="309" width="308" height="48">
+            <frame id="4101:184" name="Frame 272" x="20" y="12" width="94" height="24">
+              <frame id="4101:185" name="lucide/circuit-board" x="0" y="0" width="24" height="24" />
+              <text id="4101:187" name="TP T34" x="40" y="1.5" width="54" height="21" />
+            </frame>
+            <frame id="4101:188" name="lucide/chevron-right" x="264" y="12" width="24" height="24" />
+          </frame>
+          <frame id="4101:191" name="Link wrapper" x="0" y="365" width="308" height="48">
+            <frame id="4101:192" name="Frame 272" x="20" y="12" width="96" height="24">
+              <frame id="4101:193" name="lucide/circuit-board" x="0" y="0" width="24" height="24" />
+              <text id="4101:195" name="TP B42" x="40" y="1.5" width="56" height="21" />
+            </frame>
+            <frame id="4101:196" name="lucide/chevron-right" x="264" y="12" width="24" height="24" />
+          </frame>
+          <frame id="4101:199" name="Link wrapper" x="0" y="421" width="308" height="48">
+            <frame id="4101:200" name="Frame 272" x="20" y="12" width="74" height="24">
+              <frame id="4101:201" name="lucide/circuit-board" x="0" y="0" width="24" height="24" />
+              <text id="4101:203" name="TP 4" x="40" y="1.5" width="34" height="21" />
+            </frame>
+            <frame id="4101:204" name="lucide/chevron-right" x="264" y="12" width="24" height="24" />
+          </frame>
+          <frame id="4101:207" name="Link wrapper" x="0" y="477" width="308" height="48">
+            <frame id="4101:208" name="Frame 272" x="20" y="12" width="82" height="24">
+              <frame id="4101:209" name="lucide/circuit-board" x="0" y="0" width="24" height="24" />
+              <text id="4101:211" name="TP A1" x="40" y="1.5" width="42" height="21" />
+            </frame>
+            <frame id="4101:212" name="lucide/chevron-right" x="264" y="12" width="24" height="24" />
+          </frame>
+          <frame id="4101:215" name="Link wrapper" x="0" y="533" width="308" height="48">
+            <frame id="4101:216" name="Frame 272" x="20" y="12" width="93" height="24">
+              <frame id="4101:217" name="lucide/circuit-board" x="0" y="0" width="24" height="24" />
+              <text id="4101:219" name="TP 788" x="40" y="1.5" width="53" height="21" />
+            </frame>
+            <frame id="4101:220" name="lucide/chevron-right" x="264" y="12" width="24" height="24" />
+          </frame>
+          <frame id="4101:223" name="Link wrapper" x="0" y="589" width="308" height="48">
+            <frame id="4101:224" name="Frame 272" x="20" y="12" width="101" height="24">
+              <frame id="4101:225" name="lucide/circuit-board" x="0" y="0" width="24" height="24" />
+              <text id="4101:227" name="TP 3312" x="40" y="1.5" width="61" height="21" />
+            </frame>
+            <frame id="4101:228" name="lucide/chevron-right" x="264" y="12" width="24" height="24" />
+          </frame>
+        </frame>
+      </frame>
+    </frame>
+    <frame id="3947:221" name="Map" x="428" y="0" width="1128" height="1064">
+      <rounded-rectangle id="3947:325" name="Map" x="2" y="2" width="1124" height="1060" />
+      <!-- 8 ta "Location frame" 218x83: ichida Marker 27x41 (95,42) va
+           Location 67x31 (75,0) = Address pill 67x25 + Arrow 12x6.
+           Yorliq matni "TP A303", 11px medium, oq; pill bg rgba(15,15,20,.88) r8 px10 py6 -->
+      <frame id="3947:372" name="Location frame" x="455" y="470" width="218" height="83" />
+      <frame id="3947:397" name="Location frame" x="693" y="675" width="218" height="83" />
+      <frame id="3947:421" name="Location frame" x="137" y="688" width="218" height="83" />
+      <frame id="3959:651" name="Location frame" x="959" y="659" width="218" height="83" />
+      <frame id="3947:445" name="Location frame" x="113" y="284" width="218" height="83" />
+      <frame id="3947:469" name="Location frame" x="475" y="160" width="218" height="83" />
+      <frame id="3947:493" name="Location frame" x="837" y="223" width="218" height="83" />
+      <frame id="3947:517" name="Location frame" x="659" y="444" width="218" height="83" />
+    </frame>
+    <frame id="3947:249" name="Right" x="1564" y="0" width="340" height="1064">
+      <frame id="3947:250" name="Frame 184" x="16" y="16" width="308" height="21">
+        <text id="3947:251" name="Ma’lumotlar" x="0" y="0" width="95" height="21" />
+        <frame id="3952:574" name="lucide/expand" x="288" y="0.5" width="20" height="20" />
+      </frame>
+      <frame id="3947:349" name="Frame 185" x="16" y="47" width="308" height="204">
+        <rounded-rectangle id="3947:351" name="image 20" x="0" y="0" width="306" height="204" />
+      </frame>
+      <frame id="3947:564" name="Frame 186" x="16" y="261" width="308" height="80">
+        <rounded-rectangle id="3952:566" name="image 21" x="0" y="0" width="80" height="80" />
+        <rounded-rectangle id="3952:568" name="image 22" x="90" y="0" width="80" height="80" />
+        <rounded-rectangle id="3952:570" name="image 23" x="180" y="0" width="80" height="80" />
+        <rounded-rectangle id="3952:572" name="image 24" x="270" y="0" width="80" height="80" />
+      </frame>
+      <text id="3952:586" name="A374 - 3B Podstansiyasi" x="16" y="351" width="190" height="21" />
+      <frame id="3952:587" name="Frame 187" x="16" y="382" width="308" height="162">
+        <frame id="3952:588" name="Frame 188" x="0" y="0" width="149" height="76">
+          <text id="3952:589" name="Fiderlar" x="0" y="0" width="54" height="18" />
+          <frame id="3952:590" name="Frame 189" x="0" y="28" width="149" height="48">
+            <frame id="3952:615" name="lucide/workflow" x="20" y="12" width="24" height="24" />
+            <text id="3952:591" name="23 ta" x="56" y="13.5" width="41" height="21" />
+          </frame>
+        </frame>
+        <frame id="3952:595" name="Frame 189" x="159" y="0" width="149" height="76">
+          <text id="3952:596" name="Transformatorlar" x="0" y="1.5" width="117" height="18" />
+          <frame id="3952:597" name="Frame 189" x="0" y="29.5" width="149" height="45">
+            <frame id="3952:598" name="lucide/circuit-board" x="20" y="12.5" width="20" height="20" />
+            <text id="3952:600" name="3,123 ta" x="52" y="12" width="61" height="21" />
+          </frame>
+        </frame>
+        <frame id="3952:602" name="Frame 190" x="0" y="86" width="149" height="76">
+          <text id="3952:603" name="Abonentlar" x="0" y="0" width="77" height="18" />
+          <frame id="3952:604" name="Frame 189" x="0" y="28" width="149" height="48">
+            <frame id="3952:612" name="lucide/users" x="20" y="12" width="24" height="24" />
+            <text id="3952:607" name="25,133 ta" x="56" y="13.5" width="73" height="21" />
+          </frame>
+        </frame>
+        <frame id="3952:618" name="Frame 191" x="159" y="86" width="149" height="76">
+          <text id="3952:619" name="Qoidabuzarliklar" x="0" y="0" width="115" height="18" />
+          <frame id="3952:620" name="Frame 189" x="0" y="28" width="149" height="48">
+            <frame id="3952:625" name="lucide/hand" x="20" y="12" width="24" height="24" />
+            <text id="3952:623" name="5 ta" x="56" y="13.5" width="31" height="21" />
+          </frame>
+        </frame>
+      </frame>
+      <frame id="3959:675" name="Frame 192" x="16" y="554" width="308" height="211">
+        <text id="3959:676" name="Hisobot" x="0" y="0" width="54" height="18" />
+        <frame id="3959:677" name="Frame 189" x="0" y="28" width="308" height="183">
+          <frame id="3959:710" name="Frame 193" x="12" y="12" width="80" height="80" />
+          <frame id="3959:711" name="Frame 194" x="112" y="12" width="184" height="159">
+            <frame id="3959:755" name="Chart label" x="0" y="0" width="184" height="45">
+              <frame id="3959:756" name="Frame 196" x="0" y="14.5" width="16" height="16" />
+              <frame id="3959:757" name="Frame 197" x="26" y="0" width="158" height="45">
+                <text id="3959:758" name="Hisoblangan" x="0" y="0" width="82" height="18" />
+                <text id="3959:759" name="1,234 mln kWh" x="0" y="24" width="158" height="21" />
+              </frame>
+            </frame>
+            <frame id="3959:725" name="Chart label" x="0" y="57" width="184" height="45">
+              <frame id="3959:726" name="Frame 196" x="0" y="14.5" width="16" height="16" />
+              <frame id="3959:736" name="Frame 197" x="26" y="0" width="158" height="45">
+                <text id="3959:739" name="Iste’mol" x="0" y="0" width="52" height="18" />
+                <text id="3959:727" name="1,020 mln kWh" x="0" y="24" width="158" height="21" />
+              </frame>
+            </frame>
+            <frame id="3959:767" name="Chart label" x="0" y="114" width="184" height="45">
+              <frame id="3959:768" name="Frame 196" x="0" y="14.5" width="16" height="16" />
+              <frame id="3959:769" name="Frame 197" x="26" y="0" width="158" height="45">
+                <text id="3959:770" name="Yo’qotish" x="0" y="0" width="60" height="18" />
+                <text id="3959:771" name="0,214 mln kWh" x="0" y="24" width="158" height="21" />
+              </frame>
+            </frame>
+          </frame>
+        </frame>
+      </frame>
+      <frame id="3959:773" name="Frame 190" x="16" y="775" width="308" height="76">
+        <text id="3959:774" name="Ma’sul shaxs" x="0" y="0" width="89" height="18" />
+        <frame id="3959:775" name="Frame 189" x="0" y="28" width="308" height="48">
+          <frame id="3959:780" name="lucide/user-shield" x="20" y="12" width="24" height="24" />
+          <text id="3959:778" name="Yaxyobek Xabibulloyev" x="56" y="13.5" width="181" height="21" />
+        </frame>
+      </frame>
+      <frame id="3959:787" name="Frame 193" x="16" y="861" width="308" height="183">
+        <text id="3959:788" name="Sarfi yuqori transformatorlar" x="0" y="0" width="198" height="18" />
+        <frame id="3959:789" name="Frame 189" x="0" y="28" width="308" height="45">
+          <frame id="3959:800" name="Frame 198" x="20" y="12" width="99" height="21">
+            <frame id="3959:797" name="lucide/circuit-board" x="0" y="0.5" width="20" height="20" />
+            <text id="3959:792" name="TP A303" x="32" y="0" width="67" height="21" />
+          </frame>
+          <text id="3959:801" name="302,1 ming kWh" x="164" y="12" width="124" height="21" />
+        </frame>
+        <frame id="3959:803" name="Frame 190" x="0" y="83" width="308" height="45">
+          <frame id="3959:804" name="Frame 198" x="20" y="12" width="99" height="21">
+            <frame id="3959:805" name="lucide/circuit-board" x="0" y="0.5" width="20" height="20" />
+            <text id="3959:807" name="TP B86" x="32" y="0" width="57" height="21" />
+          </frame>
+          <text id="3959:808" name="150,2 ming kWh" x="163" y="12" width="125" height="21" />
+        </frame>
+        <frame id="3959:810" name="Frame 191" x="0" y="138" width="308" height="45">
+          <frame id="3959:811" name="Frame 198" x="20" y="12" width="99" height="21">
+            <frame id="3959:812" name="lucide/circuit-board" x="0" y="0.5" width="20" height="20" />
+            <text id="3959:814" name="TP 43" x="32" y="0" width="45" height="21" />
+          </frame>
+          <text id="3959:815" name="30,2 ming kWh" x="170" y="12" width="118" height="21" />
+        </frame>
+      </frame>
+    </frame>
+  </frame>
+</frame>

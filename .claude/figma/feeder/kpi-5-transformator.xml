@@ -1,0 +1,36 @@
+<frame id="4029:1160" name="Frame 203" x="989.3333129882812" y="0" width="239.3333282470703" height="196">
+  <frame id="4029:1161" name="Frame 200" x="16" y="16" width="207.3333282470703" height="32">
+    <text id="4029:1162" name="Transformatorlar" x="0" y="0" width="110" height="18" />
+    <frame id="4029:1163" name="Frame 201" x="175.3333282470703" y="0" width="32" height="32">
+      <frame id="4029:1164" name="lucide/circuit-board" x="6" y="6" width="20" height="20" />
+    </frame>
+  </frame>
+  <frame id="4029:1166" name="Frame 202" x="16" y="48" width="207.3333282470703" height="41">
+    <text id="4029:1167" name="50" x="0" y="4" width="33" height="31" />
+    <text id="4029:1168" name="ta faol" x="37" y="10.5" width="43" height="18" />
+  </frame>
+  <frame id="4029:1169" name="Frame 203" x="16" y="89" width="207.3333282470703" height="26">
+    <frame id="4029:1170" name="lucide/square-exclamation-point" x="0" y="0" width="20" height="20" />
+    <text id="4029:1172" name="1 ta nofaol" x="24" y="1" width="68" height="18" />
+  </frame>
+  <frame id="4029:1173" name="Frame 204" x="16" y="115" width="207.3333282470703" height="26">
+    <text id="4029:1174" name="O’tgan oy: 51 ta" x="0" y="0" width="100" height="18" />
+  </frame>
+  <frame id="4029:1175" name="Chart" x="16" y="141" width="207.3333282470703" height="39">
+    <frame id="4029:1176" name="Frame 205" x="0" y="0" width="166.3333282470703" height="39">
+      <frame id="4029:1177" name="Frame 206" x="0" y="28" width="12.027777671813965" height="11" />
+      <frame id="4029:1178" name="Frame 207" x="14.027777671813965" y="28" width="12.027777671813965" height="11" />
+      <frame id="4029:1179" name="Frame 218" x="28.05555534362793" y="23" width="12.027777671813965" height="16" />
+      <frame id="4029:1180" name="Frame 227" x="42.08333206176758" y="10" width="12.027777671813965" height="29" />
+      <frame id="4029:1181" name="Frame 228" x="56.11111068725586" y="13" width="12.027777671813965" height="26" />
+      <frame id="4029:1182" name="Frame 229" x="70.13888549804688" y="23" width="12.027777671813965" height="16" />
+      <frame id="4029:1183" name="Frame 230" x="84.16666412353516" y="7" width="12.027777671813965" height="32" />
+      <frame id="4029:1184" name="Frame 231" x="98.19444274902344" y="10" width="12.027777671813965" height="29" />
+      <frame id="4029:1185" name="Frame 232" x="112.22222137451172" y="0" width="12.027777671813965" height="39" />
+      <frame id="4029:1186" name="Frame 233" x="126.25" y="13" width="12.027777671813965" height="26" />
+      <frame id="4029:1187" name="Frame 234" x="140.27777099609375" y="23" width="12.027777671813965" height="16" />
+      <frame id="4029:1188" name="Frame 235" x="154.3055419921875" y="0" width="12.027777671813965" height="39" />
+    </frame>
+    <text id="4029:1189" name="12 oy" x="174.3333282470703" y="21" width="33" height="18" />
+  </frame>
+</frame>

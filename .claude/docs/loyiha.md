@@ -25,6 +25,11 @@ Asosiy qism - **admin panel**:
 | Til | **Faqat o'zbek tili.** Ko'p tillilik (i18n) qo'shilmaydi | 2026-09-05 |
 | Ma'lumot kiritish | Faqat Excel shablon orqali import | 2026-09-05 |
 | Mavzu (theme) | **Faqat oq (light).** Tungi mavzu keyinroq qo'shilishi mumkin | 2026-09-05 |
+| UI maketi | Figma `73vcnX4vOx0MnLcnecVFo3` - fider `4029:930`, xarita `3947:166` | 2026-09-09 |
+| Grafiklar | `@nivo/*` (line, bar, radial-bar, pie) | 2026-09-09 |
+| Ikonkalar | `lucide-react`; chiziq `36/size` (maketda 1.5px absolyut) | 2026-09-09 |
+| Xarita | Google Maps JS API + custom OverlayView markerlar | 2026-09-09 |
+| Maket nusxasi | Figma MCP kvotasi tugagach `.claude/figma/` ga eksport qilindi | 2026-09-09 |
 
 ## Til qoidasi
 
