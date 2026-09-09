@@ -1,11 +1,5 @@
-import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
-import { HomeView } from "@/components/home/HomeView";
-
-export const metadata: Metadata = {
-  title: "Asosiy",
-};
-
-export default function HomePage() {
-  return <HomeView />;
+export default function RootPage() {
+  redirect("/feeders");
 }
