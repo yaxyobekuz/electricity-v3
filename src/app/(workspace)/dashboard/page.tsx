@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
-import { Placeholder } from "@/components/shell/Placeholder";
+import { HomeView } from "@/components/home/HomeView";
 
 export const metadata: Metadata = { title: "Asosiy" };
 
 export default function Page() {
-  return <Placeholder title="Asosiy" />;
+  return <HomeView />;
 }
