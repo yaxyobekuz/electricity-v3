@@ -34,6 +34,8 @@
   --color-accent-purple: #cb30e0;
   --color-accent-indigo: #6155f5;
   --color-accent-brown: #ac7f5e;
+  --color-accent-amber: #f59e0b;
+  --color-accent-teal: #14b8a6;
 
   /* Aksent kartalarining yumshoq foni */
   --color-tint-blue: #eff6ff;
@@ -42,6 +44,8 @@
   --color-tint-purple: #feefff;
   --color-tint-indigo: #f3efff;
   --color-tint-brown: #fff5ef;
+  --color-tint-amber: #fff7ed;
+  --color-tint-teal: #effcfa;
 
   /* Trend (o'sish yomon, kamayish yaxshi - yo'qotish konteksti) */
   --color-trend-up: #cf4646;
