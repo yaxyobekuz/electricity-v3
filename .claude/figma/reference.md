@@ -24,12 +24,13 @@ powershell -File .claude/figma/sample.ps1 -Points "436,20 460,42 1500,290"
 
 ## Umumiy uslub
 
-- Karta: `bg-white`, `rounded-[12px]`, `p-[16px]`.
+- Karta: `bg-white`, `rounded-[16px]`, `p-[16px]`. (Radius piksel bo’yicha
+  o’lchangan: burchak yoyi ~16px. Ba’zi kartalarda pastki bo’shliq 8px — `pb-2`.)
 - Sahifa foni: `#f3f3f3`. Ustunlararo va qatorlararo bo'shliq: `8px`.
 - Sarlavha (`Header`): balandligi `32px`, `flex items-center justify-between`.
   Matn: `Geist Bold 14px`, rang `#333`.
 - Karta ichidagi bo'lim izohi: `12px`, rang `#767676`.
-- Markazdagi pastki havola ("Ba'tafsil"): `14px medium`, rang `#007cd2`.
+- Markazdagi pastki havola ("Ba'tafsil"): `12px medium`, rang `#007cd2`.
 
 ### Sarlavhadagi tugmalar (node 4029:1222)
 
@@ -48,10 +49,12 @@ Yolg'iz tugma: bg-[#f3f3f3] rounded-[999px] p-[2px] + bitta 28px tugma
 sarlavha qatori: bg-[#007cd2] px-[6px] py-[8px] rounded-t-[6px]
                  border-b border-[#f0f0f0]
                  matn: 11px semibold, oq, markazda
-qator:           p-[6px] border-b border-[#f0f0f0]
+qator:           px-[6px] border-b border-[#f0f0f0]
+                 balandlik jadvalga qarab 28 / 29 / 30px (`rowHeight` propi)
                  matn: 12px, #333, markazda; 1-ustun `font-medium`
-oxirgi qator:    bg-[#f3f3f3] px-[6px] py-[8px] rounded-b-[6px], border yo'q
-nishon (Badge):  rounded-full px-[8px] py-[2px] 10px semibold
+oxirgi qator:    bg-[#f3f3f3] px-[6px] rounded-b-[6px], border yo'q
+                 balandlik 32 / 34 / 35px (`lastRowHeight` propi)
+nishon (Badge):  rounded-full px-[8px] py-[2.5px] 10px/13px semibold (18px)
                  Faol    bg-[#effff0] text-[#22c55e]
                  Nofaol  bg-[#ffefef] text-[#cf4646]
                  Ta'mirda bg-[#fff5ef] text-[#f59e0b]
@@ -62,7 +65,7 @@ nishon (Badge):  rounded-full px-[8px] py-[2px] 10px semibold
 ### KPI kartasi (node 4029:986, balandligi 196)
 
 ```
-bg: tint (#eff6ff / #effff0 / #ffefef / #feefff / #f3efff / #fff5ef), p-[16px], rounded-[12px]
+bg: tint (...), p-[16px], rounded-[12px]  <- KPI kartasi 12px (oq kartalar 16px)
 header  h-[32] items-start justify-between
         sarlavha 14px medium #333
         nishon   size-[32px] rounded-[6px] bg-<accent>, ichida 20px oq ikonka
@@ -75,6 +78,19 @@ chart   flex-1 gap-[8px] items-end
 ```
 
 Accent ranglar: `#3b82f6` `#22c55e` `#ff383c` `#cb30e0` `#6155f5` `#ac7f5e`.
+
+### Oraliq slayderi (node 4029:1341)
+
+```
+yo’lak:  h-[18px] rounded-full bg-[#eff6ff], ichida 2px #d5eafc chiziq
+tanlov: rounded-xs border #007cd2, fon #49abf5/30, matn 11px medium #007cd2
+tutqich: 12x12 rounded-[3px] oq, 1x4px #dddddd belgisi, kursor ew-resize
+```
+
+Slayder **ishlaydi**: yo’lak butun oyni (30 kun) ifodalaydi, tanlov 7..30 kun,
+qadam 1 kun. Shu sababli 7 kunlik tanlov eni 7/30 = 23,3% (maketdagi qotib
+qolgan 27,7% emas) - maket statik bo’lgani uchun u yerdagi eni hech qanday
+chiziqli o’lchovga mos kelmaydi.
 
 ### Xarita markeri (node 3947:372)
 
