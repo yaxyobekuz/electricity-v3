@@ -77,7 +77,8 @@ function PolarDecoration({ center, outerRadius }: RadialBarCustomLayerProps) {
 
   return (
     <g transform={`translate(${center[0]},${center[1]})`}>
-      <g fill="none" stroke="#dcdcdc" strokeWidth={1}>
+      {/* Maketdagi to'r rangi ko'kimtir kul (#d9d9dd), sof kul emas. */}
+      <g fill="none" stroke="#d9d9dd" strokeWidth={1}>
         <circle r={outer} />
         <circle r={inner} />
         {SPOKES.map((angle) => {

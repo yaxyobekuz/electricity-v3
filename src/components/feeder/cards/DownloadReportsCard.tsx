@@ -48,7 +48,7 @@ export function DownloadReportsCard({ className }: { className?: string }) {
   return (
     <Card className={cn("pb-2", className)}>
       {/* Bu kartada sarlavha amallari yo'q, shuning uchun balandligi 32 emas 18px. */}
-      <CardHeader title="Hisobotlarni yuklab olish" className="h-[18px]!" />
+      <CardHeader title="Hisobotlarni yuklab olish" className="h-[18px]!" titleClassName="text-black" />
       <CardBody>
         {/* 4 x 64.94px, 10px oraliq; qolgan balandlikni shu qator yutadi. */}
         <div className="grid min-h-0 flex-1 grid-cols-4 gap-2.5">

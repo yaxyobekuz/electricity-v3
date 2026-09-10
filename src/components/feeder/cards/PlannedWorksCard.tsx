@@ -51,21 +51,10 @@ const COLUMNS: TableColumn[] = [
   { key: "date", label: "Sana", grow: 96 },
 ];
 
-/**
- * "Yangi" nishoni maketda #EFF6FF fon + #3B82F6 matn, ya'ni `accent-blue`.
- * `Badge` ning `blue` toni brend ko'kini (#007CD2) beradi, shuning uchun bu
- * bitta holat mahalliy span bilan chiziladi - qolgan ikkitasi `Badge` ga mos.
- */
 function StatusCell({ status }: { status: WorkStatus }) {
   if (status === "inProgress") return <Badge tone="green">Bajarilmoqda</Badge>;
   if (status === "planned") return <Badge tone="amber">Rejada</Badge>;
-  return (
-    <span className="flex justify-center">
-      <span className="inline-flex shrink-0 rounded-full bg-tint-blue px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap text-accent-blue">
-        Yangi
-      </span>
-    </span>
-  );
+  return <Badge tone="blue">Yangi</Badge>;
 }
 
 const ROWS: TableRow[] = WORKS.map((item) => ({
@@ -89,7 +78,8 @@ export function PlannedWorksCard({ className }: { className?: string }) {
         <IconPill icon={ExternalLink} label="Barcha ishlarni ochish" href="/works" />
       </CardHeader>
       <CardBody>
-        <DataTable columns={COLUMNS} rows={ROWS} />
+        {/* Maketda bu jadval qatorlari 30px, oxirgisi 34px (XML: 4082:577). */}
+        <DataTable columns={COLUMNS} rows={ROWS} rowHeight={30} lastRowHeight={34} />
       </CardBody>
     </Card>
   );

@@ -99,7 +99,7 @@ const chipMarker: MarkerRenderer = (marker, selected) => {
 export function InteractiveMapCard({ className }: { className?: string }) {
   return (
     <Card className={cn("pb-2", className)}>
-      <CardHeader title="Interaktiv ko&rsquo;rinish" className="[&>h2]:text-black">
+      <CardHeader title="Interaktiv ko&rsquo;rinish" titleClassName="text-black">
         <IconPill icon={Expand} label="Kengaytirish" href="/map" />
       </CardHeader>
       <CardBody>

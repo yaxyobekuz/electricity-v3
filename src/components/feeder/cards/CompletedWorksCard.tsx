@@ -46,7 +46,8 @@ export function CompletedWorksCard({ className }: { className?: string }) {
         <IconPill icon={ExternalLink} label="Barcha ishlarni ochish" href="/works" />
       </CardHeader>
       <CardBody>
-        <DataTable columns={COLUMNS} rows={ROWS} />
+        {/* Maketda bu jadval qatorlari 28px, oxirgisi 32px (XML: 4080:479). */}
+        <DataTable columns={COLUMNS} rows={ROWS} rowHeight={28} lastRowHeight={32} />
       </CardBody>
     </Card>
   );

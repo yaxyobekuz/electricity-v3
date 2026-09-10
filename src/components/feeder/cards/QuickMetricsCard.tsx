@@ -77,7 +77,7 @@ const METRICS: readonly QuickMetric[] = [
 export function QuickMetricsCard({ className }: { className?: string }) {
   return (
     <Card className={className}>
-      <CardHeader title="Tezkor ko&rsquo;rsatgichlar">
+      <CardHeader title="Tezkor ko&rsquo;rsatgichlar" titleClassName="text-black">
         <IconPill icon={FileDown} label="Yuklab olish" />
       </CardHeader>
 
