@@ -15,59 +15,63 @@ import {
 import { HomeKpiCard, type HomeKpiCardProps } from "@/components/home/HomeKpiCard";
 
 /**
- * Sparkline qiymatlari 0..1 ulushda (0 - eng past, 1 - eng baland nuqta).
+ * Sparkline qatorlari - HAQIQIY o'lchov birligida (kWh, foiz, dona), ulush
+ * emas: shkalani `KpiSparkline` ichidagi nivo grafigi o'zi hisoblaydi va har
+ * bir qator o'z diapazonida chiziladi. Oxirgi nuqta doim kartada ko'rsatilgan
+ * qiymatga teng.
+ *
  * Har bir ko'rsatkich o'z ohangida: iste'mol va abonentlar o'sadi,
  * yo'qotishlar tushadi, transformatorlar deyarli tekis, ogohlantirishlar esa
- * oxirida keskin sakraydi. Bir xil massivlar ishlatilmaydi - aks holda
- * sakkiz karta bir xil grafik bilan ko'rinardi.
+ * oxirida keskin sakraydi.
  */
 
-/** Jami iste'mol - notekis, ammo aniq o'suvchi trend (15 nuqta). */
+/** Jami iste'mol, kunlik kWh - notekis, ammo aniq o'suvchi trend (15 kun). */
 const TOTAL_CONSUMPTION = [
-  0.32, 0.28, 0.41, 0.38, 0.5, 0.46, 0.58, 0.62, 0.55, 0.68, 0.72, 0.66, 0.81,
-  0.88, 0.94,
+  912_000, 904_000, 928_000, 921_000, 947_000, 940_000, 966_000, 973_000,
+  961_000, 990_000, 999_000, 986_000, 1_017_000, 1_035_000, 1_048_000,
 ] as const;
 
-/** Foydali energiya - iste'molga hamohang, biroq silliqroq (15 nuqta). */
+/** Foydali energiya, kunlik kWh - iste'molga hamohang, biroq silliqroq. */
 const USEFUL_ENERGY = [
-  0.4, 0.45, 0.42, 0.52, 0.56, 0.51, 0.6, 0.64, 0.61, 0.7, 0.73, 0.69, 0.78,
-  0.84, 0.9,
+  631_000, 638_000, 634_000, 648_000, 654_000, 647_000, 660_000, 666_000,
+  662_000, 675_000, 681_000, 674_000, 697_000, 710_000, 722_500,
 ] as const;
 
-/** Texnik yo'qotishlar - sekin, pog'onali kamayish (16 nuqta). */
+/** Texnik yo'qotishlar, kunlik kWh - sekin, pog'onali kamayish (16 kun). */
 const TECHNICAL_LOSS = [
-  0.86, 0.9, 0.82, 0.78, 0.84, 0.74, 0.7, 0.75, 0.66, 0.6, 0.64, 0.55, 0.5,
-  0.53, 0.44, 0.38,
+  92_400, 94_000, 90_900, 89_300, 91_600, 87_700, 86_100, 88_000, 84_500,
+  82_200, 83_700, 80_200, 78_300, 79_400, 76_800, 75_200,
 ] as const;
 
-/** Tijorat yo'qotishlar - kuchli tebranish fonida tushish (14 nuqta). */
+/** Tijorat yo'qotishlar, kunlik kWh - kuchli tebranish fonida tushish. */
 const COMMERCIAL_LOSS = [
-  0.78, 0.62, 0.85, 0.58, 0.7, 0.5, 0.66, 0.44, 0.6, 0.38, 0.52, 0.3, 0.46,
-  0.26,
+  64_900, 60_100, 67_000, 59_200, 62_800, 57_300, 61_100, 55_400, 59_300,
+  53_600, 57_200, 51_800, 55_600, 50_300,
 ] as const;
 
-/** Umumiy yo'qotish foizi - barqaror pasayish (15 nuqta). */
+/** Umumiy yo'qotish, foiz - barqaror pasayish (15 kun). */
 const TOTAL_LOSS = [
-  0.92, 0.88, 0.9, 0.81, 0.76, 0.79, 0.7, 0.64, 0.67, 0.58, 0.52, 0.55, 0.45,
-  0.4, 0.34,
+  14.9, 14.7, 14.8, 14.4, 14.1, 14.2, 13.8, 13.5, 13.6, 13.2, 12.9, 13.0,
+  12.5, 12.3, 12.0,
 ] as const;
 
-/** Faol iste'molchilar - pog'onali o'sish, orada turg'unlik (16 nuqta). */
+/** Faol iste'molchilar, dona - pog'onali o'sish, orada turg'unlik (16 kun). */
 const ACTIVE_CONSUMERS = [
-  0.22, 0.24, 0.3, 0.31, 0.3, 0.38, 0.44, 0.45, 0.44, 0.53, 0.58, 0.6, 0.59,
-  0.68, 0.76, 0.82,
+  66_180, 66_290, 66_620, 66_680, 66_620, 67_060, 67_390, 67_450, 67_390,
+  67_890, 68_160, 68_270, 68_210, 68_710, 69_150, 69_420,
 ] as const;
 
-/** Transformatorlar - soni o'zgarmaydi, chiziq deyarli tekis (14 nuqta). */
+/**
+ * Soz transformatorlar, dona - son deyarli o'zgarmaydi. `KpiSparkline`
+ * bunday qatorni ataylab keng shkalada chizadi (o'rtacha qiymatning 6% i),
+ * aks holda 50-52 oralig’idagi tebranish tishli arraga aylanib ketardi.
+ */
 const TRANSFORMERS = [
-  0.5, 0.52, 0.5, 0.49, 0.51, 0.5, 0.52, 0.5, 0.48, 0.5, 0.51, 0.5, 0.49, 0.5,
+  51, 52, 51, 50, 51, 51, 52, 51, 50, 51, 51, 51, 50, 51,
 ] as const;
 
-/** Kritik ogohlantirishlar - past fon, oxirida keskin ko'tarilish (15 nuqta). */
-const CRITICAL_ALERTS = [
-  0.12, 0.1, 0.18, 0.14, 0.1, 0.22, 0.16, 0.12, 0.3, 0.2, 0.16, 0.42, 0.55,
-  0.48, 0.86,
-] as const;
+/** Kritik ogohlantirishlar, dona - past fon, oxirida ko'tarilish (15 kun). */
+const CRITICAL_ALERTS = [0, 0, 1, 1, 0, 1, 1, 0, 2, 1, 1, 2, 2, 1, 3] as const;
 
 /**
  * `className` ataylab chiqarib tashlangan: grid ustuni (`col-span-3`) faqat shu

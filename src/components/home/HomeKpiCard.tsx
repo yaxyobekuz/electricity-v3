@@ -1,3 +1,4 @@
+import { KpiSparkline } from "@/components/home/KpiSparkline";
 import { Card } from "@/components/ui/Card";
 import { type GlyphIcon, Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/ui/cn";
@@ -34,75 +35,12 @@ export interface HomeKpiCardProps {
   deltaTone: DeltaTone;
   /** Pastdagi kulrang izoh qatori. */
   note: string;
-  /** Sparkline nuqtalari 0..1 ulushda (0 - eng past, 1 - eng baland). */
+  /**
+   * Trend grafigining qatori - haqiqiy o'lchov birligida (kWh, foiz,
+   * dona). Shkalani `KpiSparkline` ning o'zi hisoblaydi.
+   */
   points: readonly number[];
   className?: string;
-}
-
-/** SVG koordinatalarini qisqartirish - `path` satri keraksiz uzaymasin. */
-function round(value: number): number {
-  return Math.round(value * 100) / 100;
-}
-
-/**
- * KPI kartasining pastidagi mayda trend chizig'i.
- *
- * `preserveAspectRatio="none"` - chiziq quti kengligiga to'liq cho'ziladi,
- * shuning uchun koordinatalar 100x32 shartli tizimda hisoblanadi. Aynan shu
- * cho'zilish sababli oxirgi nuqtaga marker (doira) qo'yilmaydi: u ellipsga
- * aylanib ketardi. Chiziq qalinligi esa `vectorEffect` bilan saqlanadi.
- *
- * Vertikal diapazon 4..30 (26px) - yuqorida va pastda chiziq kesilmasligi
- * uchun 2px zaxira qoladi.
- */
-export function KpiSparkline({
-  points,
-  stroke,
-  className,
-}: {
-  points: readonly number[];
-  stroke: string;
-  className?: string;
-}) {
-  if (points.length === 0) return null;
-
-  const step = points.length > 1 ? 100 / (points.length - 1) : 0;
-  const coords = points.map((value, index) => ({
-    x: round(index * step),
-    y: round(30 - value * 26),
-  }));
-
-  const line = coords.map((point) => `${point.x},${point.y}`).join(" ");
-  // To'ldirish uchun yopiq kontur: chiziqning ostki qismi quti tubiga tushadi.
-  // Kontur oxirgi nuqtaning `x` i bo'yicha yopiladi (100 emas): bitta nuqtada
-  // ham to'ldirish chiziqdan oshib, bo'sh kenglikni bo'yab qo'ymaydi.
-  const lastX = coords[coords.length - 1].x;
-  const area = [
-    "M0,32",
-    ...coords.map((point) => `L${point.x},${point.y}`),
-    `L${lastX},32`,
-    "Z",
-  ].join(" ");
-
-  return (
-    <svg
-      viewBox="0 0 100 32"
-      preserveAspectRatio="none"
-      aria-hidden="true"
-      className={cn("h-full w-full", className)}
-    >
-      <path d={area} fill={stroke} fillOpacity={0.12} />
-      <polyline
-        points={line}
-        fill="none"
-        stroke={stroke}
-        strokeWidth={1.6}
-        strokeLinejoin="round"
-        strokeLinecap="round"
-        vectorEffect="non-scaling-stroke"
-      />
-    </svg>
-  );
 }
 
 /**
@@ -170,7 +108,8 @@ export function HomeKpiCard({
       <p className="mt-0.5 shrink-0 truncate text-[10px] text-ink-soft">{note}</p>
 
       {/* Yagona `flex-1` element - qolgan balandlikni to'liq egallaydi va
-          kartaning tubiga yopishadi. `min-h-0` - SVG qutini cho'zib yubormasin. */}
+          kartaning tubiga yopishadi. `min-h-0` shart: nivo ota elementning
+          balandligini o'lchaydi, cheklovsiz u kartani cho'zib yuborardi. */}
       <div className="min-h-0 flex-1 pt-1.5">
         <KpiSparkline points={points} stroke={stroke} />
       </div>
