@@ -14,9 +14,72 @@ export interface MapMarker {
   lat: number;
   lng: number;
   label: string;
+  /** Chizuvchiga (`renderMarker`) beriladigan tur: "substation", "tp" va h.k. */
+  kind?: string;
+  /** Qidiruvga mos kelmagan marker - xiralashtirib ko'rsatiladi. */
+  dimmed?: boolean;
 }
 
+/** Xarita ustidagi tarmoq liniyasi (110 kV, 10 kV, feeder). */
+export interface MapPolyline {
+  id: string;
+  path: ReadonlyArray<{ lat: number; lng: number }>;
+  color: string;
+  width: number;
+  /** Uzuq chiziq - Google'da alohida "icons" bilan chiziladi. */
+  dashed?: boolean;
+}
+
+/** Doiraviy zona (masalan yo'qotishlar o'chog'i). */
+export interface MapCircle {
+  id: string;
+  center: { lat: number; lng: number };
+  /** Radius - METRDA (Google shuni kutadi, piksel emas). */
+  radius: number;
+  color: string;
+}
+
+export type MapTypeId = "hybrid" | "roadmap" | "satellite";
+
 export type MarkerRenderer = (marker: MapMarker, selected: boolean) => string;
+
+/** Standart bo'sh ro'yxatlar - har renderda yangi massiv yaratilmasin. */
+const NO_POLYLINES: readonly MapPolyline[] = [];
+const NO_CIRCLES: readonly MapCircle[] = [];
+
+/**
+ * Uzuq chiziq Google Maps'da `strokeOpacity: 0` va takrorlanuvchi "icons"
+ * orqali chiziladi - `strokeDasharray` ga to'g'ridan-to'g'ri mos kelmaydi.
+ */
+function polylineOptions(line: MapPolyline): any {
+  const base = { path: line.path.map((point) => ({ ...point })), clickable: false };
+  if (!line.dashed) {
+    return {
+      ...base,
+      strokeColor: line.color,
+      strokeWeight: line.width,
+      strokeOpacity: 0.95,
+    };
+  }
+  return {
+    ...base,
+    strokeColor: line.color,
+    strokeOpacity: 0,
+    icons: [
+      {
+        icon: {
+          path: "M 0,-1 0,1",
+          strokeColor: line.color,
+          strokeOpacity: 0.95,
+          strokeWeight: line.width,
+          scale: 2,
+        },
+        offset: "0",
+        repeat: "10px",
+      },
+    ],
+  };
+}
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim();
 
@@ -104,6 +167,19 @@ interface MapCanvasProps {
   selectedId?: string | null;
   onSelect?: (id: string) => void;
   renderMarker?: MarkerRenderer;
+  /** Tarmoq liniyalari - markerlar ostida chiziladi. */
+  polylines?: readonly MapPolyline[];
+  /** Doiraviy zonalar - eng pastki qatlam. */
+  circles?: readonly MapCircle[];
+  /** Asosiy qatlam turi; standart - uslublangan "roadmap". */
+  mapTypeId?: MapTypeId;
+  /**
+   * Qiymati o'zgarganda ko'rinish `center`/`zoom` ga qaytariladi.
+   * Foydalanuvchi xaritani surganidan keyin "boshlang'ich holat" tugmasi
+   * ishlashi uchun kerak: `center` o'zgarmagani uchun effekt o'z-o'zidan
+   * qayta ishga tushmaydi.
+   */
+  recenterKey?: number;
   className?: string;
   /** Kichik kartalarda qisqaroq xato matni ko'rsatiladi. */
   compactFallback?: boolean;
@@ -116,12 +192,18 @@ export function MapCanvas({
   selectedId = null,
   onSelect,
   renderMarker = pinMarker,
+  polylines = NO_POLYLINES,
+  circles = NO_CIRCLES,
+  mapTypeId = "roadmap",
+  recenterKey = 0,
   className,
   compactFallback = false,
 }: MapCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const overlaysRef = useRef<Record<string, { overlay: any; el: HTMLElement }>>({});
+  /** Polyline/Circle obyektlari - qayta chizishdan oldin tozalanadi. */
+  const shapesRef = useRef<any[]>([]);
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
   const renderRef = useRef(renderMarker);
@@ -131,7 +213,11 @@ export function MapCanvas({
     API_KEY ? "loading" : "idle",
   );
 
-  const markersKey = markers.map((m) => m.id + ":" + m.lat + ":" + m.lng + ":" + m.label).join("|");
+  // `kind` va `dimmed` ham ko'rinishga ta'sir qiladi, shuning uchun kalit
+  // butun obyektdan olinadi (markerlar soni kam - narxi sezilmaydi).
+  const markersKey = JSON.stringify(markers);
+  const polylinesKey = JSON.stringify(polylines);
+  const circlesKey = JSON.stringify(circles);
 
   useEffect(() => {
     if (!API_KEY) return;
@@ -148,9 +234,12 @@ export function MapCanvas({
         mapRef.current = new g.maps.Map(containerRef.current, {
           center,
           zoom,
+          mapTypeId,
           disableDefaultUI: true,
           clickableIcons: false,
-          styles: MAP_STYLE,
+          // Uslub faqat "roadmap" ga tegishli - sun'iy yo'ldosh qatlamida
+          // Google uni baribir e'tiborsiz qoldiradi.
+          styles: mapTypeId === "roadmap" ? MAP_STYLE : null,
           backgroundColor: "#f4f2ed",
         });
         setStatus("ready");
@@ -224,13 +313,60 @@ export function MapCanvas({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, selectedId]);
 
+  // Qatlam turi o'zgarsa - uslubni ham birga almashtirish kerak.
+  useEffect(() => {
+    if (status !== "ready" || !mapRef.current) return;
+    mapRef.current.setOptions({
+      mapTypeId,
+      styles: mapTypeId === "roadmap" ? MAP_STYLE : null,
+    });
+  }, [status, mapTypeId]);
+
+  // Liniyalar va zonalar. Markerlar HTML qatlamida (`overlayMouseTarget`)
+  // chizilgani uchun bu geometriya doim ularning ostida qoladi.
+  useEffect(() => {
+    if (status !== "ready") return;
+    const g = (window as any).google;
+    const map = mapRef.current;
+    if (!g || !map) return;
+
+    shapesRef.current.forEach((shape) => shape.setMap(null));
+    shapesRef.current = [];
+
+    circles.forEach((circle) => {
+      shapesRef.current.push(
+        new g.maps.Circle({
+          map,
+          center: { ...circle.center },
+          radius: circle.radius,
+          fillColor: circle.color,
+          fillOpacity: 0.18,
+          strokeColor: circle.color,
+          strokeOpacity: 0.85,
+          strokeWeight: 1.5,
+          clickable: false,
+        }),
+      );
+    });
+
+    polylines.forEach((line) => {
+      shapesRef.current.push(new g.maps.Polyline({ ...polylineOptions(line), map }));
+    });
+
+    return () => {
+      shapesRef.current.forEach((shape) => shape.setMap(null));
+      shapesRef.current = [];
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, polylinesKey, circlesKey]);
+
   // Markaz/zoom o'zgarsa - silliq o'tish.
   useEffect(() => {
     if (status !== "ready" || !mapRef.current) return;
     mapRef.current.panTo(center);
     mapRef.current.setZoom(zoom);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, center.lat, center.lng, zoom]);
+  }, [status, center.lat, center.lng, zoom, recenterKey]);
 
   if (!API_KEY || status === "error") {
     return (
