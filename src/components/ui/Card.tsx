@@ -3,8 +3,11 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/ui/cn";
 
 /**
- * Maketdagi asosiy konteyner: oq fon, 12px radius, 16px ichki bo'shliq.
+ * Maketdagi asosiy konteyner: oq fon, 16px radius, 16px ichki bo'shliq.
  * Balandlik doim ota grid katagiga to'liq bo'ysunadi (`h-full`).
+ *
+ * Radius maketdan piksel bo'yicha o'lchangan: burchak yoyi 00-full.png da
+ * ~16px, 12px emas (chap paneldagi kartalar bilan bir xil).
  */
 export function Card({
   children,
@@ -19,7 +22,7 @@ export function Card({
   return (
     <section
       className={cn(
-        "flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl bg-surface",
+        "flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl bg-surface",
         padded && "p-4",
         className,
       )}
@@ -34,16 +37,23 @@ export function CardHeader({
   title,
   children,
   className,
+  titleClassName,
 }: {
   title: string;
   children?: ReactNode;
   className?: string;
+  /**
+   * Maketda sarlavhalarning aksariyati `#333`, ammo uchtasi (Interaktiv
+   * ko'rinish, Tezkor ko'rsatgichlar, Hisobotlarni yuklab olish) sof qora.
+   * O'sha kartalar `text-black` uzatadi.
+   */
+  titleClassName?: string;
 }) {
   return (
     <header
       className={cn("flex h-8 shrink-0 items-center justify-between gap-2", className)}
     >
-      <h2 className="truncate text-sm font-bold text-ink">{title}</h2>
+      <h2 className={cn("truncate text-sm font-bold text-ink", titleClassName)}>{title}</h2>
       {children ? <div className="flex shrink-0 items-center gap-2">{children}</div> : null}
     </header>
   );
