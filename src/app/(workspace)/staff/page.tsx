@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 
-import { Placeholder } from "@/components/shell/Placeholder";
+import { StaffView } from "@/components/staff/StaffView";
 
-export const metadata: Metadata = { title: "Ma'sul xodimlar" };
+// Sahifa server komponenti bo'lib qoladi: `metadata` faqat shu yerdan
+// eksport qilinadi, holat esa `StaffView` ("use client") ichida.
+export const metadata: Metadata = { title: "Ma’sul xodimlar" };
 
 export default function Page() {
-  return <Placeholder title="Ma'sul xodimlar" />;
+  return <StaffView />;
 }
