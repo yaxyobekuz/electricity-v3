@@ -13,6 +13,8 @@ ma'lumotlar Excel shablonlari orqali yuklanadi.
   fider, yo'qotish) va hisob-kitob formulalari
 - [`.claude/docs/shablonlar.md`](.claude/docs/shablonlar.md) - Excel shablon
   tuzilmalari va parser uchun eslatmalar
+- [`.claude/docs/hisobotlar.md`](.claude/docs/hisobotlar.md) - PDF/Excel
+  hisobot generatorlari va `/api/reports`
 - [`.claude/docs/texnologiya.md`](.claude/docs/texnologiya.md) - buyruqlar,
   baza sozlamalari, Prisma 7 nozikliklari
 
