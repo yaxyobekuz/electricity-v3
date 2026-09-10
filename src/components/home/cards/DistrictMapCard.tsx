@@ -1,7 +1,7 @@
 "use client";
 
-import { ChevronDown, Layers, Minus, Navigation, Plus, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Layers, Minus, Navigation, Plus } from "lucide-react";
+import { useState } from "react";
 
 import {
   MapCanvas,
@@ -14,31 +14,6 @@ import {
 import { Card } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/ui/cn";
-
-/* ---------------------------------------------------------------------------
-   Filtr qatori
-   --------------------------------------------------------------------------- */
-
-interface MapFilter {
-  id: string;
-  /** Tugmadagi "Tuman: ..." ko'rinishidagi old qo'shimcha. */
-  prefix: string;
-  options: readonly string[];
-}
-
-const FILTERS: readonly MapFilter[] = [
-  { id: "district", prefix: "Tuman", options: ["Baliqchi", "Chinobod", "Fayzobod"] },
-  {
-    id: "area",
-    prefix: "Hudud",
-    options: ["Barchasi", "Markaz", "Sarnovul", "Qorako’l"],
-  },
-  {
-    id: "transformer",
-    prefix: "Transformator",
-    options: ["Barchasi", "Sog’lom", "Ogohlantirish", "Kritik"],
-  },
-];
 
 /* ---------------------------------------------------------------------------
    Geografiya
@@ -91,7 +66,7 @@ interface DistrictObject {
   x: number;
   y: number;
   kind: MarkerKind;
-  /** Qidiruv va ekran o'quvchisi uchun o'zbekcha nom. */
+  /** Marker bosilganda chiqadigan yorliq (va ekran o’quvchisi uchun nom). */
   label: string;
 }
 
@@ -131,6 +106,18 @@ const OBJECTS: readonly DistrictObject[] = [
   { id: "tp-15", x: 616, y: 178, kind: "ok", label: "TP-194 Qorako’l" },
   { id: "tp-16", x: 632, y: 218, kind: "ok", label: "TP-211 Qorako’l" },
 ];
+
+/** `MapCanvas` kutadigan ko'rinish - sxema koordinatalari bir marta o'giriladi. */
+const MARKERS: MapMarker[] = OBJECTS.map((object) => {
+  const position = toLatLng(object.x, object.y);
+  return {
+    id: object.id,
+    lat: position.lat,
+    lng: position.lng,
+    label: object.label,
+    kind: object.kind,
+  };
+});
 
 /** Tarmoq liniyalari: kuchlanish darajasi rang va qalinlikni belgilaydi. */
 type LineLevel = "feeder" | "kv10" | "kv110";
@@ -249,9 +236,7 @@ const districtMarker: MarkerRenderer = (marker, selected) => {
     : "";
 
   return (
-    '<div style="position:relative;transform:translateY(50%);opacity:' +
-    (marker.dimmed ? "0.3" : "1") +
-    '">' +
+    '<div style="position:relative;transform:translateY(50%)">' +
     shape +
     tooltip +
     "</div>"
@@ -338,21 +323,11 @@ const MAP_TYPES: readonly MapTypeId[] = ["roadmap", "hybrid"];
  * podstansiya kvadrati liniya ostida qolib ketmaydi.
  */
 export function DistrictMapCard({ className }: { className?: string }) {
-  // Har bir filtr o'z ro'yxatini aylantiradi (maketda ochiluvchi ro'yxat yo'q).
-  const [filterIndexes, setFilterIndexes] = useState<readonly number[]>([0, 0, 0]);
-  const [query, setQuery] = useState("");
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
   const [mapTypeIndex, setMapTypeIndex] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // Har bosishda ortadi - `MapCanvas` ko'rinishni qayta markazlashtiradi.
   const [recenterKey, setRecenterKey] = useState(0);
-
-  const cycleFilter = (index: number) =>
-    setFilterIndexes((prev) =>
-      prev.map((value, position) =>
-        position === index ? (value + 1) % FILTERS[index].options.length : value,
-      ),
-    );
 
   const changeZoom = (step: number) =>
     setZoom((prev) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, prev + step)));
@@ -362,26 +337,6 @@ export function DistrictMapCard({ className }: { className?: string }) {
     setSelectedId(null);
     setRecenterKey((prev) => prev + 1);
   };
-
-  // Qidiruv markerlarni yashirmaydi, mos kelmaganini xiralashtiradi -
-  // shunda tarmoq tuzilmasi ko'rinishida qoladi.
-  const needle = query.trim().toLowerCase();
-
-  const markers = useMemo<MapMarker[]>(
-    () =>
-      OBJECTS.map((object) => {
-        const position = toLatLng(object.x, object.y);
-        return {
-          id: object.id,
-          lat: position.lat,
-          lng: position.lng,
-          label: object.label,
-          kind: object.kind,
-          dimmed: needle.length > 0 && !object.label.toLowerCase().includes(needle),
-        };
-      }),
-    [needle],
-  );
 
   return (
     <Card padded={false} className={cn("p-3", className)}>
@@ -393,40 +348,10 @@ export function DistrictMapCard({ className }: { className?: string }) {
         </span>
       </div>
 
-      {/* 2) Filtrlar va qidiruv */}
-      <div className="mt-2 flex shrink-0 items-center gap-2">
-        {FILTERS.map((filter, index) => (
-          <button
-            key={filter.id}
-            type="button"
-            onClick={() => cycleFilter(index)}
-            aria-label={`${filter.prefix}ni o’zgartirish`}
-            className="flex h-7 items-center gap-1 rounded-md bg-canvas px-2 text-[10px] font-medium text-ink transition-colors hover:bg-black/5"
-          >
-            {filter.prefix}: {filter.options[filterIndexes[index]]}
-            <Icon icon={ChevronDown} size={12} />
-          </button>
-        ))}
-
-        <div className="relative ml-auto w-[150px]">
-          <span className="pointer-events-none absolute top-1/2 left-2 -translate-y-1/2 text-ink-soft">
-            <Icon icon={Search} size={14} />
-          </span>
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            aria-label="Xaritadan qidirish"
-            placeholder="Qidiruv..."
-            className="h-7 w-full rounded-md bg-canvas pr-2 pl-7 text-[10px] text-ink outline-none placeholder:text-ink-soft"
-          />
-        </div>
-      </div>
-
-      {/* 3) Xarita maydoni */}
+      {/* 2) Xarita maydoni */}
       <div className="relative mt-2 min-h-0 flex-1 overflow-hidden rounded-lg">
         <MapCanvas
-          markers={markers}
+          markers={MARKERS}
           center={CENTER}
           zoom={zoom}
           recenterKey={recenterKey}

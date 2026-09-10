@@ -16,8 +16,6 @@ export interface MapMarker {
   label: string;
   /** Chizuvchiga (`renderMarker`) beriladigan tur: "substation", "tp" va h.k. */
   kind?: string;
-  /** Qidiruvga mos kelmagan marker - xiralashtirib ko'rsatiladi. */
-  dimmed?: boolean;
 }
 
 /** Xarita ustidagi tarmoq liniyasi (110 kV, 10 kV, feeder). */
@@ -213,8 +211,8 @@ export function MapCanvas({
     API_KEY ? "loading" : "idle",
   );
 
-  // `kind` va `dimmed` ham ko'rinishga ta'sir qiladi, shuning uchun kalit
-  // butun obyektdan olinadi (markerlar soni kam - narxi sezilmaydi).
+  // `kind` ham ko'rinishga ta'sir qiladi, shuning uchun kalit butun
+  // obyektdan olinadi (markerlar soni kam - narxi sezilmaydi).
   const markersKey = JSON.stringify(markers);
   const polylinesKey = JSON.stringify(polylines);
   const circlesKey = JSON.stringify(circles);

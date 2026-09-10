@@ -44,7 +44,7 @@ export const RAIL_SECTIONS: RailSection[] = [
     key: "workspace",
     label: "Boshqaruv paneli",
     Icon: House,
-    href: "/feeders",
+    href: "/dashboard",
     match: [
       "/dashboard",
       "/substations",
