@@ -30,6 +30,8 @@ export function DataTable({
   rows,
   className,
   compact = false,
+  rowHeight,
+  lastRowHeight,
 }: {
   columns: TableColumn[];
   rows: TableRow[];
@@ -40,7 +42,16 @@ export function DataTable({
    * 30/29/35 o’lchamda qoladi.
    */
   compact?: boolean;
+  /**
+   * Maketda har bir jadvalning qator balandligi biroz farq qiladi
+   * (28 / 29 / 30 px). Kerak bo'lganda aynan qiymat beriladi, aks holda
+   * variant bo'yicha standart ishlatiladi.
+   */
+  rowHeight?: number;
+  lastRowHeight?: number;
 }) {
+  const bodyHeight = rowHeight ?? (compact ? 24 : 29);
+  const footHeight = lastRowHeight ?? (compact ? 28 : 35);
   return (
     <div className={cn("flex min-h-0 w-full flex-col overflow-hidden", className)}>
       {/* Qator balandliklari maketdan aynan o'lchangan: sarlavha 30, oddiy
@@ -72,17 +83,11 @@ export function DataTable({
         return (
           <div
             key={row.key}
+            style={{ height: last ? footHeight : bodyHeight }}
             className={cn(
               "flex w-full shrink-0 items-center px-1.5",
               last && "rounded-b-md bg-canvas",
               !last && "border-b border-solid border-[#f0f0f0]",
-              compact
-                ? last
-                  ? "h-[28px]"
-                  : "h-[24px]"
-                : last
-                  ? "h-[35px]"
-                  : "h-[29px]",
             )}
           >
             {row.cells.map((cell, cellIndex) => {
@@ -112,7 +117,8 @@ const BADGE_TONE = {
   green: "bg-tint-green text-accent-green",
   red: "bg-tint-red text-[#cf4646]",
   amber: "bg-tint-brown text-[#f59e0b]",
-  blue: "bg-tint-blue text-brand",
+  // Maketda "Yangi" nishoni #EFF6FF fon + #3B82F6 matn (brend ko'ki emas).
+  blue: "bg-tint-blue text-accent-blue",
   purple: "bg-tint-purple text-accent-purple",
 } as const;
 
@@ -124,8 +130,8 @@ export function Badge({ tone, children }: { tone: BadgeTone; children: ReactNode
     <span className="flex justify-center">
       <span
         className={cn(
-          // Maketda nishon 17px: 2px + 13px matn qutisi + 2px.
-          "inline-flex shrink-0 rounded-full px-2 py-0.5 text-[10px] leading-[13px] font-semibold whitespace-nowrap",
+          // Maketda nishon 18px: 2.5px + 13px matn qutisi + 2.5px.
+          "inline-flex shrink-0 rounded-full px-2 py-[2.5px] text-[10px] leading-[13px] font-semibold whitespace-nowrap",
           BADGE_TONE[tone],
         )}
       >
