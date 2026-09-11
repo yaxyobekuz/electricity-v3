@@ -4,6 +4,8 @@ Manba maket: Figma fayl `73vcnX4vOx0MnLcnecVFo3` ("Assets (Softlance)").
 
 - Fider sahifasi: `node-id=4029:930` ("Feeder detail", 1920x1080)
 - Xarita sahifasi: `node-id=3947:166` ("Map", 1920x1080)
+- Bosh sahifa: `node-id=4126:47` ("Home", 1920x1080) — tuzilma va
+  komponentlar xaritasi: `.claude/figma/home/notes.md`
 
 ## Maket tuzilmasi
 
