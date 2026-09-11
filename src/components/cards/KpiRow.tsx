@@ -11,18 +11,18 @@ import {
   ZapOff,
 } from "lucide-react";
 
-import { KpiCard, type KpiCardProps } from "@/components/feeder/KpiCard";
+import { KpiCard, type KpiCardProps } from "@/components/cards/KpiCard";
 
 /**
  * Ustun balandliklari maketdan aynan ko'chirilgan (39px trek = 1).
  * Ritm "silliq" emas: to'la balandlikdagi ustunlar qisqalari bilan aralash.
  */
-const DAILY_CALCULATED = [
+export const DAILY_CALCULATED = [
   1, 1, 0.744, 1, 0.513, 0.821, 0.821, 1, 0.231, 1, 0.564, 0.615, 1, 1, 1, 1, 1,
   0.615, 0.744, 0.821, 1, 0.359, 0.667, 1, 0.821, 0.744, 0.282, 0.667, 1, 1,
 ] as const;
 
-const DAILY_CONSUMED = [
+export const DAILY_CONSUMED = [
   1, 1, 0.744, 1, 0.513, 0.821, 0.821, 1, 0.231, 1, 0.564, 0.615, 0.744, 0.667,
   1, 0.744, 0.744, 0.615, 0.744, 0.821, 1, 0.359, 0.667, 1, 0.821, 0.744, 0.282,
   0.667, 0.282, 1,

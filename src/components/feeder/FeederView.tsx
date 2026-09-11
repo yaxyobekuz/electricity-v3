@@ -1,15 +1,15 @@
-import { CompletedWorksCard } from "./cards/CompletedWorksCard";
-import { ConsumptionDynamicsCard } from "./cards/ConsumptionDynamicsCard";
-import { DebtCard } from "./cards/DebtCard";
-import { DownloadReportsCard } from "./cards/DownloadReportsCard";
-import { InteractiveMapCard } from "./cards/InteractiveMapCard";
-import { KpiRow } from "./cards/KpiRow";
-import { LossDamageCard } from "./cards/LossDamageCard";
-import { PlannedWorksCard } from "./cards/PlannedWorksCard";
-import { QuickMetricsCard } from "./cards/QuickMetricsCard";
-import { ResponsibleStaffCard } from "./cards/ResponsibleStaffCard";
-import { TopTransformersCard } from "./cards/TopTransformersCard";
-import { ViolationsCard } from "./cards/ViolationsCard";
+import { CompletedWorksCard } from "@/components/cards/CompletedWorksCard";
+import { ConsumptionDynamicsCard } from "@/components/cards/ConsumptionDynamicsCard";
+import { DebtCard } from "@/components/cards/DebtCard";
+import { DownloadReportsCard } from "@/components/cards/DownloadReportsCard";
+import { InteractiveMapCard } from "@/components/cards/InteractiveMapCard";
+import { KpiRow } from "@/components/cards/KpiRow";
+import { LossDamageCard } from "@/components/cards/LossDamageCard";
+import { PlannedWorksCard } from "@/components/cards/PlannedWorksCard";
+import { QuickMetricsCard } from "@/components/cards/QuickMetricsCard";
+import { ResponsibleStaffCard } from "@/components/cards/ResponsibleStaffCard";
+import { TopTransformersCard } from "@/components/cards/TopTransformersCard";
+import { ViolationsCard } from "@/components/cards/ViolationsCard";
 
 /**
  * Fider sahifasi (Figma `4029:930` -> "Main").
