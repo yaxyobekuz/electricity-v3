@@ -25,11 +25,25 @@ const TEL_HREF = `tel:${STAFF.phone.replace(/\s/g, "")}`;
  * Tana: 48px avatar + 12px + ism/telefon ustuni, o'ngga surilgan kapsula.
  *
  * Pastki ichki bo'shliq maketda 8px (yuqorisi 16): 16 + 18 + 73 + 25 + 8 = 140.
+ *
+ * Bosh sahifada xuddi shu karta balandroq (178px) va sarlavhasi boshqacha
+ * ("Energetika rahbari"), shuning uchun matnlar propga chiqarilgan. Ichki
+ * blok `flex-1` bo'lgani uchun qo'shimcha balandlik o'z-o'zidan taqsimlanadi.
  */
-export function ResponsibleStaffCard({ className }: { className?: string }) {
+export function ResponsibleStaffCard({
+  title = "Ma’sul xodim",
+  footerLabel = "Ba’tafsil",
+  footerHref,
+  className,
+}: {
+  title?: string;
+  footerLabel?: string;
+  footerHref?: string;
+  className?: string;
+}) {
   return (
     <Card className={cn("pb-2", className)}>
-      <h2 className="shrink-0 text-sm leading-[18px] font-bold text-ink">Ma&rsquo;sul xodim</h2>
+      <h2 className="shrink-0 truncate text-sm leading-[18px] font-bold text-ink">{title}</h2>
 
       <div className="flex min-h-0 flex-1 items-center gap-3">
         <Image
@@ -62,7 +76,7 @@ export function ResponsibleStaffCard({ className }: { className?: string }) {
 
       {/* Maketdagi 1px ajratgich (#dddddd) - `CardFooterLink` da yo'q. */}
       <div className="shrink-0 border-t border-[#dddddd]">
-        <CardFooterLink>Ba&rsquo;tafsil</CardFooterLink>
+        <CardFooterLink href={footerHref}>{footerLabel}</CardFooterLink>
       </div>
     </Card>
   );
