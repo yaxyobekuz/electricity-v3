@@ -1,57 +1,118 @@
-import { ConsumptionLossCard } from "./cards/ConsumptionLossCard";
-import { DebtStructureCard } from "./cards/DebtStructureCard";
-import { DistrictMapCard } from "./cards/DistrictMapCard";
-import { EnergyDistributionCard } from "./cards/EnergyDistributionCard";
-import { EventLogCard } from "./cards/EventLogCard";
-import { ForecastCard } from "./cards/ForecastCard";
-import { KpiRow } from "./cards/KpiRow";
-import { NetworkTopologyCard } from "./cards/NetworkTopologyCard";
-import { QuickIndicatorsCard } from "./cards/QuickIndicatorsCard";
-import { RecommendationsCard } from "./cards/RecommendationsCard";
-import { SituationCenterCard } from "./cards/SituationCenterCard";
-import { TransformerStatusCard } from "./cards/TransformerStatusCard";
-import { HomeTopBar } from "./HomeTopBar";
+import { CompletedWorksCard } from "@/components/cards/CompletedWorksCard";
+import { ConsumptionDynamicsCard } from "@/components/cards/ConsumptionDynamicsCard";
+import { DebtCard } from "@/components/cards/DebtCard";
+import { DownloadReportsCard } from "@/components/cards/DownloadReportsCard";
+import { InteractiveMapCard } from "@/components/cards/InteractiveMapCard";
+import { KpiRow } from "@/components/cards/KpiRow";
+import { LossDamageCard } from "@/components/cards/LossDamageCard";
+import { PlannedWorksCard } from "@/components/cards/PlannedWorksCard";
+import { QuickMetricsCard } from "@/components/cards/QuickMetricsCard";
+import { ResponsibleStaffCard } from "@/components/cards/ResponsibleStaffCard";
+import { TopBarsCard, type TopBarItem } from "@/components/cards/TopBarsCard";
+import { ViolationsCard } from "@/components/cards/ViolationsCard";
+
+import { DataCard } from "./cards/DataCard";
+import { FilterCard } from "./cards/FilterCard";
+import { HomeKpiStack } from "./cards/HomeKpiStack";
+
+/*
+ * Diagramma qiymatlari maketdagi ustun uzunliklaridan qayta hisoblangan
+ * (ustun eni / 391.67 * shkala chegarasi), podstansiyalarniki esa maketda
+ * matn sifatida ham yozilgan: 47.9 va 71.05.
+ */
+
+const TOP_SUBSTATIONS: readonly TopBarItem[] = [
+  { id: "chinobod", label: "Chinobod", value: 47.9 },
+  { id: "baliqchi", label: "Baliqchi", value: 71.05 },
+];
+
+const TOP_FEEDERS: readonly TopBarItem[] = [
+  { id: "xaqulobod", label: "Xaqulobod", value: 47 },
+  { id: "tovuqxona", label: "Tovuqxona", value: 18.5 },
+  { id: "chinobod", label: "Chinobod", value: 56.8 },
+  { id: "qiyali", label: "Qiyali", value: 75.6 },
+  { id: "maslahat", label: "Maslahat", value: 27.9 },
+  { id: "baliqchi", label: "Baliqchi", value: 105.7 },
+];
 
 /**
- * "Asosiy" (Bosh sahifa) - tuman darajasidagi umumiy boshqaruv paneli.
+ * "Asosiy" (Bosh sahifa) - Figma `4126:47` ("Home", 1920x1080).
  *
- * 24 ustunli grid, 8px oraliq. Makro tuzilma uch ustunli: chapda tahlil
- * (span-7), o'rtada xarita va uning ostidagi kartalar (span-11 = 6 + 5),
- * o'ngda vaziyatlar/tavsiyalar ustuni (span-6).
+ * Maket fider sahifasi bilan bir xil tarmoqda qurilgan: `Main` 1476px, 18
+ * ustun, 8px oraliq. Shuning uchun kartalarning ko'pi aynan o'sha komponent
+ * (`@/components/cards/`), faqat KPI ustuni, filtr va ikkita "Eng ko'p sarf"
+ * diagrammasi shu sahifaga xos.
  *
- * Qator balandliklari `minmax(Npx, Nfr)`: 60 + 144 + 352 + 226 + 250 va 4 ta
- * 8px oraliq = 1064px, ya'ni 1080px ekranda hamma narsa skrollsiz sig'adi;
- * balandroq ekranda qatorlar mutanosib cho'ziladi.
+ * Qator balandliklari maketdan aynan:
  *
- * Balandliklar kartalarning eng zich kontentiga qarab tanlangan: 352px -
- * "Vaziyatlar markazi" dagi 6 ta hodisa (6 x 37 + 5 x 4 = 242px) uchun,
- * 226/250px - `compact` jadvallarning 5 tadan qatori (150px) uchun.
+ *   196  KPI kartalari (6 x span-3)
+ *   402  KPI ustuni (span-4) | Interaktiv xarita (span-10) | Filtr+Ma'lumot (span-4)
+ *   336  Qoidabuzarlik+Ma'sul xodim (span-6) | Qarzdorlik | Yo'qotish zarari | Tezkor (span-4)
+ *   298  Iste'mol dinamikasi | Top podstansiyalar | Top fiderlar (span-6)
+ *   209  Rejalashtirilgan ishlar (span-8) | Bajarilgan ishlar (span-6) | Hisobotlar (span-4)
+ *
+ * Jami 1441 + 4x8 = 1473px, ya'ni 1064px lik ish maydoniga sig'maydi va
+ * sahifa VERTIKAL SKROLL qilinadi - maketda ham shunday (`Main` balandligi
+ * 1699px).
  */
 export function HomeView() {
   return (
-    <div className="grid h-full min-h-0 grid-cols-[repeat(24,minmax(0,1fr))] grid-rows-[60px_minmax(144px,144fr)_minmax(352px,352fr)_minmax(226px,226fr)_minmax(250px,250fr)] gap-2 overflow-y-auto scrollbar-none">
-      {/* Yuqori sarlavha yo'lagi */}
-      <HomeTopBar className="col-span-24" />
-
-      {/* 1-qator - 8 ta KPI kartasi (8 x span-3) */}
+    <div className="grid h-full min-h-0 grid-cols-[repeat(18,minmax(0,1fr))] grid-rows-[196px_402px_336px_298px_209px] gap-2 overflow-y-auto scrollbar-none">
+      {/* 1-qator - 6 ta KPI kartasi */}
       <KpiRow />
 
       {/* 2-qator */}
-      <ConsumptionLossCard className="col-span-7" />
-      <DistrictMapCard className="col-span-11" />
-      <SituationCenterCard className="col-span-6" />
+      <HomeKpiStack className="col-span-4" />
+      <InteractiveMapCard className="col-span-10" />
+      {/* Ikki karta 8px oraliq bilan: 197 + 8 + 197 = 402. */}
+      <div className="col-span-4 grid min-h-0 grid-rows-2 gap-2">
+        <FilterCard />
+        <DataCard />
+      </div>
 
-      {/* 3-qator */}
-      <TransformerStatusCard className="col-span-7" />
-      <EnergyDistributionCard className="col-span-6" />
-      <DebtStructureCard className="col-span-5" />
-      <QuickIndicatorsCard className="col-span-6" />
+      {/* 3-qator. Chapdagi ustunda oraliq 10px (158 - 148), 148 + 10 + 178 = 336. */}
+      <div className="col-span-6 grid min-h-0 grid-rows-[148px_minmax(0,1fr)] gap-2.5">
+        <ViolationsCard />
+        <ResponsibleStaffCard
+          title={"Energetika rahbari (Ma’sul xodim)"}
+          footerLabel={"Barcha xodimlarni ko’rsatish"}
+          footerHref="/staff"
+        />
+      </div>
+      <DebtCard className="col-span-4" />
+      <LossDamageCard className="col-span-4" />
+      <QuickMetricsCard className="col-span-4" />
 
       {/* 4-qator */}
-      <NetworkTopologyCard className="col-span-7" />
-      <EventLogCard className="col-span-6" />
-      <ForecastCard className="col-span-5" />
-      <RecommendationsCard className="col-span-6" />
+      <ConsumptionDynamicsCard className="col-span-6" />
+      <TopBarsCard
+        className="col-span-6"
+        title={"Eng ko’p sarfga ega podstansiyalar"}
+        items={TOP_SUBSTATIONS}
+        max={100}
+        tickStep={20}
+        unit="mln kWh"
+        footerLabel={"Podstansiyalar sahifasini ochish"}
+        footerHref="/substations"
+      />
+      <TopBarsCard
+        className="col-span-6"
+        title={"Eng ko’p sarfga ega fiderlar"}
+        items={TOP_FEEDERS}
+        max={200}
+        tickStep={25}
+        unit="mln kWh"
+        // Maketda bu kartada ham "Podstansiyalar sahifasini ochish" yozilgan -
+        // aftidan nusxa ko'chirishda qolib ketgan. Havola fiderlar sahifasiga
+        // olib borgani uchun matn ham shunga moslashtirildi.
+        footerLabel={"Fiderlar sahifasini ochish"}
+        footerHref="/feeders"
+      />
+
+      {/* 5-qator */}
+      <PlannedWorksCard className="col-span-8" />
+      <CompletedWorksCard className="col-span-6" />
+      <DownloadReportsCard className="col-span-4" />
     </div>
   );
 }
