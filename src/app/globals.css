@@ -55,6 +55,33 @@
   --color-state-ok: #16a34a;
   --color-state-warn: #d97706;
   --color-state-bad: #dc2626;
+
+  /* ---------------------------------------------------------------------------
+     Portal (tarmoq tanlash) ekrani. Har materialning yorug' va quyuq varianti
+     kerak: izometrik yuzalar uch pog'ona rang talab qiladi, oq matnli tugma
+     esa AA uchun quyuq fon. O'rta pog'ona mavjud aksent tokenlaridan
+     olinadi - takrorlanmaydi.
+     --------------------------------------------------------------------------- */
+  --color-power-light: #86efac;
+  --color-power-deep: #15803d;
+  --color-gas-light: #fcd34d;
+  --color-gas-deep: #b45309;
+  --color-water-light: #93c5fd;
+  --color-water-deep: #1d4ed8;
+
+  /* Institutsional yupqa chiziqlar va xarita niqobi. */
+  --color-hairline: #ececec;
+  --color-line-soft: #6b7480; /* xaritadagi viloyat konturi va legenda svatchi */
+  --color-wash: #e7ebf0;
+
+  /* Izometrik poydevor - uchala sektorda bir xil. */
+  --color-plinth-top: #f4f6f8;
+  --color-plinth-left: #dfe4e9;
+  --color-plinth-right: #cdd4da;
+
+  /* Portal easinglari: kirish tez, chiqish sekin. */
+  --ease-portal-out: cubic-bezier(0.16, 0.84, 0.44, 1);
+  --ease-portal-in: cubic-bezier(0.4, 0, 0.6, 1);
 }
 
 @layer base {
@@ -77,5 +104,233 @@
   }
   .scrollbar-none::-webkit-scrollbar {
     display: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Portal ekranining animatsiyalari.
+
+   Kirish keyframe'lari HAR DOIM yashirin holatdan elementning tabiiy holatiga
+   boradi (`to { transform: none }`), shuning uchun `animation: none`
+   qo'llanganda kontent ko'rinmay qolmaydi.
+
+   Ambient harakat yuklanishdan keyin 5.4 soniyada butunlay to'xtaydi -
+   WCAG 2.2.2 uchun alohida "pauza" boshqaruvi kerak bo'lmasin.
+   --------------------------------------------------------------------------- */
+
+@keyframes portal-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes portal-map-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.994);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Tuman konturi bir marta chiziladi (`pathLength=1`, `dasharray: 1`). */
+@keyframes district-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Halo ikki marta nafas oladi va tinchiydi. Tinch qiymati ataylab past:
+   11px lik halo quyuqroq bo'lsa 2.25px lik aniq konturni yutib yuboradi va
+   chegara noaniq ko'rinadi. */
+@keyframes district-breathe {
+  0%,
+  100% {
+    stroke-opacity: 0.1;
+  }
+  50% {
+    stroke-opacity: 0.03;
+  }
+}
+
+/* Bitta o'tuvchi shtrix. -1 aynan 10 ta 0.1 lik davr - chok ko'rinmaydi. */
+@keyframes district-sweep {
+  0% {
+    stroke-dashoffset: 0;
+    opacity: 0.5;
+  }
+  88% {
+    opacity: 0.5;
+  }
+  100% {
+    stroke-dashoffset: -1;
+    opacity: 0;
+  }
+}
+
+/* Havola bosilgandan keyingi noaniq (indeterminate) yuklanish chizig'i. */
+@keyframes portal-pending {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+@layer components {
+  /* -------------------------------------------------------------------------
+     Ramka. Sahifa bir ekranga faqat keng VA baland oynada qulflanadi; past
+     oynada (yoki 200% masshtabda) skroll ochiladi - kontent qirqilmasin.
+     ------------------------------------------------------------------------- */
+  @media (min-width: 1024px) and (min-height: 760px) {
+    .portal-frame {
+      height: 100dvh;
+      /* `hidden` emas: brauzerda matn kattalashtirilsa kontent qirqilib,
+         unga yetib bo'lmay qolardi. */
+      overflow: auto;
+    }
+  }
+
+  /* Google'ning xarita ichidagi tab to'xtashlarini chetlab o'tish havolasi. */
+  .portal-skip {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 50;
+  }
+  .portal-skip:focus-visible {
+    left: 16px;
+    top: 16px;
+    border-radius: 10px;
+    background: var(--color-surface);
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-ink);
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
+  .portal-enter {
+    animation: portal-enter 420ms var(--ease-portal-out) both;
+  }
+  .portal-map-enter {
+    animation: portal-map-enter 520ms var(--ease-portal-out) both;
+  }
+
+  /* -------------------------------------------------------------------------
+     Xaritadagi tuman urg'usi. `stroke-width` HECH QACHON animatsiya
+     qilinmaydi (paint bosqichi, har kadrda 150 nuqtali yo'l qayta
+     rasterlanadi) - halo ikki qavat stroke va faqat `opacity` bilan.
+     ------------------------------------------------------------------------- */
+  .portal-outline {
+    animation: district-draw 900ms cubic-bezier(0.22, 0.61, 0.36, 1) 1 both;
+  }
+  .portal-halo {
+    stroke-opacity: 0.1;
+    animation: district-breathe 2200ms var(--ease-portal-in) 900ms 2 both;
+  }
+  .portal-sweep {
+    opacity: 0;
+    animation: district-sweep 4000ms linear 900ms 1 forwards;
+  }
+
+  /* -------------------------------------------------------------------------
+     Sektor paneli. Ataylab tinch va tekis: soya ham, hover holati ham yo'q.
+     Panel faqat chegara, matn va izometrik obyekt bilan ishlaydi; yagona
+     interaktiv belgi - klaviatura fokusi halqasi.
+     ------------------------------------------------------------------------- */
+  .sector-plate {
+    /* Plita to'ldirmasi (`p-4` / `lg:p-5`) - qoplama va yuklanish chizig'i
+       shu qiymatga tayanadi, shuning uchun u yagona manbada turadi. */
+    --plate-pad: 16px;
+    /* Chegara utilita bilan emas, shu yerda: `border-*` utilitasi
+       `utilities` qatlamida turadi va bu qoidani bosib ketardi. */
+    border-color: #f0f0f0;
+  }
+
+  @media (min-width: 1024px) {
+    .sector-plate {
+      --plate-pad: 20px;
+    }
+  }
+
+  /* Izometrik obyektni vertikal markazlash. Tailwind `-translate-y-1/2`
+     utilitasi ishlatilmaydi - u `transform` ni butunlay egallaydi. */
+  .sector-art {
+    transform: translateY(-50%);
+  }
+
+  /* -------------------------------------------------------------------------
+     Butun plitani bosiladigan qiladigan karta-havola. Boshqaruv sarlavha
+     ichida turadi: bitta tab to'xtashi, hisoblangan nom = sarlavha matni.
+     ------------------------------------------------------------------------- */
+  .sector-link {
+    outline: none;
+  }
+  /* Qoplama va yuklanish chizig'ining o'lchov nuqtasi - plita EMAS, uning
+     ichidagi kontent o'ramchisi (yagona `position: relative` ota element).
+     Shuning uchun ular plita to'ldirmasi qiymatiga teng manfiy inset bilan
+     tashqariga chiqariladi - aks holda karta faqat ichki maydonida bosiladi. */
+  .sector-link::after {
+    content: "";
+    position: absolute;
+    inset: calc(var(--plate-pad) * -1);
+    border-radius: 16px;
+  }
+  .sector-link:focus-visible::after {
+    outline: 2px solid var(--color-brand);
+    outline-offset: -2px;
+  }
+
+  .portal-pending {
+    position: absolute;
+    right: calc(var(--plate-pad) * -1);
+    bottom: calc(var(--plate-pad) * -1);
+    left: calc(var(--plate-pad) * -1);
+    height: 2px;
+    overflow: hidden;
+    border-end-start-radius: 16px;
+    border-end-end-radius: 16px;
+    background: var(--s-tint);
+  }
+
+  .sector-arrow {
+    /* Ranglar utilita bilan emas, shu yerda - yuqoridagi sabab. */
+    background-color: var(--color-canvas);
+    color: var(--color-ink-muted);
+  }
+
+  .portal-pending-bar {
+    animation: portal-pending 900ms linear infinite;
+  }
+}
+
+@layer base {
+  /* -------------------------------------------------------------------------
+     Harakatni kamaytirish so'ralganda portaldagi barcha animatsiya o'chadi.
+     Kirish keyframe'lari elementni tabiiy holatida qoldiradigan qilib
+     yozilgan, shuning uchun hech narsa ko'rinmay qolmaydi.
+     ------------------------------------------------------------------------- */
+  @media (prefers-reduced-motion: reduce) {
+    .portal-frame *,
+    .portal-frame *::before,
+    .portal-frame *::after {
+      animation: none !important;
+    }
+    .portal-sweep {
+      display: none;
+    }
   }
 }
