@@ -9,6 +9,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Map as MapGlyph } from "lucide-react";
 
+import { BALIQCHI_DISTRICT } from "@/lib/geo/boundaries";
+import { toPath } from "@/lib/geo/rings";
+
 export interface MapMarker {
   id: string;
   lat: number;
@@ -181,6 +184,18 @@ interface MapCanvasProps {
   className?: string;
   /** Kichik kartalarda qisqaroq xato matni ko'rsatiladi. */
   compactFallback?: boolean;
+  /**
+   * Baliqchi tumani chegarasini chizish. Standart - yoqilgan: platformadagi
+   * barcha interaktiv xaritalar nazorat hududini ko'rsatishi kerak.
+   */
+  district?: boolean;
+  /**
+   * Ko'rinishni `center`/`zoom` o'rniga tuman chegarasiga moslaydi -
+   * butun Baliqchi tumani kadrga sig'adi.
+   */
+  fitDistrict?: boolean;
+  /** `fitDistrict` uchun piksel to'ldirma. */
+  fitPadding?: number;
 }
 
 export function MapCanvas({
@@ -196,6 +211,9 @@ export function MapCanvas({
   recenterKey = 0,
   className,
   compactFallback = false,
+  district = true,
+  fitDistrict = false,
+  fitPadding = 12,
 }: MapCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -331,6 +349,28 @@ export function MapCanvas({
     shapesRef.current.forEach((shape) => shape.setMap(null));
     shapesRef.current = [];
 
+    // Baliqchi tumani chegarasi - platformadagi HAR BIR interaktiv xaritada
+    // ko'rinadi (nazorat hududi doim bir xil). Eng pastki qatlamda va
+    // bosilmaydigan, aks holda markerlarni to'sib qo'yardi.
+    if (district) {
+      BALIQCHI_DISTRICT.rings.forEach((ring) => {
+        shapesRef.current.push(
+          new g.maps.Polygon({
+            map,
+            paths: toPath(ring),
+            fillColor: "#007cd2",
+            fillOpacity: 0.05,
+            strokeColor: "#007cd2",
+            strokeOpacity: 0.9,
+            strokeWeight: 2,
+            clickable: false,
+            geodesic: false,
+            zIndex: 0,
+          }),
+        );
+      });
+    }
+
     circles.forEach((circle) => {
       shapesRef.current.push(
         new g.maps.Circle({
@@ -356,15 +396,24 @@ export function MapCanvas({
       shapesRef.current = [];
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, polylinesKey, circlesKey]);
+  }, [status, polylinesKey, circlesKey, district]);
 
   // Markaz/zoom o'zgarsa - silliq o'tish.
   useEffect(() => {
     if (status !== "ready" || !mapRef.current) return;
+    if (fitDistrict) {
+      const g = (window as any).google;
+      const bounds = new g.maps.LatLngBounds();
+      BALIQCHI_DISTRICT.rings.forEach((ring) => {
+        ring.forEach(([lng, lat]) => bounds.extend({ lat, lng }));
+      });
+      mapRef.current.fitBounds(bounds, fitPadding);
+      return;
+    }
     mapRef.current.panTo(center);
     mapRef.current.setZoom(zoom);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, center.lat, center.lng, zoom, recenterKey]);
+  }, [status, center.lat, center.lng, zoom, recenterKey, fitDistrict, fitPadding]);
 
   if (!API_KEY || status === "error") {
     return (

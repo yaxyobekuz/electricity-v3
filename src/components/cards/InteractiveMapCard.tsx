@@ -108,6 +108,7 @@ export function InteractiveMapCard({ className }: { className?: string }) {
             markers={MARKERS}
             center={CENTER}
             zoom={ZOOM}
+            fitDistrict
             selectedId={SELECTED_ID}
             compactFallback
             renderMarker={chipMarker}
