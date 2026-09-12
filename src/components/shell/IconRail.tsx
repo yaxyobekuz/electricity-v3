@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Settings } from "lucide-react";
+import { LayoutGrid, Settings } from "lucide-react";
 
 import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/ui/cn";
@@ -23,6 +23,20 @@ export function IconRail() {
       className="flex w-[72px] shrink-0 select-none flex-col justify-between overflow-hidden rounded-2xl bg-rail p-1.5"
     >
       <ul className="flex flex-col items-center gap-3">
+        {/* Portalga qaytish. Usiz tarmoq yo'nalishini tanlash ekraniga faqat
+            manzilni qo'lda yozib qaytish mumkin bo'lardi. */}
+        <li className="w-full">
+          <Link
+            href="/"
+            title="Tarmoq yo’nalishlari"
+            aria-label="Tarmoq yo’nalishlari"
+            className="flex h-14 w-full items-center justify-center rounded-lg text-white transition-colors hover:bg-white/10"
+          >
+            <Icon icon={LayoutGrid} size={32} />
+          </Link>
+        </li>
+        <li aria-hidden className="my-0.5 h-px w-8 shrink-0 bg-white/15" />
+
         {RAIL_SECTIONS.map((section) => {
           const active = section.match.some(
             (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
