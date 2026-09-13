@@ -11,6 +11,14 @@ import { SidebarPanel } from "./AppShell";
 import { WORKSPACE_LINKS } from "./nav";
 
 /**
+ * Panel sarlavhasi: bosh sahifa maketida (Figma `4126:80`) butun tuman,
+ * fider sahifasi maketida esa o'sha fider nomi.
+ */
+function panelTitle(pathname: string): string {
+  return pathname.startsWith("/feeders") ? "Xaqulobod fideri" : "Baliqchi tumani elektr ta’minoti";
+}
+
+/**
  * "Boshqaruv paneli" bo'limining ikkilamchi paneli - sahifa havolalari va
  * pastda AI reklama kartasi.
  */
@@ -18,7 +26,7 @@ export function WorkspaceSidebar() {
   const pathname = usePathname();
 
   return (
-    <SidebarPanel title="Xaqulobod fideri" footer={<AiPromo />}>
+    <SidebarPanel title={panelTitle(pathname)} footer={<AiPromo />}>
       <nav aria-label="Boshqaruv paneli sahifalari">
         <ul className="flex flex-col gap-2">
           {WORKSPACE_LINKS.map((link) => {
