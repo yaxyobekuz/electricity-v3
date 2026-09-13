@@ -6,26 +6,6 @@ import { BALIQCHI_DISTRICT, type Ring } from "./boundaries";
    kutadi - almashtirish faqat shu yerdagi `toPath` orqali bajariladi.
    --------------------------------------------------------------------------- */
 
-/** Shoelace formulasi. (lng, lat) fazosida musbat qiymat - soat strelkasiga teskari. */
-export function signedArea(ring: Ring): number {
-  let area = 0;
-  for (let i = 0; i < ring.length; i++) {
-    const [x1, y1] = ring[i];
-    const [x2, y2] = ring[(i + 1) % ring.length];
-    area += x1 * y2 - x2 * y1;
-  }
-  return area / 2;
-}
-
-/**
- * Halqani kerakli yo'nalishga keltiradi. Teshik (hole) tashqi konturga
- * TESKARI yo'nalishda bo'lishi shart - shundagina teshik nonzero va even-odd
- * qoidalarining ikkalasida ham to'g'ri chiziladi.
- */
-export function orient(ring: Ring, ccw: boolean): Ring {
-  return signedArea(ring) > 0 === ccw ? ring : [...ring].reverse();
-}
-
 /**
  * [lng, lat] -> Google `{lat, lng}`. Tartib almashtirilsa xato chiqmaydi
  * (71.9 kenglik ham, 40.8 uzunlik ham qonuniy qiymat), shuning uchun
@@ -44,19 +24,6 @@ export function growBbox(
   const dy = (bbox[3] - bbox[1]) * k;
   return [bbox[0] - dx, bbox[1] - dy, bbox[2] + dx, bbox[3] + dy];
 }
-
-/**
- * Xiralashtirish niqobining tashqi to'rtburchagi. Ataylab LOKAL (butun dunyo
- * emas): Merkatorda 180 darajadan uzun qirra noaniq va Google uni umuman
- * chizmasligi mumkin. Yo'nalishi CW (shoelace = -306), ya'ni ichidagi
- * viloyat halqasi CCW bo'lishi kerak.
- */
-export const MASK_RECT: Ring = [
-  [63, 32],
-  [63, 49],
-  [81, 49],
-  [81, 32],
-];
 
 // Ma'lumot fayli qo'lda tahrirlanib koordinata tartibi almashib qolsa, buni
 // ekranda emas, konsolda darrov ko'rish uchun.

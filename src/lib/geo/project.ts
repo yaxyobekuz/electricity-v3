@@ -44,31 +44,8 @@ export function fitBbox(
   return (lng, lat) => [ox + (lng - minLng) * scale, oy + (yTop - mercatorY(lat)) * scale];
 }
 
-/**
- * Proyeksiyalangan nuqtalarni siyraklashtiradi: oldingi saqlangan nuqtadan
- * `minPx` dan yaqin nuqtalar tashlab yuboriladi. Oxirgi nuqta doim qoladi,
- * aks holda halqa yopilmaydi.
- */
-export function simplifyPoints(
-  points: ReadonlyArray<readonly [number, number]>,
-  minPx = 2,
-): Array<readonly [number, number]> {
-  if (points.length < 3) return [...points];
-  const out: Array<readonly [number, number]> = [points[0]];
-  let [px, py] = points[0];
-  for (let i = 1; i < points.length - 1; i++) {
-    const [x, y] = points[i];
-    if (Math.abs(x - px) + Math.abs(y - py) < minPx) continue;
-    out.push(points[i]);
-    px = x;
-    py = y;
-  }
-  out.push(points[points.length - 1]);
-  return out;
-}
-
 /** Nuqtalar ro'yxatidan yopiq SVG `d` satrini yig'adi. */
-export function pointsToPath(
+function pointsToPath(
   points: ReadonlyArray<readonly [number, number]>,
   decimals = 1,
 ): string {
