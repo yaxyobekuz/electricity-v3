@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { Map as MapGlyph } from "lucide-react";
 
 import { BALIQCHI_DISTRICT } from "@/lib/geo/boundaries";
+import { NEIGHBOUR_DISTRICTS } from "@/lib/geo/districts";
 import { toPath } from "@/lib/geo/rings";
 
 export interface MapMarker {
@@ -353,6 +354,26 @@ export function MapCanvas({
     // ko'rinadi (nazorat hududi doim bir xil). Eng pastki qatlamda va
     // bosilmaydigan, aks holda markerlarni to'sib qo'yardi.
     if (district) {
+      // Qo'shni tumanlar - kontekst: ingichka, to'ldirmasiz kontur.
+      NEIGHBOUR_DISTRICTS.forEach((neighbour) => {
+        neighbour.rings.forEach((ring) => {
+          shapesRef.current.push(
+            new g.maps.Polygon({
+              map,
+              paths: toPath(ring),
+              fillOpacity: 0,
+              strokeColor: "#6b7480",
+              strokeOpacity: 0.5,
+              strokeWeight: 1,
+              clickable: false,
+              geodesic: false,
+              zIndex: 0,
+            }),
+          );
+        });
+      });
+
+      // Baliqchi - faol hudud, shuning uchun to'ldirma va quyuqroq kontur.
       BALIQCHI_DISTRICT.rings.forEach((ring) => {
         shapesRef.current.push(
           new g.maps.Polygon({
@@ -365,7 +386,7 @@ export function MapCanvas({
             strokeWeight: 2,
             clickable: false,
             geodesic: false,
-            zIndex: 0,
+            zIndex: 1,
           }),
         );
       });
