@@ -1,8 +1,8 @@
 "use client";
 
-import { ResponsiveBar } from "@nivo/bar";
+import { type BarCustomLayerProps, ResponsiveBar } from "@nivo/bar";
 import { ChartNoAxesColumn, FileDown, Table } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Card, CardFooterLink, CardHeader } from "@/components/ui/Card";
 import { DataTable, type TableColumn } from "@/components/ui/DataTable";
@@ -18,33 +18,82 @@ export interface TopBarItem {
   value: number;
 }
 
+/** Nivo'ga uzatiladigan qator (`BarDatum` talabi uchun `type`, `interface` emas). */
+type BarRow = { id: string; label: string; value: number };
+
 /**
- * Maketdagi o'lchamlar (Figma `4216:57`, "BarLineChart" 454.67x218):
+ * Maketdagi o'lchamlar (Figma `4216:57`, "BarLineChart" 454.67x218, ichki
+ * blok 8px pastda):
  *
  *   yAxisTop   15px  - qiymat o'qi YUQORIDA (0 / 20 / ... / max)
- *   MainChart  195px - chapda 59px yorliq ustuni, qolgani ustunlar maydoni
- *   ustun      qator qadamining 40% i (2 ta qatorda 39.36/97.5,
- *              6 ta qatorda 13.12/32.5 - ikkalasi ham 0.404)
- *
- * Shundan nivo `padding` qiymati 0.6 bo'ladi.
+ *   MainChart  195px - chapda yorliq ustuni (59 / 66 / 46px), o'ngda 4px,
+ *              qolgani ustunlar maydoni
+ *   yorliq     ustun chetidan 2px chapda tugaydi
+ *   ustun      qator qadamining 40.37% i (2 ta qatorda 39.36/97.5,
+ *              6 ta qatorda 13.12/32.5), qator ichida markazda
  */
-/*
- * O’ng chekka 12px: oxirgi bo’linma yorlig’i ("100" / "200") tik ustida
- * markazlashadi, 4px da uning yarmi SVG chetidan chiqib kesilardi.
- * Maketda ham u o’ng chetga tegib turadi, ya’ni ichkariga surilgan.
- */
-const CHART_MARGIN = { top: 15, right: 12, bottom: 0, left: 59 } as const;
-const BAR_PADDING = 0.6;
+const AXIS_HEIGHT = 15;
+const PLOT_HEIGHT = 195;
+const CHART_RIGHT = 4;
+const LABEL_GAP = 2;
+const BAR_SHARE = 0.4037;
 
-/** Maketda o'q va yorliq matni 10px, rangi #4d4d4d; to'r - #d9d9dd. */
+/**
+ * Nivo'da band shkalaning `padding` i ichki va tashqi bo'shliqni TENG
+ * qiladi, maketda esa ustun qator qadamining markazida - tashqi bo'shliq
+ * ichkisining yarmi. Farqni nivo'ning ichki maydonini yuqori va pastga
+ * `padding * qadam / 2` ga cho'zib yo'qotamiz: shunda nivo qadami maketdagi
+ * `195 / n` ga, birinchi ustun esa aynan o'z qatorining markaziga tushadi.
+ * O'q va tik chiziqlar maydonga bog'liq bo'lgani uchun `ScaleLayer` chizadi.
+ */
+const BAR_PADDING = 1 - BAR_SHARE;
+
+/**
+ * Maketda o'q va yorliq matni 12px (qutisi 15px: "100" - 21px, "Chinobod" -
+ * 55px), rangi #4d4d4d; to'r - #d9d9dd.
+ */
+const AXIS_TEXT = { fill: "#4d4d4d", fontSize: 12 } as const;
+const GRID_COLOR = "#d9d9dd";
+
 const CHART_THEME = {
-  text: { fontFamily: "inherit", fontSize: 10, fill: "#4d4d4d" },
+  text: { fontFamily: "inherit", ...AXIS_TEXT },
   axis: {
-    ticks: { text: { fill: "#4d4d4d", fontSize: 10 } },
+    ticks: { text: AXIS_TEXT },
     domain: { line: { stroke: "transparent" } },
   },
-  grid: { line: { stroke: "#d9d9dd", strokeWidth: 1 } },
 } as const;
+
+/**
+ * Tik to'r chiziqlari va yuqoridagi qiymat o'qi. `inset` - nivo ichki
+ * maydonining tepasidan haqiqiy (195px) maydongacha bo'lgan masofa.
+ */
+function scaleLayer(tickValues: readonly number[], inset: number) {
+  return function ScaleLayer({ xScale }: BarCustomLayerProps<BarRow>) {
+    const scale = xScale as (value: number) => number;
+    return (
+      <g>
+        {tickValues.map((value) => {
+          const x = scale(value);
+          return (
+            <g key={value}>
+              <line x1={x} x2={x} y1={inset} y2={inset + PLOT_HEIGHT} stroke={GRID_COLOR} />
+              {/* Yorliq 15px lik o'q qatorining markazida (maketda quti maydonga tegib turadi). */}
+              <text
+                x={x}
+                y={inset - AXIS_HEIGHT / 2}
+                textAnchor="middle"
+                dominantBaseline="central"
+                style={AXIS_TEXT}
+              >
+                {value}
+              </text>
+            </g>
+          );
+        })}
+      </g>
+    );
+  };
+}
 
 type View = "chart" | "table";
 
@@ -56,9 +105,9 @@ const VIEWS = [
 /**
  * "Eng ko'p sarfga ega ..." kartasi - gorizontal ustunli diagramma.
  *
- * Bosh sahifada ikki marta ishlatiladi (podstansiyalar va fiderlar), maketda
- * ular faqat ma'lumot va shkala chegarasi bilan farq qiladi, shuning uchun
- * komponent bitta.
+ * Bosh sahifada uch marta ishlatiladi (podstansiyalar, fiderlar,
+ * transformatorlar), maketda ular faqat ma'lumot, shkala chegarasi va yorliq
+ * ustunining kengligi bilan farq qiladi, shuning uchun komponent bitta.
  */
 export function TopBarsCard({
   title,
@@ -66,12 +115,15 @@ export function TopBarsCard({
   max,
   tickStep,
   unit,
+  labelWidth = 59,
   footerLabel,
   footerHref,
   className,
 }: {
   title: string;
   items: readonly TopBarItem[];
+  /** Maketdagi `xAxis` kengligi - eng uzun nomga qarab 46 / 59 / 66px. */
+  labelWidth?: number;
   /** Shkalaning yuqori chegarasi (maketda 100 yoki 200). */
   max: number;
   /** O'q bo'linmasi orasidagi qadam (20 yoki 25). */
@@ -84,14 +136,9 @@ export function TopBarsCard({
 }) {
   const [view, setView] = useState<View>("chart");
 
-  const tickValues = Array.from(
-    { length: Math.floor(max / tickStep) + 1 },
-    (_, index) => index * tickStep,
-  );
-
   // Nivo gorizontal ustunlarni pastdan yuqoriga chizadi - maketdagi tartib
   // saqlanishi uchun ro'yxat teskari uzatiladi.
-  const chartData = [...items].reverse().map((item) => ({
+  const chartData = [...items].reverse().map((item): BarRow => ({
     id: item.id,
     label: item.label,
     value: item.value,
@@ -106,6 +153,16 @@ export function TopBarsCard({
     { key: "value", label: `Sarf, ${unit}`, grow: 2 },
   ];
 
+  // Maketdagi qator qadami va shundan nivo maydoni qancha cho'zilishi.
+  const inset = (BAR_PADDING * (PLOT_HEIGHT / Math.max(items.length, 1))) / 2;
+  const layers = useMemo(() => {
+    const tickValues = Array.from(
+      { length: Math.floor(max / tickStep) + 1 },
+      (_, index) => index * tickStep,
+    );
+    return [scaleLayer(tickValues, inset), "bars" as const, "axes" as const];
+  }, [max, tickStep, inset]);
+
   return (
     <Card padded={false} className={cn("px-4 pt-4 pb-2", className)}>
       <CardHeader title={title}>
@@ -113,29 +170,35 @@ export function TopBarsCard({
         <IconPill icon={FileDown} label="Yuklab olish" />
       </CardHeader>
 
-      {/* Maketda diagramma sarlavhadan 16px pastda boshlanadi (48 - 32), ya'ni
-          `CardBody` ning 8px i yetmaydi - shuning uchun bu yerda pt-4. */}
-      <div className="min-h-0 flex-1 pt-4">
+      {/* Maketda diagramma bloki sarlavha tagida (y=48), ichki qismi esa 8px
+          pastda. O'ng chetdagi "100" / "200" yorlig'i tik ustida markazlashadi
+          va 4px lik chekkadan chiqadi - kesilmasligi uchun overflow ochiq.
+          Maketda yuqori o'q yorliqlari tiklardan 9px gacha siljigan (bir
+          tekis taqsimlangan) - bu yerda ular o'z tiki ustida turadi. */}
+      <div className="min-h-0 flex-1 pt-2 [&_svg]:overflow-visible">
         {view === "chart" ? (
           <ResponsiveBar
             data={chartData}
             keys={["value"]}
             indexBy="id"
             layout="horizontal"
-            margin={CHART_MARGIN}
+            margin={{
+              top: AXIS_HEIGHT - inset,
+              right: CHART_RIGHT,
+              bottom: -inset,
+              left: labelWidth,
+            }}
             padding={BAR_PADDING}
             colors={["#007cd2"]}
             borderRadius={2}
             valueScale={{ type: "linear", min: 0, max }}
-            gridXValues={tickValues}
-            enableGridX
-            enableGridY={false}
-            axisTop={{ tickSize: 0, tickPadding: 4, tickValues }}
+            layers={layers}
+            axisTop={null}
             axisBottom={null}
             axisRight={null}
             axisLeft={{
               tickSize: 0,
-              tickPadding: 6,
+              tickPadding: LABEL_GAP,
               format: (value: string) => nameById[value] ?? value,
             }}
             enableLabel={false}
