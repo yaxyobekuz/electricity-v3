@@ -178,6 +178,49 @@
   }
 }
 
+/* Qo'shni tumandan Baliqchiga oqim. Yoy tugundan markazga chizilgan: offset
+   kamayganda naqsh yo'l bo'ylab oldinga - Baliqchi tomon - suriladi.
+   Zarrachalar naqshi "0.6 5.4" (davr 6) - siljish aynan bir davr, chok yo'q. */
+@keyframes current-flow {
+  from {
+    stroke-dashoffset: 6;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Impuls naqshi "0.2 2" (`pathLength=1`): 0.2 da tugun oldida, -1 da
+   markazdan to'liq chiqib bo'lgan, qolgani pauza. Siljish aynan bir davr
+   (2.2). Impuls uchi markazga tsiklning ~45% ida yetadi - `hub-arrive`
+   shu lahzaga bog'langan. */
+@keyframes current-pulse {
+  from {
+    stroke-dashoffset: 0.2;
+  }
+  to {
+    stroke-dashoffset: -2;
+  }
+}
+
+/* Impuls yetib kelganda markaziy tugundan tarqaluvchi to'lqin. */
+@keyframes hub-arrive {
+  0%,
+  44% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  46% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  72%,
+  100% {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
 /* Havola bosilgandan keyingi noaniq (indeterminate) yuklanish chizig'i. */
 @keyframes portal-pending {
   0% {
@@ -244,6 +287,24 @@
   .portal-sweep {
     opacity: 0;
     animation: district-sweep 4000ms linear 900ms 1 forwards;
+  }
+
+  /* -------------------------------------------------------------------------
+     Baliqchiga "elektr oqimi". Faqat `stroke-dashoffset`, `opacity` va
+     `transform` animatsiya qilinadi. Impuls va to'lqin tsikli bir xil
+     (3200 ms) bo'lishi SHART: to'lqin impuls yetib kelgan lahzaga bog'langan.
+     ------------------------------------------------------------------------- */
+  .portal-current-flow {
+    animation: current-flow 320ms linear infinite;
+  }
+  .portal-current-pulse {
+    animation: current-pulse 3200ms linear infinite both;
+  }
+  .portal-hub-arrive {
+    opacity: 0;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: hub-arrive 3200ms var(--ease-portal-out) infinite both;
   }
 
   /* -------------------------------------------------------------------------
@@ -329,7 +390,9 @@
     .portal-frame *::after {
       animation: none !important;
     }
-    .portal-sweep {
+    .portal-sweep,
+    .portal-current-pulse,
+    .portal-hub-arrive {
       display: none;
     }
   }
