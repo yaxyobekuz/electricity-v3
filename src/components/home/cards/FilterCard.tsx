@@ -1,12 +1,15 @@
 "use client";
 
+import { PlugZap, Zap, ZapOff } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { Card } from "@/components/ui/Card";
+import { Icon } from "@/components/ui/Icon";
 import { SelectField, type SelectOption } from "@/components/ui/SelectField";
 import { SUBSTATIONS } from "@/lib/data/substations";
 import { TRANSFORMERS } from "@/lib/data/transformers";
+import { cn } from "@/lib/ui/cn";
 
 const SUBSTATION_OPTIONS: readonly SelectOption[] = SUBSTATIONS.map((item) => ({
   value: item.id,
@@ -26,12 +29,29 @@ const FEEDER_OPTIONS: readonly SelectOption[] = [
   "Baliqchi",
 ].map((name) => ({ value: name.toLowerCase(), label: name }));
 
+/** Tanlov bo'yicha oqimlar - ranglar 1-qatordagi KPI kartalari bilan bir xil. */
+const METRICS = [
+  { id: "total", label: "Umumiy oqim", value: "15,2 ming kWh", icon: Zap, tile: "bg-accent-blue" },
+  {
+    id: "useful",
+    label: "Foydali oqim",
+    value: "15,2 ming kWh",
+    icon: PlugZap,
+    tile: "bg-accent-green",
+  },
+  { id: "loss", label: "Yo’qotish", value: "15,2 ming kWh", icon: ZapOff, tile: "bg-accent-red" },
+] as const;
+
 /**
- * "Filteratsiya" kartasi (Figma `4179:238`, 321.78x197).
+ * "Filtratsiya" kartasi (Figma `4179:238`, 321.78x402).
  *
- * Ichki o'lchamlar maketdan: sarlavha 18px `h2` (16,16), tana 139px (16,42),
- * uchta 32px qator 8px oraliq bilan (0 / 40 / 80), pastda 19px havola (120).
- * 32 + 8 + 32 + 8 + 32 + 8 + 19 = 139.
+ * Bloklar orasidagi masofa maketda bir xil - 23px:
+ *
+ *   sarlavha 18 | tanlovlar 112 (3 x 32, oraliq 8) | ajratgich 1
+ *   | oqimlar 130 (3 x 38, oraliq 8) | havola 25 (1px chiziq + 8 + 16)
+ *
+ * 16 + 18 + 23 + 112 + 23 + 1 + 23 + 130 + 23 + 25 + 8 = 402 (pastki
+ * bo'shliq 8px).
  *
  * Maketda faqat yopiq holat chizilgan; ochiluvchi ro'yxat `SelectField` da.
  * Transformatorlar ro'yxati tanlangan podstansiyaga qarab qisqaradi - shuning
@@ -73,10 +93,10 @@ export function FilterCard({ className }: { className?: string }) {
       : "/feeders";
 
   return (
-    <Card className={className}>
-      <h2 className="shrink-0 text-sm leading-[18px] font-bold text-ink">Filteratsiya</h2>
+    <Card className={cn("gap-[23px] pb-2", className)}>
+      <h2 className="shrink-0 text-sm leading-[18px] font-bold text-ink">Filtratsiya</h2>
 
-      <div className="mt-2 flex min-h-0 flex-1 flex-col gap-2">
+      <div className="flex shrink-0 flex-col gap-2">
         <SelectField
           value={substation}
           options={SUBSTATION_OPTIONS}
@@ -95,16 +115,38 @@ export function FilterCard({ className }: { className?: string }) {
           placeholder="Transformatorni tanlang"
           onChange={setTransformer}
         />
+      </div>
 
-        {/* Maketda havola tananing pastida, markazda (19px qator). */}
-        <div className="mt-auto flex shrink-0 items-center justify-center">
-          <Link
-            href={href}
-            className="text-sm leading-[18px] font-medium text-brand transition-opacity hover:opacity-70"
-          >
-            Sahifaga o&rsquo;tish
-          </Link>
-        </div>
+      <div className="h-px shrink-0 bg-[#dddddd]" />
+
+      <ul className="flex shrink-0 flex-col gap-2">
+        {METRICS.map((metric) => (
+          <li key={metric.id} className="flex h-[38px] items-center gap-2">
+            <span
+              className={cn(
+                "flex size-9 shrink-0 items-center justify-center rounded-md text-white",
+                metric.tile,
+              )}
+            >
+              <Icon icon={metric.icon} size={20} />
+            </span>
+            <span className="flex min-w-0 flex-col gap-1">
+              <span className="truncate text-xs leading-4 text-[#999999]">{metric.label}</span>
+              <span className="truncate text-sm leading-[18px] font-bold text-ink">
+                {metric.value}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-auto flex shrink-0 justify-center border-t border-[#dddddd] pt-2">
+        <Link
+          href={href}
+          className="text-xs leading-4 font-medium text-brand transition-opacity hover:opacity-70"
+        >
+          Sahifaga o&rsquo;tish
+        </Link>
       </div>
     </Card>
   );
