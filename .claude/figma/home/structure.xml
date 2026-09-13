@@ -1,4 +1,4 @@
-<frame id="4126:47" name="Home" x="-9355" y="975" width="1920" height="1080">
+<frame id="4126:47" name="Home" x="-10141" y="3111" width="1920" height="1080">
   <frame id="4126:48" name="wrapper" x="8" y="8" width="1904" height="1064">
     <frame id="4126:49" name="Left" x="0" y="0" width="420" height="1064">
       <frame id="4126:50" name="White" x="0" y="0" width="72" height="1064">
@@ -34,9 +34,9 @@
         </frame>
       </frame>
       <frame id="4126:77" name="Black" x="80" y="0" width="340" height="1064">
-        <frame id="4126:78" name="Frame 268" x="16" y="16" width="308" height="637">
+        <frame id="4126:78" name="Frame 268" x="16" y="16" width="308" height="693">
           <frame id="4126:79" name="Frame 184" x="0" y="0" width="308" height="21">
-            <text id="4126:80" name="Xaqulobod fideri" x="0" y="0" width="130" height="21" />
+            <text id="4126:80" name="Baliqchi tumani elektr ta’minoti" x="0" y="0" width="247" height="21" />
           </frame>
           <frame id="4126:81" name="Link wrapper" x="0" y="29" width="308" height="48">
             <frame id="4126:82" name="lucide/layout-dashboard" x="20" y="12" width="24" height="24" />
@@ -82,6 +82,10 @@
             <frame id="4126:122" name="lucide/settings" x="20" y="12" width="24" height="24" />
             <text id="4126:124" name="Sozlamalar" x="60" y="13.5" width="87" height="21" />
           </frame>
+          <frame id="4263:2870" name="Link wrapper" x="0" y="645" width="308" height="48">
+            <frame id="4263:2871" name="lucide/settings" x="20" y="12" width="24" height="24" />
+            <text id="4263:2873" name="Murojaatlar" x="60" y="13.5" width="90" height="21" />
+          </frame>
         </frame>
         <frame id="4126:125" name="Frame 270" x="16" y="922" width="308" height="126">
           <rounded-rectangle id="4126:126" name="image 25" x="0" y="0" width="308" height="148" />
@@ -97,167 +101,200 @@
       <frame id="4126:133" name="KPI cards" x="0" y="0" width="1476" height="196">
         <frame id="4126:134" name="Frame 199" x="0" y="0" width="239.3333282470703" height="196">
           <frame id="4126:135" name="Frame 200" x="16" y="16" width="207.3333282470703" height="32">
-            <text id="4126:136" name="Hisoblangan" x="0" y="0" width="82" height="18" />
+            <text id="4126:136" name="Umumiy oqim" x="0" y="0" width="90" height="18" />
             <frame id="4126:137" name="Frame 201" x="175.3333282470703" y="0" width="32" height="32">
               <frame id="4126:138" name="lucide/zap" x="6" y="6" width="20" height="20" />
             </frame>
           </frame>
           <frame id="4126:140" name="Frame 202" x="16" y="48" width="207.3333282470703" height="41">
             <text id="4126:141" name="220,1" x="0" y="4" width="63" height="31" />
-            <text id="4126:142" name="ming kWh" x="67" y="10.5" width="66" height="18" />
+            <text id="4126:142" name="ming kWh yillik" x="67" y="10.5" width="100" height="18" />
           </frame>
-          <frame id="4126:143" name="Frame 203" x="16" y="89" width="207.3333282470703" height="26">
+          <frame id="4126:147" name="Frame 204" x="16" y="89" width="207.3333282470703" height="26">
+            <text id="4126:148" name="Bu oy: 19,1 ming kWh" x="0" y="0" width="133" height="18" />
+          </frame>
+          <frame id="4250:26" name="Frame 205" x="16" y="115" width="207.3333282470703" height="26">
+            <text id="4250:27" name="O’tgan oy: 198,1 ming kWh" x="0" y="0" width="167" height="18" />
+          </frame>
+          <frame id="4126:143" name="Frame 203" x="16" y="141" width="207.3333282470703" height="26">
             <frame id="4126:144" name="lucide/arrow-up" x="0" y="0" width="20" height="20" />
-            <text id="4126:146" name="28,2 ming kWh ga ko’p" x="24" y="1" width="150" height="18" />
+            <text id="4126:146" name="Bu oy: 2.1% ga oshdi" x="24" y="1" width="131" height="18" />
           </frame>
-          <frame id="4126:147" name="Frame 204" x="16" y="115" width="207.3333282470703" height="26">
-            <text id="4126:148" name="O’tgan oy: 198,1 kWh" x="0" y="0" width="132" height="18" />
-          </frame>
-          <frame id="4126:149" name="Chart" x="16" y="141" width="207.3333282470703" height="39">
-            <frame id="4126:150" name="Frame 205" x="0" y="0" width="153.3333282470703" height="39">
-              <frame id="4126:151" name="Frame 206" x="0" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:152" name="Frame 207" x="5.177777290344238" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:153" name="Frame 208" x="10.355554580688477" y="10" width="3.1777775287628174" height="29" />
-              <frame id="4126:154" name="Frame 209" x="15.533331871032715" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:155" name="Frame 210" x="20.711109161376953" y="19" width="3.1777775287628174" height="20" />
-              <frame id="4126:156" name="Frame 211" x="25.888887405395508" y="7" width="3.1777775287628174" height="32" />
-              <frame id="4126:157" name="Frame 212" x="31.066665649414062" y="7" width="3.1777775287628174" height="32" />
-              <frame id="4126:158" name="Frame 213" x="36.244441986083984" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:159" name="Frame 214" x="41.422218322753906" y="30" width="3.1777775287628174" height="9" />
-              <frame id="4126:160" name="Frame 215" x="46.59999465942383" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:161" name="Frame 216" x="51.77777099609375" y="17" width="3.1777775287628174" height="22" />
-              <frame id="4126:162" name="Frame 217" x="56.95554733276367" y="15" width="3.1777775287628174" height="24" />
-              <frame id="4126:163" name="Frame 218" x="62.133323669433594" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:164" name="Frame 219" x="67.31110382080078" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:165" name="Frame 220" x="72.48888397216797" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:166" name="Frame 221" x="77.66666412353516" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:167" name="Frame 222" x="82.84444427490234" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:168" name="Frame 223" x="88.02222442626953" y="15" width="3.1777775287628174" height="24" />
-              <frame id="4126:169" name="Frame 224" x="93.20000457763672" y="10" width="3.1777775287628174" height="29" />
-              <frame id="4126:170" name="Frame 225" x="98.3777847290039" y="7" width="3.1777775287628174" height="32" />
-              <frame id="4126:171" name="Frame 226" x="103.5555648803711" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:172" name="Frame 227" x="108.73334503173828" y="25" width="3.1777775287628174" height="14" />
-              <frame id="4126:173" name="Frame 228" x="113.91112518310547" y="13" width="3.1777775287628174" height="26" />
-              <frame id="4126:174" name="Frame 229" x="119.08890533447266" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:175" name="Frame 230" x="124.26668548583984" y="7" width="3.1777775287628174" height="32" />
-              <frame id="4126:176" name="Frame 231" x="129.4444580078125" y="10" width="3.1777775287628174" height="29" />
-              <frame id="4126:177" name="Frame 232" x="134.6222381591797" y="28" width="3.1777775287628174" height="11" />
-              <frame id="4126:178" name="Frame 233" x="139.80001831054688" y="13" width="3.1777775287628174" height="26" />
-              <frame id="4126:179" name="Frame 234" x="144.97779846191406" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:180" name="Frame 235" x="150.15557861328125" y="0" width="3.1777775287628174" height="39" />
+          <frame id="4126:149" name="Chart" x="16" y="167" width="207.3333282470703" height="13">
+            <frame id="4126:150" name="Frame 205" x="0" y="0" width="153.3333282470703" height="13">
+              <frame id="4126:151" name="Frame 206" x="0" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4126:152" name="Frame 207" x="5.177777290344238" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4126:153" name="Frame 208" x="10.355554580688477" y="-16" width="3.1777775287628174" height="29" />
+              <frame id="4126:154" name="Frame 209" x="15.533331871032715" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4126:155" name="Frame 210" x="20.711109161376953" y="-7" width="3.1777775287628174" height="20" />
+              <frame id="4126:156" name="Frame 211" x="25.888887405395508" y="-19" width="3.1777775287628174" height="32" />
+              <frame id="4126:157" name="Frame 212" x="31.066665649414062" y="-19" width="3.1777775287628174" height="32" />
+              <frame id="4126:158" name="Frame 213" x="36.244441986083984" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4126:159" name="Frame 214" x="41.422218322753906" y="4" width="3.1777775287628174" height="9" />
+              <frame id="4126:160" name="Frame 215" x="46.59999465942383" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4126:161" name="Frame 216" x="51.77777099609375" y="-9" width="3.1777775287628174" height="22" />
+              <frame id="4126:162" name="Frame 217" x="56.95554733276367" y="-11" width="3.1777775287628174" height="24" />
+              <frame id="4126:163" name="Frame 218" x="62.133323669433594" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4126:164" name="Frame 219" x="67.31110382080078" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4126:165" name="Frame 220" x="72.48888397216797" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4126:166" name="Frame 221" x="77.66666412353516" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4126:167" name="Frame 222" x="82.84444427490234" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4126:168" name="Frame 223" x="88.02222442626953" y="-11" width="3.1777775287628174" height="24" />
+              <frame id="4126:169" name="Frame 224" x="93.20000457763672" y="-16" width="3.1777775287628174" height="29" />
+              <frame id="4126:170" name="Frame 225" x="98.3777847290039" y="-19" width="3.1777775287628174" height="32" />
+              <frame id="4126:171" name="Frame 226" x="103.5555648803711" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4126:172" name="Frame 227" x="108.73334503173828" y="-1" width="3.1777775287628174" height="14" />
+              <frame id="4126:173" name="Frame 228" x="113.91112518310547" y="-13" width="3.1777775287628174" height="26" />
+              <frame id="4126:174" name="Frame 229" x="119.08890533447266" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4126:175" name="Frame 230" x="124.26668548583984" y="-19" width="3.1777775287628174" height="32" />
+              <frame id="4126:176" name="Frame 231" x="129.4444580078125" y="-16" width="3.1777775287628174" height="29" />
+              <frame id="4126:177" name="Frame 232" x="134.6222381591797" y="2" width="3.1777775287628174" height="11" />
+              <frame id="4126:178" name="Frame 233" x="139.80001831054688" y="-13" width="3.1777775287628174" height="26" />
+              <frame id="4126:179" name="Frame 234" x="144.97779846191406" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4126:180" name="Frame 235" x="150.15557861328125" y="0" width="3.1777775287628174" height="13" />
             </frame>
-            <text id="4126:181" name="30 kun" x="161.3333282470703" y="21" width="46" height="18" />
+            <text id="4126:181" name="30 kun" x="161.3333282470703" y="-5" width="46" height="18" />
           </frame>
         </frame>
-        <frame id="4126:182" name="Frame 200" x="247.3333282470703" y="0" width="239.3333282470703" height="196">
-          <frame id="4126:183" name="Frame 200" x="16" y="16" width="207.3333282470703" height="32">
-            <text id="4126:184" name="Iste’mol" x="0" y="0" width="52" height="18" />
-            <frame id="4126:185" name="Frame 201" x="175.3333282470703" y="0" width="32" height="32">
-              <frame id="4126:186" name="lucide/plug-zap" x="6" y="6" width="20" height="20" />
+        <frame id="4252:29" name="Frame 205" x="247.3333282470703" y="0" width="239.3333282470703" height="196">
+          <frame id="4252:30" name="Frame 200" x="16" y="16" width="207.3333282470703" height="32">
+            <text id="4252:31" name="Foydali oqim" x="0" y="0" width="83" height="18" />
+            <frame id="4252:32" name="Frame 201" x="175.3333282470703" y="0" width="32" height="32">
+              <frame id="4309:2825" name="lucide/plug-zap" x="6" y="6" width="20" height="20" />
             </frame>
           </frame>
-          <frame id="4126:188" name="Frame 202" x="16" y="48" width="207.3333282470703" height="41">
-            <text id="4126:189" name="190,5" x="0" y="4" width="65" height="31" />
-            <text id="4126:190" name="ming kWh" x="69" y="10.5" width="66" height="18" />
-          </frame>
-          <frame id="4126:191" name="Frame 203" x="16" y="89" width="207.3333282470703" height="26">
-            <frame id="4126:192" name="lucide/arrow-up" x="20" y="20" width="20" height="20" />
-            <text id="4126:194" name="10,5 ming kWh ga kam" x="24" y="1" width="148" height="18" />
-          </frame>
-          <frame id="4126:195" name="Frame 204" x="16" y="115" width="207.3333282470703" height="26">
-            <text id="4126:196" name="O’tgan oy: 180,0 kWh" x="0" y="0" width="136" height="18" />
-          </frame>
-          <frame id="4126:197" name="Chart" x="16" y="141" width="207.3333282470703" height="39">
-            <frame id="4126:198" name="Frame 205" x="0" y="0" width="153.3333282470703" height="39">
-              <frame id="4126:199" name="Frame 206" x="0" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:200" name="Frame 207" x="5.177777290344238" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:201" name="Frame 208" x="10.355554580688477" y="10" width="3.1777775287628174" height="29" />
-              <frame id="4126:202" name="Frame 209" x="15.533331871032715" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:203" name="Frame 210" x="20.711109161376953" y="19" width="3.1777775287628174" height="20" />
-              <frame id="4126:204" name="Frame 211" x="25.888887405395508" y="7" width="3.1777775287628174" height="32" />
-              <frame id="4126:205" name="Frame 212" x="31.066665649414062" y="7" width="3.1777775287628174" height="32" />
-              <frame id="4126:206" name="Frame 213" x="36.244441986083984" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:207" name="Frame 214" x="41.422218322753906" y="30" width="3.1777775287628174" height="9" />
-              <frame id="4126:208" name="Frame 215" x="46.59999465942383" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:209" name="Frame 216" x="51.77777099609375" y="17" width="3.1777775287628174" height="22" />
-              <frame id="4126:210" name="Frame 217" x="56.95554733276367" y="15" width="3.1777775287628174" height="24" />
-              <frame id="4126:211" name="Frame 218" x="62.133323669433594" y="10" width="3.1777775287628174" height="29" />
-              <frame id="4126:212" name="Frame 219" x="67.31110382080078" y="13" width="3.1777775287628174" height="26" />
-              <frame id="4126:213" name="Frame 220" x="72.48888397216797" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:214" name="Frame 221" x="77.66666412353516" y="10" width="3.1777775287628174" height="29" />
-              <frame id="4126:215" name="Frame 222" x="82.84444427490234" y="10" width="3.1777775287628174" height="29" />
-              <frame id="4126:216" name="Frame 223" x="88.02222442626953" y="15" width="3.1777775287628174" height="24" />
-              <frame id="4126:217" name="Frame 224" x="93.20000457763672" y="10" width="3.1777775287628174" height="29" />
-              <frame id="4126:218" name="Frame 225" x="98.3777847290039" y="7" width="3.1777775287628174" height="32" />
-              <frame id="4126:219" name="Frame 226" x="103.5555648803711" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:220" name="Frame 227" x="108.73334503173828" y="25" width="3.1777775287628174" height="14" />
-              <frame id="4126:221" name="Frame 228" x="113.91112518310547" y="13" width="3.1777775287628174" height="26" />
-              <frame id="4126:222" name="Frame 229" x="119.08890533447266" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:223" name="Frame 230" x="124.26668548583984" y="7" width="3.1777775287628174" height="32" />
-              <frame id="4126:224" name="Frame 231" x="129.4444580078125" y="10" width="3.1777775287628174" height="29" />
-              <frame id="4126:225" name="Frame 232" x="134.6222381591797" y="28" width="3.1777775287628174" height="11" />
-              <frame id="4126:226" name="Frame 233" x="139.80001831054688" y="13" width="3.1777775287628174" height="26" />
-              <frame id="4126:227" name="Frame 234" x="144.97779846191406" y="28" width="3.1777775287628174" height="11" />
-              <frame id="4126:228" name="Frame 235" x="150.15557861328125" y="0" width="3.1777775287628174" height="39" />
+          <frame id="4252:35" name="Frame 202" x="16" y="48" width="207.3333282470703" height="41">
+            <frame id="4257:131" name="Frame 284" x="0" y="4" width="168" height="31">
+              <text id="4252:36" name="200,1" x="0" y="0" width="64" height="31" />
+              <text id="4252:37" name="ming kWh yillik" x="68" y="6.5" width="100" height="18" />
             </frame>
-            <text id="4126:229" name="30 kun" x="161.3333282470703" y="21" width="46" height="18" />
+          </frame>
+          <frame id="4252:38" name="Frame 204" x="16" y="89" width="207.3333282470703" height="26">
+            <text id="4252:39" name="Bu oy: 19,1 ming kWh" x="0" y="0" width="133" height="18" />
+          </frame>
+          <frame id="4252:40" name="Frame 205" x="16" y="115" width="207.3333282470703" height="26">
+            <text id="4252:41" name="O’tgan oy: 198,1 ming kWh" x="0" y="0" width="167" height="18" />
+          </frame>
+          <frame id="4252:42" name="Frame 203" x="16" y="141" width="207.3333282470703" height="26">
+            <frame id="4252:43" name="lucide/arrow-up" x="0" y="0" width="20" height="20" />
+            <text id="4252:45" name="Bu oy: 2.1% ga oshdi" x="24" y="1" width="131" height="18" />
+          </frame>
+          <frame id="4252:46" name="Chart" x="16" y="167" width="207.3333282470703" height="13">
+            <frame id="4252:47" name="Frame 205" x="0" y="0" width="153.3333282470703" height="13">
+              <frame id="4252:48" name="Frame 206" x="0" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:49" name="Frame 207" x="5.177777290344238" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:50" name="Frame 208" x="10.355554580688477" y="-16" width="3.1777775287628174" height="29" />
+              <frame id="4252:51" name="Frame 209" x="15.533331871032715" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:52" name="Frame 210" x="20.711109161376953" y="-7" width="3.1777775287628174" height="20" />
+              <frame id="4252:53" name="Frame 211" x="25.888887405395508" y="-19" width="3.1777775287628174" height="32" />
+              <frame id="4252:54" name="Frame 212" x="31.066665649414062" y="-19" width="3.1777775287628174" height="32" />
+              <frame id="4252:55" name="Frame 213" x="36.244441986083984" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:56" name="Frame 214" x="41.422218322753906" y="4" width="3.1777775287628174" height="9" />
+              <frame id="4252:57" name="Frame 215" x="46.59999465942383" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:58" name="Frame 216" x="51.77777099609375" y="-9" width="3.1777775287628174" height="22" />
+              <frame id="4252:59" name="Frame 217" x="56.95554733276367" y="-11" width="3.1777775287628174" height="24" />
+              <frame id="4252:60" name="Frame 218" x="62.133323669433594" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:61" name="Frame 219" x="67.31110382080078" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:62" name="Frame 220" x="72.48888397216797" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:63" name="Frame 221" x="77.66666412353516" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:64" name="Frame 222" x="82.84444427490234" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:65" name="Frame 223" x="88.02222442626953" y="-11" width="3.1777775287628174" height="24" />
+              <frame id="4252:66" name="Frame 224" x="93.20000457763672" y="-16" width="3.1777775287628174" height="29" />
+              <frame id="4252:67" name="Frame 225" x="98.3777847290039" y="-19" width="3.1777775287628174" height="32" />
+              <frame id="4252:68" name="Frame 226" x="103.5555648803711" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:69" name="Frame 227" x="108.73334503173828" y="-1" width="3.1777775287628174" height="14" />
+              <frame id="4252:70" name="Frame 228" x="113.91112518310547" y="-13" width="3.1777775287628174" height="26" />
+              <frame id="4252:71" name="Frame 229" x="119.08890533447266" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:72" name="Frame 230" x="124.26668548583984" y="-19" width="3.1777775287628174" height="32" />
+              <frame id="4252:73" name="Frame 231" x="129.4444580078125" y="-16" width="3.1777775287628174" height="29" />
+              <frame id="4252:74" name="Frame 232" x="134.6222381591797" y="2" width="3.1777775287628174" height="11" />
+              <frame id="4252:75" name="Frame 233" x="139.80001831054688" y="-13" width="3.1777775287628174" height="26" />
+              <frame id="4252:76" name="Frame 234" x="144.97779846191406" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:77" name="Frame 235" x="150.15557861328125" y="0" width="3.1777775287628174" height="13" />
+            </frame>
+            <text id="4252:78" name="30 kun" x="161.3333282470703" y="-5" width="46" height="18" />
           </frame>
         </frame>
-        <frame id="4126:230" name="Frame 201" x="494.6666564941406" y="0" width="239.3333282470703" height="196">
-          <frame id="4126:231" name="Frame 200" x="16" y="16" width="207.3333282470703" height="32">
-            <text id="4126:232" name="Yo’qotish" x="0" y="0" width="60" height="18" />
-            <frame id="4126:233" name="Frame 201" x="175.3333282470703" y="0" width="32" height="32">
-              <frame id="4126:234" name="lucide/zap-off" x="6" y="6" width="20" height="20" />
+        <frame id="4252:80" name="Frame 206" x="494.6666564941406" y="0" width="239.3333282470703" height="196">
+          <frame id="4252:81" name="Frame 200" x="16" y="16" width="207.3333282470703" height="32">
+            <text id="4252:82" name="Yo’qotish" x="0" y="0" width="60" height="18" />
+            <frame id="4252:83" name="Frame 201" x="175.3333282470703" y="0" width="32" height="32">
+              <frame id="4309:2834" name="lucide/zap-off" x="6" y="6" width="20" height="20" />
             </frame>
           </frame>
-          <frame id="4126:236" name="Frame 202" x="16" y="48" width="207.3333282470703" height="41">
-            <text id="4126:237" name="30,4" x="0" y="4" width="54" height="31" />
-            <text id="4126:238" name="ming kWh" x="58" y="10.5" width="66" height="18" />
+          <frame id="4252:86" name="Frame 202" x="16" y="48" width="207.3333282470703" height="41">
+            <text id="4252:87" name="20,1" x="0" y="4" width="47" height="31" />
+            <text id="4252:88" name="ming kWh yillik" x="51" y="10.5" width="100" height="18" />
           </frame>
-          <frame id="4126:239" name="Frame 203" x="16" y="89" width="207.3333282470703" height="26">
-            <frame id="4126:240" name="lucide/arrow-up" x="20" y="20" width="20" height="20" />
-            <text id="4126:242" name="5,5 ming kWh ga kam" x="24" y="1" width="142" height="18" />
+          <frame id="4252:89" name="Frame 204" x="16" y="89" width="207.3333282470703" height="26">
+            <text id="4252:90" name="Bu oy: 19,1 ming kWh" x="0" y="0" width="133" height="18" />
           </frame>
-          <frame id="4126:243" name="Frame 204" x="16" y="115" width="207.3333282470703" height="26">
-            <text id="4126:244" name="O’tgan oy: 35,9 kWh" x="0" y="0" width="131" height="18" />
+          <frame id="4252:91" name="Frame 205" x="16" y="115" width="207.3333282470703" height="26">
+            <text id="4252:92" name="O’tgan oy: 198,1 ming kWh" x="0" y="0" width="167" height="18" />
           </frame>
-          <frame id="4126:245" name="Chart" x="16" y="141" width="207.3333282470703" height="39">
-            <frame id="4126:246" name="Frame 205" x="0" y="0" width="153.3333282470703" height="39">
-              <frame id="4126:247" name="Frame 206" x="0" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:248" name="Frame 207" x="5.177777290344238" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:249" name="Frame 208" x="10.355554580688477" y="10" width="3.1777775287628174" height="29" />
-              <frame id="4126:250" name="Frame 209" x="15.533331871032715" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:251" name="Frame 210" x="20.711109161376953" y="19" width="3.1777775287628174" height="20" />
-              <frame id="4126:252" name="Frame 211" x="25.888887405395508" y="7" width="3.1777775287628174" height="32" />
-              <frame id="4126:253" name="Frame 212" x="31.066665649414062" y="7" width="3.1777775287628174" height="32" />
-              <frame id="4126:254" name="Frame 213" x="36.244441986083984" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:255" name="Frame 214" x="41.422218322753906" y="13" width="3.1777775287628174" height="26" />
-              <frame id="4126:256" name="Frame 215" x="46.59999465942383" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:257" name="Frame 216" x="51.77777099609375" y="17" width="3.1777775287628174" height="22" />
-              <frame id="4126:258" name="Frame 217" x="56.95554733276367" y="15" width="3.1777775287628174" height="24" />
-              <frame id="4126:259" name="Frame 218" x="62.133323669433594" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:260" name="Frame 219" x="67.31110382080078" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:261" name="Frame 220" x="72.48888397216797" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:262" name="Frame 221" x="77.66666412353516" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:263" name="Frame 222" x="82.84444427490234" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:264" name="Frame 223" x="88.02222442626953" y="15" width="3.1777775287628174" height="24" />
-              <frame id="4126:265" name="Frame 224" x="93.20000457763672" y="10" width="3.1777775287628174" height="29" />
-              <frame id="4126:266" name="Frame 225" x="98.3777847290039" y="7" width="3.1777775287628174" height="32" />
-              <frame id="4126:267" name="Frame 226" x="103.5555648803711" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:268" name="Frame 227" x="108.73334503173828" y="10" width="3.1777775287628174" height="29" />
-              <frame id="4126:269" name="Frame 228" x="113.91112518310547" y="13" width="3.1777775287628174" height="26" />
-              <frame id="4126:270" name="Frame 229" x="119.08890533447266" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:271" name="Frame 230" x="124.26668548583984" y="7" width="3.1777775287628174" height="32" />
-              <frame id="4126:272" name="Frame 231" x="129.4444580078125" y="10" width="3.1777775287628174" height="29" />
-              <frame id="4126:273" name="Frame 232" x="134.6222381591797" y="28" width="3.1777775287628174" height="11" />
-              <frame id="4126:274" name="Frame 233" x="139.80001831054688" y="13" width="3.1777775287628174" height="26" />
-              <frame id="4126:275" name="Frame 234" x="144.97779846191406" y="0" width="3.1777775287628174" height="39" />
-              <frame id="4126:276" name="Frame 235" x="150.15557861328125" y="0" width="3.1777775287628174" height="39" />
+          <frame id="4252:93" name="Frame 203" x="16" y="141" width="207.3333282470703" height="26">
+            <frame id="4252:94" name="lucide/arrow-up" x="0" y="0" width="20" height="20" />
+            <text id="4252:96" name="Bu oy: 2.1% ga oshdi" x="24" y="1" width="131" height="18" />
+          </frame>
+          <frame id="4252:97" name="Chart" x="16" y="167" width="207.3333282470703" height="13">
+            <frame id="4252:98" name="Frame 205" x="0" y="0" width="153.3333282470703" height="13">
+              <frame id="4252:99" name="Frame 206" x="0" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:100" name="Frame 207" x="5.177777290344238" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:101" name="Frame 208" x="10.355554580688477" y="-16" width="3.1777775287628174" height="29" />
+              <frame id="4252:102" name="Frame 209" x="15.533331871032715" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:103" name="Frame 210" x="20.711109161376953" y="-7" width="3.1777775287628174" height="20" />
+              <frame id="4252:104" name="Frame 211" x="25.888887405395508" y="-19" width="3.1777775287628174" height="32" />
+              <frame id="4252:105" name="Frame 212" x="31.066665649414062" y="-19" width="3.1777775287628174" height="32" />
+              <frame id="4252:106" name="Frame 213" x="36.244441986083984" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:107" name="Frame 214" x="41.422218322753906" y="4" width="3.1777775287628174" height="9" />
+              <frame id="4252:108" name="Frame 215" x="46.59999465942383" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:109" name="Frame 216" x="51.77777099609375" y="-9" width="3.1777775287628174" height="22" />
+              <frame id="4252:110" name="Frame 217" x="56.95554733276367" y="-11" width="3.1777775287628174" height="24" />
+              <frame id="4252:111" name="Frame 218" x="62.133323669433594" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:112" name="Frame 219" x="67.31110382080078" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:113" name="Frame 220" x="72.48888397216797" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:114" name="Frame 221" x="77.66666412353516" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:115" name="Frame 222" x="82.84444427490234" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:116" name="Frame 223" x="88.02222442626953" y="-11" width="3.1777775287628174" height="24" />
+              <frame id="4252:117" name="Frame 224" x="93.20000457763672" y="-16" width="3.1777775287628174" height="29" />
+              <frame id="4252:118" name="Frame 225" x="98.3777847290039" y="-19" width="3.1777775287628174" height="32" />
+              <frame id="4252:119" name="Frame 226" x="103.5555648803711" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:120" name="Frame 227" x="108.73334503173828" y="-1" width="3.1777775287628174" height="14" />
+              <frame id="4252:121" name="Frame 228" x="113.91112518310547" y="-13" width="3.1777775287628174" height="26" />
+              <frame id="4252:122" name="Frame 229" x="119.08890533447266" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:123" name="Frame 230" x="124.26668548583984" y="-19" width="3.1777775287628174" height="32" />
+              <frame id="4252:124" name="Frame 231" x="129.4444580078125" y="-16" width="3.1777775287628174" height="29" />
+              <frame id="4252:125" name="Frame 232" x="134.6222381591797" y="2" width="3.1777775287628174" height="11" />
+              <frame id="4252:126" name="Frame 233" x="139.80001831054688" y="-13" width="3.1777775287628174" height="26" />
+              <frame id="4252:127" name="Frame 234" x="144.97779846191406" y="0" width="3.1777775287628174" height="13" />
+              <frame id="4252:128" name="Frame 235" x="150.15557861328125" y="0" width="3.1777775287628174" height="13" />
             </frame>
-            <text id="4126:277" name="30 kun" x="161.3333282470703" y="21" width="46" height="18" />
+            <text id="4252:129" name="30 kun" x="161.3333282470703" y="-5" width="46" height="18" />
           </frame>
         </frame>
-        <frame id="4126:278" name="Frame 202" x="742" y="0" width="239.3333282470703" height="196">
+        <frame id="4257:169" name="Frame 207" x="742" y="0" width="239.3333282470703" height="196">
+          <frame id="4261:1508" name="Frame 285" x="16" y="16" width="207.3333282470703" height="167">
+            <frame id="4257:170" name="Frame 200" x="0" y="0" width="207.3333282470703" height="32">
+              <text id="4257:171" name="Yo’qotish darajasi" x="0" y="0" width="115" height="18" />
+              <frame id="4257:172" name="Frame 201" x="175.3333282470703" y="0" width="32" height="32">
+                <frame id="4261:209" name="lucide/percent" x="6" y="6" width="20" height="20" />
+              </frame>
+            </frame>
+            <frame id="4257:175" name="Frame 202" x="0" y="36" width="207.3333282470703" height="41">
+              <text id="4257:176" name="20,1%" x="50.166664123535156" y="4" width="67" height="31" />
+              <text id="4257:177" name="Yillik" x="125.16666412353516" y="10.5" width="32" height="18" />
+            </frame>
+            <frame id="4261:1510" name="Frame 203" x="0" y="81" width="207.3333282470703" height="41">
+              <text id="4261:1511" name="18,2%" x="60.166664123535156" y="9" width="45" height="21" />
+              <text id="4261:1512" name="Oylik" x="113.16666412353516" y="10.5" width="34" height="18" />
+            </frame>
+            <frame id="4261:1518" name="Frame 204" x="0" y="126" width="207.3333282470703" height="41">
+              <text id="4261:1519" name="25%" x="61.666664123535156" y="9" width="35" height="21" />
+              <text id="4261:1520" name="Kunlik" x="104.66666412353516" y="10.5" width="41" height="18" />
+            </frame>
+          </frame>
+        </frame>
+        <frame id="4126:278" name="Frame 202" x="989.3333129882812" y="0" width="239.3333282470703" height="196">
           <frame id="4126:279" name="Frame 200" x="16" y="16" width="207.3333282470703" height="32">
             <text id="4126:280" name="Abonentlar" x="0" y="0" width="73" height="18" />
             <frame id="4126:281" name="Frame 201" x="175.3333282470703" y="0" width="32" height="32">
@@ -269,211 +306,131 @@
             <text id="4126:286" name="ta umumiy" x="73" y="10.5" width="69" height="18" />
           </frame>
           <frame id="4126:287" name="Frame 203" x="16" y="89" width="207.3333282470703" height="26">
-            <frame id="4126:288" name="lucide/user-minus" x="0" y="0" width="20" height="20" />
-            <text id="4126:290" name="25 ta aloqada emas" x="24" y="1" width="130" height="18" />
+            <frame id="4248:9" name="lucide/user-group" x="0" y="0" width="20" height="20" />
+            <text id="4126:290" name="1420 ta aholi" x="24" y="1" width="85" height="18" />
           </frame>
-          <frame id="4126:291" name="Frame 204" x="16" y="115" width="207.3333282470703" height="26">
-            <text id="4126:292" name="O’tgan oy: 2,227 ta" x="0" y="0" width="122" height="18" />
+          <frame id="4248:3" name="Frame 204" x="16" y="115" width="207.3333282470703" height="26">
+            <frame id="4248:19" name="lucide/store" x="0" y="0" width="20" height="20" />
+            <text id="4248:7" name="737 ta yuridik" x="24" y="1" width="89" height="18" />
           </frame>
           <frame id="4126:293" name="Chart" x="16" y="141" width="207.3333282470703" height="39">
-            <frame id="4126:294" name="Frame 205" x="0" y="0" width="166.3333282470703" height="39">
-              <frame id="4126:295" name="Frame 206" x="0" y="0" width="12.027777671813965" height="39" />
-              <frame id="4126:296" name="Frame 207" x="14.027777671813965" y="0" width="12.027777671813965" height="39" />
-              <frame id="4126:297" name="Frame 218" x="28.05555534362793" y="0" width="12.027777671813965" height="39" />
-              <frame id="4126:298" name="Frame 227" x="42.08333206176758" y="10" width="12.027777671813965" height="29" />
-              <frame id="4126:299" name="Frame 228" x="56.11111068725586" y="13" width="12.027777671813965" height="26" />
-              <frame id="4126:300" name="Frame 229" x="70.13888549804688" y="0" width="12.027777671813965" height="39" />
-              <frame id="4126:301" name="Frame 230" x="84.16666412353516" y="7" width="12.027777671813965" height="32" />
-              <frame id="4126:302" name="Frame 231" x="98.19444274902344" y="10" width="12.027777671813965" height="29" />
-              <frame id="4126:303" name="Frame 232" x="112.22222137451172" y="28" width="12.027777671813965" height="11" />
-              <frame id="4126:304" name="Frame 233" x="126.25" y="13" width="12.027777671813965" height="26" />
-              <frame id="4126:305" name="Frame 234" x="140.27777099609375" y="0" width="12.027777671813965" height="39" />
-              <frame id="4126:306" name="Frame 235" x="154.3055419921875" y="0" width="12.027777671813965" height="39" />
+            <frame id="4126:294" name="Frame 205" x="0" y="0" width="207.3333282470703" height="39">
+              <frame id="4126:295" name="Frame 206" x="0" y="0" width="15.444443702697754" height="39" />
+              <frame id="4126:296" name="Frame 207" x="17.444442749023438" y="0" width="15.444443702697754" height="39" />
+              <frame id="4126:297" name="Frame 218" x="34.888885498046875" y="0" width="15.444443702697754" height="39" />
+              <frame id="4126:298" name="Frame 227" x="52.33332824707031" y="10" width="15.444443702697754" height="29" />
+              <frame id="4126:299" name="Frame 228" x="69.77777099609375" y="13" width="15.444443702697754" height="26" />
+              <frame id="4126:300" name="Frame 229" x="87.22221374511719" y="0" width="15.444443702697754" height="39" />
+              <frame id="4126:301" name="Frame 230" x="104.66665649414062" y="7" width="15.444443702697754" height="32" />
+              <frame id="4126:302" name="Frame 231" x="122.11109924316406" y="10" width="15.444443702697754" height="29" />
+              <frame id="4126:303" name="Frame 232" x="139.5555419921875" y="28" width="15.444443702697754" height="11" />
+              <frame id="4126:304" name="Frame 233" x="156.99998474121094" y="13" width="15.444443702697754" height="26" />
+              <frame id="4126:305" name="Frame 234" x="174.44442749023438" y="0" width="15.444443702697754" height="39" />
+              <frame id="4126:306" name="Frame 235" x="191.8888702392578" y="0" width="15.444443702697754" height="39" />
             </frame>
-            <text id="4126:307" name="12 oy" x="174.3333282470703" y="21" width="33" height="18" />
-          </frame>
-        </frame>
-        <frame id="4126:308" name="Frame 203" x="989.3333129882812" y="0" width="239.3333282470703" height="196">
-          <frame id="4126:309" name="Frame 200" x="16" y="16" width="207.3333282470703" height="32">
-            <text id="4126:310" name="Transformatorlar" x="0" y="0" width="110" height="18" />
-            <frame id="4126:311" name="Frame 201" x="175.3333282470703" y="0" width="32" height="32">
-              <frame id="4126:312" name="lucide/circuit-board" x="6" y="6" width="20" height="20" />
-            </frame>
-          </frame>
-          <frame id="4126:314" name="Frame 202" x="16" y="48" width="207.3333282470703" height="41">
-            <text id="4126:315" name="50" x="0" y="4" width="33" height="31" />
-            <text id="4126:316" name="ta faol" x="37" y="10.5" width="43" height="18" />
-          </frame>
-          <frame id="4126:317" name="Frame 203" x="16" y="89" width="207.3333282470703" height="26">
-            <frame id="4126:318" name="lucide/square-exclamation-point" x="0" y="0" width="20" height="20" />
-            <text id="4126:320" name="1 ta nofaol" x="24" y="1" width="68" height="18" />
-          </frame>
-          <frame id="4126:321" name="Frame 204" x="16" y="115" width="207.3333282470703" height="26">
-            <text id="4126:322" name="O’tgan oy: 51 ta" x="0" y="0" width="100" height="18" />
-          </frame>
-          <frame id="4126:323" name="Chart" x="16" y="141" width="207.3333282470703" height="39">
-            <frame id="4126:324" name="Frame 205" x="0" y="0" width="166.3333282470703" height="39">
-              <frame id="4126:325" name="Frame 206" x="0" y="28" width="12.027777671813965" height="11" />
-              <frame id="4126:326" name="Frame 207" x="14.027777671813965" y="28" width="12.027777671813965" height="11" />
-              <frame id="4126:327" name="Frame 218" x="28.05555534362793" y="23" width="12.027777671813965" height="16" />
-              <frame id="4126:328" name="Frame 227" x="42.08333206176758" y="10" width="12.027777671813965" height="29" />
-              <frame id="4126:329" name="Frame 228" x="56.11111068725586" y="13" width="12.027777671813965" height="26" />
-              <frame id="4126:330" name="Frame 229" x="70.13888549804688" y="23" width="12.027777671813965" height="16" />
-              <frame id="4126:331" name="Frame 230" x="84.16666412353516" y="7" width="12.027777671813965" height="32" />
-              <frame id="4126:332" name="Frame 231" x="98.19444274902344" y="10" width="12.027777671813965" height="29" />
-              <frame id="4126:333" name="Frame 232" x="112.22222137451172" y="0" width="12.027777671813965" height="39" />
-              <frame id="4126:334" name="Frame 233" x="126.25" y="13" width="12.027777671813965" height="26" />
-              <frame id="4126:335" name="Frame 234" x="140.27777099609375" y="23" width="12.027777671813965" height="16" />
-              <frame id="4126:336" name="Frame 235" x="154.3055419921875" y="0" width="12.027777671813965" height="39" />
-            </frame>
-            <text id="4126:337" name="12 oy" x="174.3333282470703" y="21" width="33" height="18" />
           </frame>
         </frame>
         <frame id="4126:338" name="Frame 204" x="1236.6666259765625" y="0" width="239.3333282470703" height="196">
           <frame id="4126:339" name="Frame 200" x="16" y="16" width="207.3333282470703" height="32">
-            <text id="4126:340" name="Qarzdorlik" x="0" y="0" width="69" height="18" />
+            <text id="4126:340" name="Debitor qarzdorlik" x="0" y="0" width="119" height="18" />
             <frame id="4126:341" name="Frame 201" x="175.3333282470703" y="0" width="32" height="32">
               <frame id="4126:342" name="lucide/hand-coins" x="6" y="6" width="20" height="20" />
             </frame>
           </frame>
           <frame id="4126:344" name="Frame 202" x="16" y="48" width="207.3333282470703" height="41">
-            <text id="4126:345" name="42,1" x="0" y="4" width="47" height="31" />
-            <text id="4126:346" name="mln so’m" x="51" y="10.5" width="59" height="18" />
+            <text id="4126:345" name="5,6" x="0" y="4" width="38" height="31" />
+            <text id="4126:346" name="mlrd so’m" x="42" y="10.5" width="65" height="18" />
           </frame>
-          <frame id="4126:347" name="Frame 203" x="16" y="89" width="207.3333282470703" height="26">
-            <frame id="4126:348" name="lucide/arrow-up" x="20" y="20" width="20" height="20" />
-            <text id="4126:350" name="14,7 mln so’m ga kam" x="24" y="1" width="138" height="18" />
+          <frame id="4268:2961" name="Frame 203" x="16" y="89" width="207.3333282470703" height="26">
+            <frame id="4268:2962" name="lucide/user-group" x="0" y="0" width="20" height="20" />
+            <text id="4268:2964" name="4,5 mlrd aholi" x="24" y="1" width="89" height="18" />
           </frame>
-          <frame id="4126:351" name="Frame 204" x="16" y="115" width="207.3333282470703" height="26">
-            <text id="4126:352" name="O’tgan oy: 56,8 mln so’m" x="0" y="0" width="159" height="18" />
+          <frame id="4268:2965" name="Frame 204" x="16" y="115" width="207.3333282470703" height="26">
+            <frame id="4268:2966" name="lucide/store" x="0" y="0" width="20" height="20" />
+            <text id="4268:2968" name="1,1 mlrd yuridik" x="24" y="1" width="95" height="18" />
           </frame>
           <frame id="4126:353" name="Chart" x="16" y="141" width="207.3333282470703" height="39">
-            <frame id="4126:354" name="Frame 205" x="0" y="0" width="166.3333282470703" height="39">
-              <frame id="4126:355" name="Frame 206" x="0" y="28" width="12.027777671813965" height="11" />
-              <frame id="4126:356" name="Frame 207" x="14.027777671813965" y="28" width="12.027777671813965" height="11" />
-              <frame id="4126:357" name="Frame 218" x="28.05555534362793" y="23" width="12.027777671813965" height="16" />
-              <frame id="4126:358" name="Frame 227" x="42.08333206176758" y="23" width="12.027777671813965" height="16" />
-              <frame id="4126:359" name="Frame 228" x="56.11111068725586" y="32" width="12.027777671813965" height="7" />
-              <frame id="4126:360" name="Frame 229" x="70.13888549804688" y="23" width="12.027777671813965" height="16" />
-              <frame id="4126:361" name="Frame 230" x="84.16666412353516" y="0" width="12.027777671813965" height="39" />
-              <frame id="4126:362" name="Frame 231" x="98.19444274902344" y="10" width="12.027777671813965" height="29" />
-              <frame id="4126:363" name="Frame 232" x="112.22222137451172" y="23" width="12.027777671813965" height="16" />
-              <frame id="4126:364" name="Frame 233" x="126.25" y="13" width="12.027777671813965" height="26" />
-              <frame id="4126:365" name="Frame 234" x="140.27777099609375" y="23" width="12.027777671813965" height="16" />
-              <frame id="4126:366" name="Frame 235" x="154.3055419921875" y="28" width="12.027777671813965" height="11" />
+            <frame id="4126:354" name="Frame 205" x="0" y="0" width="207.3333282470703" height="39">
+              <frame id="4126:355" name="Frame 206" x="0" y="28" width="15.444443702697754" height="11" />
+              <frame id="4126:356" name="Frame 207" x="17.444442749023438" y="28" width="15.444443702697754" height="11" />
+              <frame id="4126:357" name="Frame 218" x="34.888885498046875" y="23" width="15.444443702697754" height="16" />
+              <frame id="4126:358" name="Frame 227" x="52.33332824707031" y="23" width="15.444443702697754" height="16" />
+              <frame id="4126:359" name="Frame 228" x="69.77777099609375" y="32" width="15.444443702697754" height="7" />
+              <frame id="4126:360" name="Frame 229" x="87.22221374511719" y="23" width="15.444443702697754" height="16" />
+              <frame id="4126:361" name="Frame 230" x="104.66665649414062" y="0" width="15.444443702697754" height="39" />
+              <frame id="4126:362" name="Frame 231" x="122.11109924316406" y="10" width="15.444443702697754" height="29" />
+              <frame id="4126:363" name="Frame 232" x="139.5555419921875" y="23" width="15.444443702697754" height="16" />
+              <frame id="4126:364" name="Frame 233" x="156.99998474121094" y="13" width="15.444443702697754" height="26" />
+              <frame id="4126:365" name="Frame 234" x="174.44442749023438" y="23" width="15.444443702697754" height="16" />
+              <frame id="4126:366" name="Frame 235" x="191.8888702392578" y="28" width="15.444443702697754" height="11" />
             </frame>
-            <text id="4126:367" name="12 oy" x="174.3333282470703" y="21" width="33" height="18" />
           </frame>
         </frame>
       </frame>
-      <frame id="4126:368" name="Frame 236" x="0" y="204" width="1476" height="1495">
+      <frame id="4126:368" name="Frame 236" x="0" y="204" width="1476" height="1930">
         <frame id="4179:2" name="KPI cards 2" x="0" y="0" width="321.77777099609375" height="402">
-          <frame id="4179:3" name="Frame 199" x="0" y="0" width="321.77777099609375" height="196">
-            <frame id="4179:4" name="Frame 200" x="16" y="16" width="289.77777099609375" height="32">
-              <text id="4179:5" name="Podstansiyalar" x="0" y="0" width="98" height="18" />
-              <frame id="4179:6" name="Frame 201" x="257.77777099609375" y="0" width="32" height="32">
-                <frame id="4182:538" name="lucide/factory" x="6" y="6" width="20" height="20" />
+          <frame id="4285:3" name="Card" x="0" y="0" width="321.77777099609375" height="80">
+            <rounded-rectangle id="4286:73" name="Rectangle 18" x="-53" y="27" width="106" height="106" />
+            <frame id="4285:11" name="Content" x="16" y="16" width="289.77777099609375" height="48">
+              <frame id="4286:138" name="Frame 286" x="0" y="0" width="158" height="48">
+                <frame id="4286:52" name="energy-industry-energetic-thunderbolt-power-svgrepo-com (1) 1" x="0" y="0" width="48" height="48" />
+                <frame id="4286:74" name="Frame 197" x="60" y="2.5" width="98" height="43">
+                  <text id="4286:76" name="4ta" x="0" y="0" width="98" height="21" />
+                  <text id="4286:75" name="Podstansiyalar" x="0" y="25" width="98" height="18" />
+                </frame>
               </frame>
-            </frame>
-            <frame id="4179:9" name="Frame 202" x="16" y="48" width="289.77777099609375" height="41">
-              <text id="4179:10" name="220,1" x="0" y="4" width="63" height="31" />
-              <text id="4179:11" name="ming kWh" x="67" y="10.5" width="66" height="18" />
-            </frame>
-            <frame id="4179:12" name="Frame 203" x="16" y="89" width="289.77777099609375" height="26">
-              <frame id="4179:13" name="lucide/arrow-up" x="0" y="0" width="20" height="20" />
-              <text id="4179:15" name="28,2 ming kWh ga ko’p" x="24" y="1" width="150" height="18" />
-            </frame>
-            <frame id="4179:16" name="Frame 204" x="16" y="115" width="289.77777099609375" height="26">
-              <text id="4179:17" name="O’tgan oy: 198,1 kWh" x="0" y="0" width="132" height="18" />
-            </frame>
-            <frame id="4179:18" name="Chart" x="16" y="141" width="289.77777099609375" height="39">
-              <frame id="4179:19" name="Frame 205" x="0" y="0" width="235.77777099609375" height="39">
-                <frame id="4179:20" name="Frame 206" x="0" y="0" width="5.9259257316589355" height="39" />
-                <frame id="4179:21" name="Frame 207" x="7.9259257316589355" y="0" width="5.9259257316589355" height="39" />
-                <frame id="4179:22" name="Frame 208" x="15.851851463317871" y="10" width="5.9259257316589355" height="29" />
-                <frame id="4179:23" name="Frame 209" x="23.77777671813965" y="0" width="5.9259257316589355" height="39" />
-                <frame id="4179:24" name="Frame 210" x="31.703702926635742" y="19" width="5.9259257316589355" height="20" />
-                <frame id="4179:25" name="Frame 211" x="39.6296272277832" y="7" width="5.9259257316589355" height="32" />
-                <frame id="4179:26" name="Frame 212" x="47.5555534362793" y="7" width="5.9259257316589355" height="32" />
-                <frame id="4179:27" name="Frame 213" x="55.48147964477539" y="0" width="5.9259257316589355" height="39" />
-                <frame id="4179:28" name="Frame 214" x="63.407405853271484" y="30" width="5.9259257316589355" height="9" />
-                <frame id="4179:29" name="Frame 215" x="71.33332824707031" y="0" width="5.9259257316589355" height="39" />
-                <frame id="4179:30" name="Frame 216" x="79.2592544555664" y="17" width="5.9259257316589355" height="22" />
-                <frame id="4179:31" name="Frame 217" x="87.1851806640625" y="15" width="5.9259257316589355" height="24" />
-                <frame id="4179:32" name="Frame 218" x="95.1111068725586" y="0" width="5.9259257316589355" height="39" />
-                <frame id="4179:33" name="Frame 219" x="103.03703308105469" y="0" width="5.9259257316589355" height="39" />
-                <frame id="4179:34" name="Frame 220" x="110.96295928955078" y="0" width="5.9259257316589355" height="39" />
-                <frame id="4179:35" name="Frame 221" x="118.88888549804688" y="0" width="5.9259257316589355" height="39" />
-                <frame id="4179:36" name="Frame 222" x="126.81481170654297" y="0" width="5.9259257316589355" height="39" />
-                <frame id="4179:37" name="Frame 223" x="134.74073791503906" y="15" width="5.9259257316589355" height="24" />
-                <frame id="4179:38" name="Frame 224" x="142.66665649414062" y="10" width="5.9259257316589355" height="29" />
-                <frame id="4179:39" name="Frame 225" x="150.5925750732422" y="7" width="5.9259257316589355" height="32" />
-                <frame id="4179:40" name="Frame 226" x="158.51849365234375" y="0" width="5.9259257316589355" height="39" />
-                <frame id="4179:41" name="Frame 227" x="166.4444122314453" y="25" width="5.9259257316589355" height="14" />
-                <frame id="4179:42" name="Frame 228" x="174.37033081054688" y="13" width="5.9259257316589355" height="26" />
-                <frame id="4179:43" name="Frame 229" x="182.29624938964844" y="0" width="5.9259257316589355" height="39" />
-                <frame id="4179:44" name="Frame 230" x="190.22216796875" y="7" width="5.9259257316589355" height="32" />
-                <frame id="4179:45" name="Frame 231" x="198.14808654785156" y="10" width="5.9259257316589355" height="29" />
-                <frame id="4179:46" name="Frame 232" x="206.07400512695312" y="28" width="5.9259257316589355" height="11" />
-                <frame id="4179:47" name="Frame 233" x="213.9999237060547" y="13" width="5.9259257316589355" height="26" />
-                <frame id="4179:48" name="Frame 234" x="221.92584228515625" y="0" width="5.9259257316589355" height="39" />
-                <frame id="4179:49" name="Frame 235" x="229.8517608642578" y="0" width="5.9259257316589355" height="39" />
+              <frame id="4286:139" name="Frame 189" x="208.77777099609375" y="8" width="81" height="32">
+                <text id="4286:140" name="Ochish" x="20" y="8" width="41" height="16" />
               </frame>
-              <text id="4179:50" name="30 kun" x="243.77777099609375" y="21" width="46" height="18" />
             </frame>
           </frame>
-          <frame id="4179:51" name="Frame 200" x="0" y="206" width="321.77777099609375" height="196">
-            <frame id="4179:52" name="Frame 200" x="16" y="16" width="289.77777099609375" height="32">
-              <text id="4179:53" name="Fiderlar" x="0" y="0" width="51" height="18" />
-              <frame id="4179:54" name="Frame 201" x="257.77777099609375" y="0" width="32" height="32">
-                <frame id="4182:541" name="lucide/workflow" x="4" y="4" width="24" height="24" />
+          <frame id="4286:142" name="Card" x="0" y="88" width="321.77777099609375" height="80">
+            <rounded-rectangle id="4286:143" name="Rectangle 18" x="-53" y="27" width="106" height="106" />
+            <frame id="4286:144" name="Content" x="16" y="16" width="289.77777099609375" height="48">
+              <frame id="4286:145" name="Frame 286" x="0" y="0" width="111" height="48">
+                <frame id="4286:204" name="transmission-electricity-industry-electric-energy-svgrepo-com 1" x="0" y="0" width="48" height="48" />
+                <frame id="4286:167" name="Frame 197" x="60" y="2.5" width="51" height="43">
+                  <text id="4286:168" name="21ta" x="0" y="0" width="51" height="21" />
+                  <text id="4286:169" name="Fiderlar" x="0" y="25" width="51" height="18" />
+                </frame>
+              </frame>
+              <frame id="4286:170" name="Frame 189" x="208.77777099609375" y="8" width="81" height="32">
+                <text id="4286:171" name="Ochish" x="20" y="8" width="41" height="16" />
               </frame>
             </frame>
-            <frame id="4179:57" name="Frame 202" x="16" y="48" width="289.77777099609375" height="41">
-              <text id="4179:58" name="190,5" x="0" y="4" width="65" height="31" />
-              <text id="4179:59" name="ming kWh" x="69" y="10.5" width="66" height="18" />
-            </frame>
-            <frame id="4179:60" name="Frame 203" x="16" y="89" width="289.77777099609375" height="26">
-              <frame id="4179:61" name="lucide/arrow-up" x="20" y="20" width="20" height="20" />
-              <text id="4179:63" name="10,5 ming kWh ga kam" x="24" y="1" width="148" height="18" />
-            </frame>
-            <frame id="4179:64" name="Frame 204" x="16" y="115" width="289.77777099609375" height="26">
-              <text id="4179:65" name="O’tgan oy: 180,0 kWh" x="0" y="0" width="136" height="18" />
-            </frame>
-            <frame id="4179:66" name="Chart" x="16" y="141" width="289.77777099609375" height="39">
-              <frame id="4179:67" name="Frame 205" x="0" y="0" width="235.77777099609375" height="39">
-                <frame id="4179:68" name="Frame 206" x="0" y="0" width="5.9259257316589355" height="39" />
-                <frame id="4179:69" name="Frame 207" x="7.9259257316589355" y="0" width="5.9259257316589355" height="39" />
-                <frame id="4179:70" name="Frame 208" x="15.851851463317871" y="10" width="5.9259257316589355" height="29" />
-                <frame id="4179:71" name="Frame 209" x="23.77777671813965" y="0" width="5.9259257316589355" height="39" />
-                <frame id="4179:72" name="Frame 210" x="31.703702926635742" y="19" width="5.9259257316589355" height="20" />
-                <frame id="4179:73" name="Frame 211" x="39.6296272277832" y="7" width="5.9259257316589355" height="32" />
-                <frame id="4179:74" name="Frame 212" x="47.5555534362793" y="7" width="5.9259257316589355" height="32" />
-                <frame id="4179:75" name="Frame 213" x="55.48147964477539" y="0" width="5.9259257316589355" height="39" />
-                <frame id="4179:76" name="Frame 214" x="63.407405853271484" y="30" width="5.9259257316589355" height="9" />
-                <frame id="4179:77" name="Frame 215" x="71.33332824707031" y="0" width="5.9259257316589355" height="39" />
-                <frame id="4179:78" name="Frame 216" x="79.2592544555664" y="17" width="5.9259257316589355" height="22" />
-                <frame id="4179:79" name="Frame 217" x="87.1851806640625" y="15" width="5.9259257316589355" height="24" />
-                <frame id="4179:80" name="Frame 218" x="95.1111068725586" y="10" width="5.9259257316589355" height="29" />
-                <frame id="4179:81" name="Frame 219" x="103.03703308105469" y="13" width="5.9259257316589355" height="26" />
-                <frame id="4179:82" name="Frame 220" x="110.96295928955078" y="0" width="5.9259257316589355" height="39" />
-                <frame id="4179:83" name="Frame 221" x="118.88888549804688" y="10" width="5.9259257316589355" height="29" />
-                <frame id="4179:84" name="Frame 222" x="126.81481170654297" y="10" width="5.9259257316589355" height="29" />
-                <frame id="4179:85" name="Frame 223" x="134.74073791503906" y="15" width="5.9259257316589355" height="24" />
-                <frame id="4179:86" name="Frame 224" x="142.66665649414062" y="10" width="5.9259257316589355" height="29" />
-                <frame id="4179:87" name="Frame 225" x="150.5925750732422" y="7" width="5.9259257316589355" height="32" />
-                <frame id="4179:88" name="Frame 226" x="158.51849365234375" y="0" width="5.9259257316589355" height="39" />
-                <frame id="4179:89" name="Frame 227" x="166.4444122314453" y="25" width="5.9259257316589355" height="14" />
-                <frame id="4179:90" name="Frame 228" x="174.37033081054688" y="13" width="5.9259257316589355" height="26" />
-                <frame id="4179:91" name="Frame 229" x="182.29624938964844" y="0" width="5.9259257316589355" height="39" />
-                <frame id="4179:92" name="Frame 230" x="190.22216796875" y="7" width="5.9259257316589355" height="32" />
-                <frame id="4179:93" name="Frame 231" x="198.14808654785156" y="10" width="5.9259257316589355" height="29" />
-                <frame id="4179:94" name="Frame 232" x="206.07400512695312" y="28" width="5.9259257316589355" height="11" />
-                <frame id="4179:95" name="Frame 233" x="213.9999237060547" y="13" width="5.9259257316589355" height="26" />
-                <frame id="4179:96" name="Frame 234" x="221.92584228515625" y="28" width="5.9259257316589355" height="11" />
-                <frame id="4179:97" name="Frame 235" x="229.8517608642578" y="0" width="5.9259257316589355" height="39" />
+          </frame>
+          <frame id="4286:173" name="Card" x="0" y="176" width="321.77777099609375" height="80">
+            <rounded-rectangle id="4286:174" name="Rectangle 18" x="-53" y="27" width="106" height="106" />
+            <frame id="4286:175" name="Content" x="16" y="16" width="289.77777099609375" height="48">
+              <frame id="4286:176" name="Frame 286" x="0" y="0" width="153" height="48">
+                <frame id="4286:247" name="transformer-power-voltage-energy-electronic-svgrepo-com 2" x="0" y="0" width="48" height="48" />
+                <frame id="4286:198" name="Frame 197" x="60" y="2.5" width="93" height="43">
+                  <text id="4286:199" name="984ta" x="0" y="0" width="93" height="21" />
+                  <text id="4286:200" name="Transformator" x="0" y="25" width="93" height="18" />
+                </frame>
               </frame>
-              <text id="4179:98" name="30 kun" x="243.77777099609375" y="21" width="46" height="18" />
+              <frame id="4286:201" name="Frame 189" x="208.77777099609375" y="8" width="81" height="32">
+                <text id="4286:202" name="Ochish" x="20" y="8" width="41" height="16" />
+              </frame>
+            </frame>
+          </frame>
+          <frame id="4289:353" name="Card" x="0" y="264" width="321.77777099609375" height="138">
+            <frame id="4289:354" name="Header" x="16" y="16" width="289.77777099609375" height="18">
+              <text id="4289:355" name="Obektlar holati" x="0" y="0" width="104" height="18" />
+            </frame>
+            <frame id="4302:2805" name="Content" x="16" y="42" width="289.77777099609375" height="75">
+              <frame id="4302:2806" name="Frame 190" x="0" y="0" width="140.88888549804688" height="75">
+                <text id="4302:2807" name="Ko’rikdan o’tkazilgan" x="0" y="0" width="137" height="18" />
+                <frame id="4302:2808" name="Frame 189" x="0" y="46" width="140.88888549804688" height="29">
+                  <text id="4302:2811" name="45 ta" x="49.44444274902344" y="4" width="42" height="21" />
+                </frame>
+              </frame>
+              <frame id="4302:2812" name="Frame 191" x="148.88888549804688" y="0" width="140.88888549804688" height="75">
+                <text id="4302:2813" name="Ko’rikdan o’tkazilishi kerak" x="0" y="0" width="135" height="36" />
+                <frame id="4302:2814" name="Frame 189" x="0" y="46" width="140.88888549804688" height="29">
+                  <text id="4302:2817" name="3 ta" x="54.94444274902344" y="4" width="31" height="21" />
+                </frame>
+              </frame>
             </frame>
           </frame>
         </frame>
@@ -496,7 +453,7 @@
               <frame id="4126:816" name="Frame" x="362.4443359375" y="12" width="28" height="28" />
               <frame id="4126:842" name="Frame" x="190.4443359375" y="40" width="28" height="28" />
               <frame id="4126:868" name="Frame" x="26.4443359375" y="6" width="28" height="28" />
-              <frame id="4126:894" name="Frame 248" x="34.4443359375" y="137" width="40" height="40">
+              <frame id="4126:894" name="Frame 248" x="197.111328125" y="103" width="40" height="40">
                 <frame id="4126:895" name="transformer-power-voltage-energy-electronic-svgrepo-com 1" x="8" y="8" width="24" height="24" />
               </frame>
               <frame id="4126:919" name="Frame 249" x="557.22265625" y="167" width="215" height="135">
@@ -507,7 +464,7 @@
                     <text id="4126:924" name="TP A303" x="16" y="0" width="40" height="13" />
                   </frame>
                 </frame>
-                <text id="4126:925" name="Bu oygi iste’mol: 51,5 ming kWh" x="10" y="51" width="151" height="16" />
+                <text id="4126:925" name="Bu oygi Foydali oqim: 51,5 ming kWh" x="10" y="51" width="173" height="16" />
                 <frame id="4126:926" name="Frame 253" x="10" y="75" width="195" height="50">
                   <frame id="4126:927" name="lucide/info" x="4" y="4" width="12" height="12" />
                   <text id="4126:929" name="Ushbu transformator o’tgan oyga nisbatan 20,1 ming kWh ga ko’p energiya iste’mol qilmoqda." x="20" y="4" width="167" height="39" />
@@ -526,11 +483,11 @@
           </frame>
         </frame>
         <frame id="4179:367" name="Right" x="1154.2222900390625" y="0" width="321.77777099609375" height="402">
-          <frame id="4179:238" name="Card" x="0" y="0" width="321.77777099609375" height="197">
+          <frame id="4179:238" name="Card" x="0" y="0" width="321.77777099609375" height="402">
             <frame id="4179:239" name="Header" x="16" y="16" width="289.77777099609375" height="18">
-              <text id="4179:240" name="Filteratsiya" x="0" y="0" width="78" height="18" />
+              <text id="4179:240" name="Filtratsiya" x="0" y="0" width="70" height="18" />
             </frame>
-            <frame id="4179:358" name="Main" x="16" y="42" width="289.77777099609375" height="139">
+            <frame id="4179:358" name="Main" x="16" y="57" width="289.77777099609375" height="112">
               <frame id="4180:502" name="Toggle btn" x="0" y="0" width="289.77777099609375" height="32">
                 <text id="4180:513" name="Podstansiyani tanlang" x="12" y="7" width="142" height="18" />
                 <frame id="4180:510" name="lucide/chevron-right" x="281.77777099609375" y="7" width="18" height="18" />
@@ -543,150 +500,97 @@
                 <text id="4180:520" name="Transformatorni tanlang" x="12" y="7" width="153" height="18" />
                 <frame id="4180:521" name="lucide/chevron-right" x="281.77777099609375" y="7" width="18" height="18" />
               </frame>
-              <frame id="4182:544" name="Toggle btn" x="0" y="120" width="289.77777099609375" height="19">
-                <text id="4182:545" name="Sahifaga o’tish" x="99.38888549804688" y="1.5" width="95" height="18" />
-              </frame>
             </frame>
-          </frame>
-          <frame id="4179:497" name="Card" x="0" y="205" width="321.77777099609375" height="197">
-            <frame id="4179:498" name="Header" x="16" y="16" width="289.77777099609375" height="18">
-              <text id="4179:499" name="Ma’lumotlar" x="0" y="0" width="83" height="18" />
-            </frame>
-            <frame id="4179:500" name="Main" x="16" y="42" width="289.77777099609375" height="139">
-              <frame id="4182:529" name="Chart label" x="0" y="0" width="106" height="16">
-                <frame id="4182:530" name="Frame 196" x="0" y="2" width="12" height="12" />
-                <frame id="4182:531" name="Frame 197" x="22" y="0" width="84" height="16">
-                  <text id="4182:533" name="1,020 mln kWh" x="0" y="0" width="84" height="16" />
+            <rounded-rectangle id="4301:2776" name="Rectangle 19" x="16" y="192" width="289.77777099609375" height="1" />
+            <frame id="4301:2788" name="Frame 293" x="16" y="216" width="289.77777099609375" height="130">
+              <frame id="4301:2789" name="Frame 254" x="0" y="0" width="289.77777099609375" height="38">
+                <frame id="4301:2790" name="Frame 201" x="0" y="1" width="36" height="36">
+                  <frame id="4301:2791" name="lucide/zap" x="8" y="8" width="20" height="20" />
+                </frame>
+                <frame id="4301:2793" name="Frame 197" x="44" y="0" width="245.77777099609375" height="38">
+                  <text id="4301:2794" name="Umumiy oqim" x="0" y="0" width="77" height="16" />
+                  <text id="4301:2795" name="15,2 ming kWh" x="0" y="20" width="245.77777099609375" height="18" />
                 </frame>
               </frame>
+              <frame id="4301:2780" name="Frame 254" x="0" y="46" width="289.77777099609375" height="38">
+                <frame id="4301:2781" name="Frame 201" x="0" y="1" width="36" height="36">
+                  <frame id="4309:2828" name="lucide/plug-zap" x="8" y="8" width="20" height="20" />
+                </frame>
+                <frame id="4301:2784" name="Frame 197" x="44" y="0" width="245.77777099609375" height="38">
+                  <text id="4301:2785" name="Foydali oqim" x="0" y="0" width="71" height="16" />
+                  <text id="4301:2786" name="15,2 ming kWh" x="0" y="20" width="245.77777099609375" height="18" />
+                </frame>
+              </frame>
+              <frame id="4301:2797" name="Frame 255" x="0" y="92" width="289.77777099609375" height="38">
+                <frame id="4301:2798" name="Frame 201" x="0" y="1" width="36" height="36">
+                  <frame id="4309:2831" name="lucide/zap-off" x="8" y="8" width="20" height="20" />
+                </frame>
+                <frame id="4301:2801" name="Frame 197" x="44" y="0" width="245.77777099609375" height="38">
+                  <text id="4301:2802" name="Yo’qotish" x="0" y="0" width="52" height="16" />
+                  <text id="4301:2803" name="15,2 ming kWh" x="0" y="20" width="245.77777099609375" height="18" />
+                </frame>
+              </frame>
+            </frame>
+            <frame id="4301:2777" name="Footer" x="16" y="369" width="289.77777099609375" height="25">
+              <text id="4301:2778" name="Sahifaga o’tish" x="102.88888549804688" y="9" width="84" height="16" />
             </frame>
           </frame>
         </frame>
         <frame id="4126:497" name="Mid" x="0" y="410" width="486.6666564941406" height="336">
-          <frame id="4126:498" name="Card" x="0" y="0" width="486.6666564941406" height="148">
-            <frame id="4126:499" name="Header" x="16" y="16" width="454.6666564941406" height="32">
-              <text id="4126:500" name="Qoidabuzarliklar" x="0" y="7" width="115" height="18" />
-              <frame id="4126:501" name="Right" x="422.6666564941406" y="0" width="32" height="32">
-                <frame id="4126:502" name="Toggle btn" x="0" y="0" width="32" height="32">
-                  <frame id="4126:503" name="Frame 241" x="2" y="2" width="28" height="28">
-                    <frame id="4126:504" name="lucide/file-down" x="5" y="5" width="18" height="18" />
-                  </frame>
-                </frame>
+          <frame id="4126:498" name="Card" x="0" y="0" width="486.6666564941406" height="220">
+            <frame id="4126:499" name="Header" x="16" y="16" width="454.6666564941406" height="18">
+              <text id="4126:500" name="Qoidabuzarliklar" x="0" y="0" width="115" height="18" />
+            </frame>
+            <frame id="4289:271" name="Frame 191" x="16" y="46" width="454.6666564941406" height="73">
+              <text id="4289:272" name="Umumiy aniqlangan holatlar" x="0" y="0" width="184" height="18" />
+              <frame id="4289:273" name="Frame 189" x="0" y="28" width="454.6666564941406" height="45">
+                <frame id="4289:288" name="lucide/shield-check" x="190.8333282470703" y="12.5" width="20" height="20" />
+                <text id="4289:276" name="911 ta" x="218.8333282470703" y="12" width="45" height="21" />
               </frame>
             </frame>
-            <frame id="4126:506" name="Content" x="16" y="56" width="454.6666564941406" height="76">
-              <frame id="4126:507" name="Frame 190" x="0" y="0" width="146.2222137451172" height="76">
-                <text id="4126:508" name="Ma’muriy holat" x="0" y="0" width="97" height="18" />
-                <frame id="4126:509" name="Frame 189" x="0" y="28" width="146.2222137451172" height="48">
-                  <frame id="4126:510" name="lucide/file-exclamation-point" x="20" y="12" width="24" height="24" />
-                  <text id="4126:512" name="45 ta" x="56" y="13.5" width="42" height="21" />
+            <frame id="4126:506" name="Content" x="16" y="131" width="454.6666564941406" height="73">
+              <frame id="4126:507" name="Frame 190" x="0" y="0" width="146.2222137451172" height="73">
+                <text id="4126:508" name="Ma’muriy" x="0" y="0" width="60" height="18" />
+                <frame id="4126:509" name="Frame 189" x="0" y="28" width="146.2222137451172" height="45">
+                  <frame id="4126:510" name="lucide/file-exclamation-point" x="38.111106872558594" y="12.5" width="20" height="20" />
+                  <text id="4126:512" name="45 ta" x="66.1111068725586" y="12" width="42" height="21" />
                 </frame>
               </frame>
-              <frame id="4126:513" name="Frame 191" x="154.2222137451172" y="0" width="146.2222137451172" height="76">
-                <text id="4126:514" name="Jinoiy holat" x="0" y="0" width="77" height="18" />
-                <frame id="4126:515" name="Frame 189" x="0" y="28" width="146.2222137451172" height="48">
-                  <frame id="4126:516" name="lucide/gavel" x="20" y="12" width="24" height="24" />
-                  <text id="4126:518" name="3 ta" x="56" y="13.5" width="31" height="21" />
+              <frame id="4126:513" name="Frame 191" x="154.2222137451172" y="0" width="146.2222137451172" height="73">
+                <text id="4126:514" name="Jinoiy" x="0" y="0" width="40" height="18" />
+                <frame id="4126:515" name="Frame 189" x="0" y="28" width="146.2222137451172" height="45">
+                  <frame id="4126:516" name="lucide/gavel" x="43.611106872558594" y="12.5" width="20" height="20" />
+                  <text id="4126:518" name="3 ta" x="71.6111068725586" y="12" width="31" height="21" />
                 </frame>
               </frame>
-              <frame id="4126:519" name="Frame 192" x="308.4444274902344" y="0" width="146.2222137451172" height="76">
-                <text id="4126:520" name="Aybsiz" x="0" y="0" width="44" height="18" />
-                <frame id="4126:521" name="Frame 189" x="0" y="28" width="146.2222137451172" height="48">
-                  <frame id="4126:522" name="lucide/shield-check" x="20" y="12" width="24" height="24" />
-                  <text id="4126:524" name="13 ta" x="56" y="13.5" width="38" height="21" />
-                </frame>
-              </frame>
-            </frame>
-          </frame>
-          <frame id="4126:525" name="Card" x="0" y="158" width="486.6666564941406" height="178">
-            <frame id="4126:526" name="Header" x="16" y="16" width="454.6666564941406" height="18">
-              <text id="4126:527" name="Energetika rahbari (Ma’sul xodim)" x="0" y="0" width="229" height="18" />
-            </frame>
-            <frame id="4126:528" name="Content" x="16" y="34" width="454.6666564941406" height="111">
-              <frame id="4126:529" name="Frame 245" x="0" y="31.5" width="193" height="48">
-                <frame id="4126:530" name="Profile Pic" x="0" y="0" width="48" height="48" />
-                <frame id="4126:531" name="Frame 242" x="60" y="1" width="141" height="46">
-                  <text id="4126:532" name="Jaloliddin Ketmonov" x="0" y="0" width="141" height="18" />
-                  <text id="4126:533" name="+998 93 188 72 79" x="0" y="28" width="122" height="18" />
-                </frame>
-              </frame>
-              <frame id="4126:534" name="Frame 189" x="353.6666564941406" y="39.5" width="101" height="32">
-                <text id="4126:535" name="Bog’lanish" x="20" y="8" width="61" height="16" />
-              </frame>
-            </frame>
-            <frame id="4126:536" name="Footer" x="16" y="145" width="454.6666564941406" height="25">
-              <text id="4126:537" name="Barcha xodimlarni ko’rsatish" x="147.8333282470703" y="9" width="159" height="16" />
-            </frame>
-          </frame>
-        </frame>
-        <frame id="4126:610" name="Card" x="494.6666564941406" y="410" width="321.77777099609375" height="336">
-          <frame id="4126:611" name="Header" x="16" y="16" width="289.77777099609375" height="32">
-            <text id="4126:612" name="Qarzdorlik" x="0" y="7" width="73" height="18" />
-            <frame id="4126:613" name="Right" x="187.77777099609375" y="0" width="102" height="32">
-              <frame id="4126:614" name="Toggle btn" x="0" y="0" width="62" height="32">
-                <frame id="4126:615" name="Frame 240" x="2" y="2" width="28" height="28">
-                  <frame id="4126:616" name="lucide/chart-no-axes-column" x="5" y="5" width="18" height="18" />
-                </frame>
-                <frame id="4126:618" name="Frame 241" x="32" y="2" width="28" height="28">
-                  <frame id="4126:619" name="lucide/table" x="5" y="5" width="18" height="18" />
-                </frame>
-              </frame>
-              <frame id="4126:621" name="Toggle btn" x="70" y="0" width="32" height="32">
-                <frame id="4126:622" name="Frame 241" x="2" y="2" width="28" height="28">
-                  <frame id="4126:623" name="lucide/file-down" x="5" y="5" width="18" height="18" />
+              <frame id="4126:519" name="Frame 192" x="308.4444274902344" y="0" width="146.2222137451172" height="73">
+                <text id="4126:520" name="Istemolchi aybisiz" x="0" y="0" width="118" height="18" />
+                <frame id="4126:521" name="Frame 189" x="0" y="28" width="146.2222137451172" height="45">
+                  <frame id="4126:522" name="lucide/shield-check" x="40.111106872558594" y="12.5" width="20" height="20" />
+                  <text id="4126:524" name="13 ta" x="68.1111068725586" y="12" width="38" height="21" />
                 </frame>
               </frame>
             </frame>
           </frame>
-          <frame id="4126:625" name="Main" x="16" y="56" width="289.77777099609375" height="264">
-            <frame id="4126:626" name="Chart" x="0" y="0" width="289.77777099609375" height="169">
-              <frame id="4126:627" name="Frame 244" x="55.888885498046875" y="0" width="178" height="169">
-                <frame id="4126:628" name="PolarGrid" x="-2" y="-0.000007510185241699219" width="184.000732421875" height="168.9652099609375">
-                  <text id="4126:629" name="0" x="90.46257781982422" y="0" width="6.999554634094238" height="12.034798622131348" />
-                  <text id="4126:630" name="75" x="154.3352813720703" y="31.044342160224915" width="12.999173164367676" height="12.034798622131348" />
-                  <text id="4126:631" name="150" x="165.00082397460938" y="108.6125031709671" width="17" height="12" />
-                  <text id="4126:632" name="225" x="116.79102325439453" y="156.96520245075226" width="19" height="12" />
-                  <text id="4126:633" name="300" x="28.952289581298828" y="146.26805889606476" width="19" height="12" />
-                  <text id="4126:634" name="375" x="-2" y="80.32559216022491" width="19" height="12" />
-                  <vector id="4126:635" name="Vector" x="13.84245777130127" y="10.373327374458313" width="155.6151123046875" height="156.0762939453125" />
-                  <vector id="4126:636" name="Vector" x="21.841949462890625" y="18.396528363227844" width="139.99107360839844" height="140.40599060058594" />
-                  <vector id="4126:637" name="Vector" x="21.842323303222656" y="18.14175808429718" width="143.49095153808594" height="143.91629028320312" />
-                </frame>
-                <frame id="4126:638" name="Series" x="27.008291244506836" y="23.57818603515625" width="133.17063903808594" height="133.5528564453125" />
-                <frame id="4126:651" name="DataLabels" x="42.11402130126953" y="35.101497650146484" width="37.997581481933594" height="12.034798622131348">
-                  <text id="4126:652" name="Sentabr" x="42.11402130126953" y="35.101497650146484" width="37.997581481933594" height="12.034798622131348" />
-                </frame>
-                <frame id="4126:653" name="Annotations" x="21.841873168945312" y="18.396577835083008" width="143.4908905029297" height="143.91616821289062" />
-              </frame>
-            </frame>
-            <frame id="4126:664" name="Frame 194" x="0" y="177" width="289.77777099609375" height="87">
-              <frame id="4126:665" name="Chart label" x="0" y="9" width="140.88888549804688" height="35">
-                <frame id="4126:666" name="Frame 196" x="0" y="11.5" width="12" height="12" />
-                <frame id="4126:667" name="Frame 197" x="22" y="0" width="85" height="35">
-                  <text id="4126:668" name="Umumiy" x="0" y="0" width="39" height="13" />
-                  <text id="4126:669" name="361,7 mln so’m" x="0" y="19" width="85" height="16" />
+          <frame id="4289:294" name="Card" x="0" y="228" width="486.6666564941406" height="108">
+            <rounded-rectangle id="4289:295" name="Rectangle 18" x="-53" y="27" width="106" height="106" />
+            <frame id="4289:296" name="Content" x="16" y="30" width="454.6666564941406" height="48">
+              <frame id="4289:297" name="Frame 286" x="0" y="0" width="273" height="48">
+                <frame id="4289:340" name="business-electricity-connect-energy-commerce-svgrepo-com 1" x="0" y="0" width="48" height="48" />
+                <frame id="4289:322" name="Frame 197" x="60" y="2.5" width="213" height="43">
+                  <text id="4289:324" name="Umumiy keltirilgan zarar miqdori" x="0" y="0" width="213" height="18" />
+                  <text id="4289:323" name="635,1 mln so’m" x="0" y="22" width="213" height="21" />
                 </frame>
               </frame>
-              <frame id="4126:670" name="Chart label" x="148.88888549804688" y="9" width="140.88888549804688" height="35">
-                <frame id="4126:671" name="Frame 196" x="0" y="11.5" width="12" height="12" />
-                <frame id="4126:672" name="Frame 197" x="22" y="0" width="87" height="35">
-                  <text id="4126:673" name="Aholi" x="0" y="0" width="24" height="13" />
-                  <text id="4126:674" name="261,6 mln so’m" x="0" y="19" width="87" height="16" />
-                </frame>
-              </frame>
-              <frame id="4126:675" name="Chart label" x="0" y="52" width="289.77777099609375" height="35">
-                <frame id="4126:676" name="Frame 196" x="0" y="11.5" width="12" height="12" />
-                <frame id="4126:677" name="Frame 197" x="22" y="0" width="85" height="35">
-                  <text id="4126:678" name="Yuridik" x="0" y="0" width="32" height="13" />
-                  <text id="4126:679" name="100,1 mln so’m" x="0" y="19" width="85" height="16" />
-                </frame>
+              <frame id="4289:325" name="Frame 189" x="366.6666564941406" y="8" width="88" height="32">
+                <text id="4289:326" name="Ba’tafsil" x="20" y="8" width="48" height="16" />
               </frame>
             </frame>
           </frame>
         </frame>
-        <frame id="4126:680" name="Card" x="824.4444580078125" y="410" width="321.77777099609375" height="336">
+        <frame id="4126:680" name="Card" x="494.6666564941406" y="410" width="321.77777099609375" height="336">
           <frame id="4126:681" name="Header" x="16" y="16" width="289.77777099609375" height="32">
-            <text id="4126:682" name="Yo’qotish zarari" x="0" y="7" width="107" height="18" />
+            <text id="4126:682" name="Hisoblagichlar holati" x="0" y="7" width="142" height="18" />
             <frame id="4126:683" name="Right" x="187.77777099609375" y="0" width="102" height="32">
               <frame id="4126:684" name="Toggle btn" x="0" y="0" width="62" height="32">
                 <frame id="4126:685" name="Frame 240" x="2" y="2" width="28" height="28">
@@ -704,51 +608,133 @@
             </frame>
           </frame>
           <frame id="4126:695" name="Main" x="16" y="56" width="289.77777099609375" height="264">
-            <frame id="4126:696" name="RadialChart-SVG" x="0" y="0" width="289.77777099609375" height="169">
-              <frame id="4126:697" name="Frame 248" x="55.22216796875" y="0" width="180" height="169">
-                <frame id="4126:698" name="PolarGrid" x="0" y="0" width="180" height="169">
-                  <text id="4126:699" name="0" x="91.45408630371094" y="0" width="8.007680892944336" height="13.731678009033203" />
-                  <text id="4126:700" name="25" x="135.40687561035156" y="12.237105369567871" width="14.871406555175781" height="13.731678009033203" />
-                  <text id="4126:701" name="50" x="162.14183044433594" y="44.823768615722656" width="14.871406555175781" height="13.731678009033203" />
-                  <text id="4126:702" name="75" x="166.27255249023438" y="92.49742126464844" width="13.72745132446289" height="13.731678009033203" />
-                  <text id="4126:703" name="100" x="146.4066925048828" y="135.39633178710938" width="20.59117889404297" height="13.731678009033203" />
-                  <text id="4126:704" name="125" x="99.57379150390625" y="155.26832580566406" width="19.447223663330078" height="13.731678009033203" />
-                  <text id="4126:705" name="150" x="47.56502914428711" y="151.13638305664062" width="19.447223663330078" height="13.731678009033203" />
-                  <text id="4126:706" name="175" x="14.649947166442871" y="124.39313507080078" width="19.447223663330078" height="13.731678009033203" />
-                  <text id="4126:707" name="200" x="0" y="78.33174896240234" width="21.735130310058594" height="13.731678009033203" />
-                  <vector id="4126:708" name="Vector" x="16.57206916809082" y="11.251294136047363" width="155.50848388671875" height="155.55641174316406" />
-                  <vector id="4126:709" name="Vector" x="25.71489143371582" y="20.396921157836914" width="137.3839569091797" height="137.4262237548828" />
-                  <vector id="4126:710" name="Vector" x="25.715248107910156" y="20.15128517150879" width="138.71315002441406" height="138.75592041015625" />
+            <frame id="4301:2469" name="RadialChart-SVG" x="0" y="0" width="289.77777099609375" height="169">
+              <frame id="4301:2514" name="Frame 292" x="55.3330078125" y="0" width="180" height="169">
+                <frame id="4301:2472" name="PolarGrid" x="0" y="0" width="179.99949645996094" height="169.00003051757812">
+                  <text id="4301:2473" name="0" x="91.17263793945312" y="0" width="8.126193046569824" height="13.909346580505371" />
+                  <text id="4301:2474" name="20" x="154.44549560546875" y="30.31846046447754" width="15.09150218963623" height="13.909346580505371" />
+                  <text id="4301:2475" name="40" x="164.9084930419922" y="107.86854553222656" width="15.09150218963623" height="13.909346580505371" />
+                  <text id="4301:2476" name="60" x="117.61418914794922" y="155.0906524658203" width="15.09150218963623" height="13.909346580505371" />
+                  <text id="4301:2477" name="80" x="35.678287506103516" y="144.64361572265625" width="15.09150218963623" height="13.909346580505371" />
+                  <text id="4301:2478" name="100" x="0" y="79.34523010253906" width="20.895925521850586" height="13.909346580505371" />
+                  <vector id="4301:2479" name="Vector" x="15.182416915893555" y="11.396862983703613" width="155.43931579589844" height="155.2019805908203" />
+                  <vector id="4301:2480" name="Vector" x="24.46055030822754" y="20.66082763671875" width="137.33265686035156" height="137.1229705810547" />
+                  <vector id="4301:2481" name="Vector" x="24.460912704467773" y="20.41201400756836" width="140.7660369873047" height="140.5512237548828" />
                 </frame>
-                <frame id="4126:711" name="Series" x="30.709148406982422" y="25.39280128479004" width="128.7244415283203" height="128.76409912109375" />
-                <frame id="4126:724" name="DataLabels" x="42.09004211425781" y="33.96868133544922" width="43.47026062011719" height="13.731678009033203">
-                  <text id="4126:725" name="Sentabr" x="42.09004211425781" y="33.96868133544922" width="43.47026062011719" height="13.731678009033203" />
+                <frame id="4301:2482" name="Series" x="29.528873443603516" y="25.721763610839844" width="130.62954711914062" height="130.4300994873047" />
+                <frame id="4301:2499" name="DataLabels" x="33.72120666503906" y="34.4083137512207" width="51.07892990112305" height="13.909346580505371">
+                  <text id="4301:2500" name="Sentabr" x="33.72120666503906" y="34.4083137512207" width="51.07892990112305" height="13.909346580505371" />
                 </frame>
-                <frame id="4126:726" name="Annotations" x="25.71495246887207" y="20.396928787231445" width="138.71311950683594" height="138.7558135986328" />
+                <frame id="4301:2501" name="Annotations" x="24.46133804321289" y="20.66083526611328" width="140.76600646972656" height="140.55108642578125" />
               </frame>
             </frame>
             <frame id="4126:737" name="Frame 194" x="0" y="177" width="289.77777099609375" height="87">
               <frame id="4126:738" name="Chart label" x="0" y="9" width="140.88888549804688" height="35">
                 <frame id="4126:739" name="Frame 196" x="0" y="11.5" width="12" height="12" />
-                <frame id="4126:740" name="Frame 197" x="22" y="0" width="83" height="35">
-                  <text id="4126:741" name="Tabiiy" x="0" y="0" width="27" height="13" />
-                  <text id="4126:742" name="161,7 mln so’m" x="0" y="19" width="83" height="16" />
+                <frame id="4126:740" name="Frame 197" x="22" y="0" width="50" height="35">
+                  <text id="4126:741" name="Umumiy" x="0" y="0" width="39" height="13" />
+                  <text id="4126:742" name="2,253 ta" x="0" y="19" width="50" height="16" />
                 </frame>
               </frame>
               <frame id="4126:743" name="Chart label" x="148.88888549804688" y="9" width="140.88888549804688" height="35">
                 <frame id="4126:744" name="Frame 196" x="0" y="11.5" width="12" height="12" />
-                <frame id="4126:745" name="Frame 197" x="22" y="0" width="79" height="35">
-                  <text id="4126:746" name="Texnologik" x="0" y="0" width="51" height="13" />
-                  <text id="4126:747" name="61,6 mln so’m" x="0" y="19" width="79" height="16" />
+                <frame id="4126:745" name="Frame 197" x="22" y="0" width="46" height="35">
+                  <text id="4126:746" name="Aloqada" x="0" y="0" width="39" height="13" />
+                  <text id="4126:747" name="1900 ta" x="0" y="19" width="46" height="16" />
                 </frame>
               </frame>
-              <frame id="4126:748" name="Chart label" x="0" y="52" width="289.77777099609375" height="35">
+              <frame id="4301:1965" name="Chart label" x="0" y="52" width="140.88888549804688" height="35">
+                <frame id="4301:1966" name="Frame 196" x="0" y="11.5" width="12" height="12" />
+                <frame id="4301:1967" name="Frame 197" x="22" y="0" width="108" height="35">
+                  <text id="4301:1968" name="Aloqaga chiqmayotgan" x="0" y="0" width="108" height="13" />
+                  <text id="4301:1969" name="153 ta" x="0" y="19" width="37" height="16" />
+                </frame>
+              </frame>
+              <frame id="4126:748" name="Chart label" x="148.88888549804688" y="52" width="140.88888549804688" height="35">
                 <frame id="4126:749" name="Frame 196" x="0" y="11.5" width="12" height="12" />
-                <frame id="4126:750" name="Frame 197" x="22" y="0" width="79" height="35">
-                  <text id="4126:751" name="O’g’irlik" x="0" y="0" width="36" height="13" />
-                  <text id="4126:752" name="50,1 mln so’m" x="0" y="19" width="79" height="16" />
+                <frame id="4126:750" name="Frame 197" x="22" y="0" width="104" height="35">
+                  <text id="4126:751" name="Sxemasi o’zgartirilgan" x="0" y="0" width="104" height="13" />
+                  <text id="4126:752" name="100 ta" x="0" y="19" width="38" height="16" />
                 </frame>
               </frame>
+            </frame>
+          </frame>
+        </frame>
+        <frame id="4301:2515" name="Card" x="824.4444580078125" y="410" width="321.77777099609375" height="336">
+          <frame id="4301:2516" name="Header" x="16" y="16" width="289.77777099609375" height="32">
+            <text id="4301:2517" name="Murojaatlar" x="0" y="7" width="81" height="18" />
+            <frame id="4301:2518" name="Right" x="187.77777099609375" y="0" width="102" height="32">
+              <frame id="4301:2519" name="Toggle btn" x="0" y="0" width="62" height="32">
+                <frame id="4301:2520" name="Frame 240" x="2" y="2" width="28" height="28">
+                  <frame id="4301:2521" name="lucide/chart-no-axes-column" x="5" y="5" width="18" height="18" />
+                </frame>
+                <frame id="4301:2523" name="Frame 241" x="32" y="2" width="28" height="28">
+                  <frame id="4301:2524" name="lucide/table" x="5" y="5" width="18" height="18" />
+                </frame>
+              </frame>
+              <frame id="4301:2526" name="Toggle btn" x="70" y="0" width="32" height="32">
+                <frame id="4301:2527" name="Frame 241" x="2" y="2" width="28" height="28">
+                  <frame id="4301:2528" name="lucide/file-down" x="5" y="5" width="18" height="18" />
+                </frame>
+              </frame>
+            </frame>
+          </frame>
+          <frame id="4301:2530" name="Main" x="16" y="56" width="289.77777099609375" height="264">
+            <frame id="4301:2531" name="RadialChart-SVG" x="0" y="0" width="289.77777099609375" height="169">
+              <frame id="4301:2532" name="Frame 292" x="55.3330078125" y="0" width="180" height="169">
+                <frame id="4301:2533" name="PolarGrid" x="0" y="0" width="179.99949645996094" height="169.00003051757812">
+                  <text id="4301:2534" name="0" x="91.17263793945312" y="0" width="8.126193046569824" height="13.909346580505371" />
+                  <text id="4301:2535" name="20" x="154.44549560546875" y="30.31846046447754" width="15.09150218963623" height="13.909346580505371" />
+                  <text id="4301:2536" name="40" x="164.9084930419922" y="107.86854553222656" width="15.09150218963623" height="13.909346580505371" />
+                  <text id="4301:2537" name="60" x="117.61418914794922" y="155.0906524658203" width="15.09150218963623" height="13.909346580505371" />
+                  <text id="4301:2538" name="80" x="35.678287506103516" y="144.64361572265625" width="15.09150218963623" height="13.909346580505371" />
+                  <text id="4301:2539" name="100" x="0" y="79.34523010253906" width="20.895925521850586" height="13.909346580505371" />
+                  <vector id="4301:2540" name="Vector" x="15.182416915893555" y="11.396862983703613" width="155.43931579589844" height="155.2019805908203" />
+                  <vector id="4301:2541" name="Vector" x="24.46055030822754" y="20.66082763671875" width="137.33265686035156" height="137.1229705810547" />
+                  <vector id="4301:2542" name="Vector" x="24.460912704467773" y="20.41201400756836" width="140.7660369873047" height="140.5512237548828" />
+                </frame>
+                <frame id="4301:2543" name="Series" x="29.528873443603516" y="25.721763610839844" width="130.62954711914062" height="130.4300994873047" />
+                <frame id="4301:2560" name="DataLabels" x="33.72120666503906" y="34.4083137512207" width="51.07892990112305" height="13.909346580505371">
+                  <text id="4301:2561" name="Sentabr" x="33.72120666503906" y="34.4083137512207" width="51.07892990112305" height="13.909346580505371" />
+                </frame>
+                <frame id="4301:2562" name="Annotations" x="24.46133804321289" y="20.66083526611328" width="140.76600646972656" height="140.55108642578125" />
+              </frame>
+            </frame>
+            <frame id="4301:2573" name="Frame 194" x="0" y="177" width="289.77777099609375" height="87">
+              <frame id="4301:2579" name="Chart label" x="0" y="9" width="140.88888549804688" height="35">
+                <frame id="4301:2580" name="Frame 196" x="0" y="11.5" width="12" height="12" />
+                <frame id="4301:2581" name="Frame 197" x="22" y="0" width="79" height="35">
+                  <text id="4301:2582" name="Ijobiy hal etilgan" x="0" y="0" width="79" height="13" />
+                  <text id="4301:2583" name="1900 ta" x="0" y="19" width="46" height="16" />
+                </frame>
+              </frame>
+              <frame id="4301:2574" name="Chart label" x="148.88888549804688" y="9" width="140.88888549804688" height="35">
+                <frame id="4301:2575" name="Frame 196" x="0" y="11.5" width="12" height="12" />
+                <frame id="4301:2576" name="Frame 197" x="22" y="0" width="54" height="35">
+                  <text id="4301:2577" name="Rad etilgan" x="0" y="0" width="54" height="13" />
+                  <text id="4301:2578" name="55 ta" x="0" y="19" width="32" height="16" />
+                </frame>
+              </frame>
+              <frame id="4301:2584" name="Chart label" x="0" y="52" width="140.88888549804688" height="35">
+                <frame id="4301:2585" name="Frame 196" x="0" y="11.5" width="12" height="12" />
+                <frame id="4301:2586" name="Frame 197" x="22" y="0" width="50" height="35">
+                  <text id="4301:2587" name="Jarayonda" x="0" y="0" width="50" height="13" />
+                  <text id="4301:2588" name="153 ta" x="0" y="19" width="37" height="16" />
+                </frame>
+              </frame>
+              <frame id="4301:2589" name="Chart label" x="148.88888549804688" y="52" width="140.88888549804688" height="35">
+                <frame id="4301:2590" name="Frame 196" x="0" y="11.5" width="12" height="12" />
+                <frame id="4301:2591" name="Frame 197" x="22" y="0" width="81" height="35">
+                  <text id="4301:2592" name="Muddati buzilgan" x="0" y="0" width="81" height="13" />
+                  <text id="4301:2593" name="45 ta" x="0" y="19" width="32" height="16" />
+                </frame>
+              </frame>
+            </frame>
+          </frame>
+          <frame id="4301:2601" name="Chart label" x="15.5556640625" y="57" width="289.77777099609375" height="35">
+            <frame id="4301:2603" name="Frame 197" x="0" y="0" width="95" height="35">
+              <text id="4301:2604" name="Umumiy murojaatlar" x="0" y="0" width="95" height="13" />
+              <text id="4301:2605" name="2,253 ta" x="0" y="19" width="50" height="16" />
             </frame>
           </frame>
         </frame>
@@ -787,8 +773,8 @@
                 <frame id="4126:961" name="lucide/wrench-off" x="10" y="10" width="24" height="24" />
               </frame>
               <frame id="4126:963" name="Frame 197" x="52" y="0.5" width="237.77777099609375" height="43">
-                <text id="4126:964" name="Nofal transformatorlar" x="0" y="0" width="147" height="18" />
-                <text id="4126:965" name="1 ta" x="0" y="22" width="237.77777099609375" height="21" />
+                <text id="4126:964" name="Nosoz qurilmalar" x="0" y="0" width="112" height="18" />
+                <text id="4126:965" name="136 ta" x="0" y="22" width="237.77777099609375" height="21" />
               </frame>
             </frame>
             <frame id="4126:966" name="Frame 257" x="0" y="162" width="289.77777099609375" height="44">
@@ -796,7 +782,7 @@
                 <frame id="4126:968" name="lucide/clock-arrow-up" x="10" y="10" width="24" height="24" />
               </frame>
               <frame id="4126:970" name="Frame 197" x="52" y="0.5" width="237.77777099609375" height="43">
-                <text id="4126:971" name="Pik iste&#39;mol vaqti" x="0" y="0" width="112" height="18" />
+                <text id="4126:971" name="Yuqori iste&#39;mol vaqti" x="0" y="0" width="132" height="18" />
                 <text id="4126:972" name="19:30 - 21:00" x="0" y="22" width="237.77777099609375" height="21" />
               </frame>
             </frame>
@@ -805,159 +791,13 @@
                 <frame id="4126:975" name="lucide/square-check-big" x="10" y="10" width="24" height="24" />
               </frame>
               <frame id="4126:977" name="Frame 197" x="52" y="0.5" width="237.77777099609375" height="43">
-                <text id="4126:978" name="Reja bajarilishi" x="0" y="0" width="96" height="18" />
-                <text id="4126:979" name="89,1%" x="0" y="22" width="237.77777099609375" height="21" />
+                <text id="4126:978" name="Kunlik topshiriq bajarilishi" x="0" y="0" width="170" height="18" />
+                <text id="4126:979" name="46%" x="0" y="22" width="237.77777099609375" height="21" />
               </frame>
             </frame>
           </frame>
         </frame>
-        <frame id="4126:369" name="Card" x="0" y="754" width="486.6666564941406" height="298">
-          <frame id="4126:370" name="Header" x="16" y="16" width="454.6666564941406" height="32">
-            <text id="4126:371" name="Iste’mol dinamikasi" x="0" y="7" width="133" height="18" />
-            <frame id="4126:372" name="Right" x="352.6666564941406" y="0" width="102" height="32">
-              <frame id="4126:373" name="Toggle btn" x="0" y="0" width="62" height="32">
-                <frame id="4126:374" name="Frame 240" x="2" y="2" width="28" height="28">
-                  <frame id="4126:375" name="lucide/chart-no-axes-column" x="5" y="5" width="18" height="18" />
-                </frame>
-                <frame id="4126:377" name="Frame 241" x="32" y="2" width="28" height="28">
-                  <frame id="4126:378" name="lucide/table" x="5" y="5" width="18" height="18" />
-                </frame>
-              </frame>
-              <frame id="4126:380" name="Toggle btn" x="70" y="0" width="32" height="32">
-                <frame id="4126:381" name="Frame 241" x="2" y="2" width="28" height="28">
-                  <frame id="4126:382" name="lucide/file-down" x="5" y="5" width="18" height="18" />
-                </frame>
-              </frame>
-            </frame>
-          </frame>
-          <frame id="4126:384" name="Main" x="16" y="56" width="454.6666564941406" height="200">
-            <frame id="4126:385" name="Chart" x="0" y="0" width="345.6666564941406" height="200">
-              <frame id="4126:386" name="Chart&amp;Axis" x="0" y="0" width="345.6666564941406" height="200">
-                <frame id="4126:387" name="MainChart" x="0" y="0" width="345.6666564941406" height="178">
-                  <frame id="4126:388" name="yAxisLeft" x="0" y="0" width="33" height="178">
-                    <text id="4126:389" name="2000" x="4" y="0" width="25" height="12" />
-                    <text id="4126:390" name="500" x="10" y="83" width="19" height="12" />
-                    <text id="4126:391" name="0" x="22" y="166" width="7" height="12" />
-                  </frame>
-                  <frame id="4126:392" name="Graphi&amp;Grid" x="33" y="0" width="312.6666564941406" height="178">
-                    <frame id="4126:393" name="xLines" x="0" y="0" width="284.6904602050781" height="178">
-                      <line id="4126:394" name="Line" x="1" y="6" width="282.6904602050781" height="0" />
-                      <line id="4126:395" name="Line" x="1" y="89" width="282.6904602050781" height="0" />
-                      <line id="4126:396" name="Line" x="1" y="172" width="282.6904602050781" height="0" />
-                    </frame>
-                    <frame id="4126:397" name="yLines" x="0" y="0" width="284.6904602050781" height="178">
-                      <line id="4126:398" name="Line" x="0.7268550992012024" y="162.742919921875" width="0" height="147.4857177734375" />
-                      <line id="4126:399" name="Line" x="47.933101654052734" y="162.742919921875" width="0" height="147.4857177734375" />
-                      <line id="4126:400" name="Line" x="95.13896942138672" y="162.742919921875" width="0" height="147.4857177734375" />
-                      <line id="4126:401" name="Line" x="142.34521484375" y="162.742919921875" width="0" height="147.4857177734375" />
-                      <line id="4126:402" name="Line" x="189.5514678955078" y="162.742919921875" width="0" height="147.4857177734375" />
-                      <line id="4126:403" name="Line" x="236.75770568847656" y="162.742919921875" width="0" height="147.4857177734375" />
-                      <line id="4126:404" name="Line" x="283.9635925292969" y="162.742919921875" width="0" height="147.4857177734375" />
-                    </frame>
-                    <frame id="4126:405" name="LineArea" x="0" y="7" width="284.6904602050781" height="164">
-                      <frame id="4126:406" name="LineGroup2" x="0" y="3.93603515625" width="285.47320556640625" height="157.15451049804688">
-                        <vector id="4126:407" name="singleLine2" x="0" y="3.936000168323517" width="284.6904602050781" height="155.63600158691406" />
-                        <frame id="4126:408" name="LineNodes2" x="0" y="3.93603515625" width="285.47320556640625" height="157.15451049804688">
-                          <frame id="4126:409" name="basicNode" x="0" y="34.27599334716797" width="0.7827817797660828" height="1.5185184478759766" />
-                          <frame id="4126:411" name="basicNode" x="47.44829177856445" y="3.935982584953308" width="0.7827817797660828" height="1.5185184478759766" />
-                          <frame id="4126:413" name="basicNode" x="94.89695739746094" y="133.00404357910156" width="0.7827817797660828" height="1.5185184478759766" />
-                          <frame id="4126:415" name="basicNode" x="142.34521484375" y="159.57196044921875" width="0.7827817797660828" height="1.5185184478759766" />
-                          <frame id="4126:417" name="basicNode" x="189.7935028076172" y="46.576011657714844" width="0.7827817797660828" height="1.5185184478759766" />
-                          <frame id="4126:419" name="basicNode" x="237.24217224121094" y="73.80000305175781" width="0.7827817797660828" height="1.5185184478759766" />
-                          <frame id="4126:421" name="basicNode" x="284.6904296875" y="42.14797592163086" width="0.7827817797660828" height="1.5185184478759766" />
-                        </frame>
-                      </frame>
-                      <frame id="4126:423" name="LineGroup1" x="0" y="75.1119384765625" width="285.47320556640625" height="83.68257904052734">
-                        <vector id="4126:424" name="singleLine1" x="0" y="75.11199855804443" width="284.6904602050781" height="82.16400146484375" />
-                        <frame id="4126:425" name="LineNodes1" x="0" y="75.1119384765625" width="285.47320556640625" height="83.68257904052734">
-                          <frame id="4126:426" name="basicNode" x="0" y="113.97999572753906" width="0.7827817797660828" height="1.5185184478759766" />
-                          <frame id="4126:428" name="basicNode" x="47.44829177856445" y="146.28800201416016" width="0.7827817797660828" height="1.5185184478759766" />
-                          <frame id="4126:430" name="basicNode" x="94.89695739746094" y="75.11199855804443" width="0.7827817797660828" height="1.5185184478759766" />
-                          <frame id="4126:432" name="basicNode" x="142.34521484375" y="127.0999984741211" width="0.7827817797660828" height="1.5185184478759766" />
-                          <frame id="4126:434" name="basicNode" x="189.7935028076172" y="90.36401748657227" width="0.7827817797660828" height="1.5185184478759766" />
-                          <frame id="4126:436" name="basicNode" x="237.24217224121094" y="157.27600860595703" width="0.7827817797660828" height="1.5185184478759766" />
-                          <frame id="4126:438" name="basicNode" x="284.6904296875" y="118.40793991088867" width="0.7827817797660828" height="1.5185184478759766" />
-                        </frame>
-                      </frame>
-                      <frame id="4126:440" name="LineGroup0" x="0" y="5.5760498046875" width="285.47320556640625" height="152.56246948242188">
-                        <vector id="4126:441" name="singleLine0" x="0" y="5.575999736785889" width="284.6904602050781" height="151.0440216064453" />
-                        <frame id="4126:442" name="LineNodes0" x="0" y="5.5760498046875" width="285.47320556640625" height="152.56246948242188">
-                          <frame id="4126:443" name="basicNode" x="0" y="156.62002563476562" width="0.7827817797660828" height="1.5185184478759766" />
-                          <frame id="4126:445" name="basicNode" x="47.44829177856445" y="71.83193969726562" width="0.7827817797660828" height="1.5185184478759766" />
-                          <frame id="4126:447" name="basicNode" x="94.89695739746094" y="5.576011419296265" width="0.7827817797660828" height="1.5185184478759766" />
-                          <frame id="4126:449" name="basicNode" x="142.34521484375" y="129.23193359375" width="0.7827817797660828" height="1.5185184478759766" />
-                          <frame id="4126:451" name="basicNode" x="189.7935028076172" y="91.1839599609375" width="0.7827817797660828" height="1.5185184478759766" />
-                          <frame id="4126:453" name="basicNode" x="237.24217224121094" y="58.38396072387695" width="0.7827817797660828" height="1.5185184478759766" />
-                          <frame id="4126:455" name="basicNode" x="284.6904296875" y="104.95996856689453" width="0.7827817797660828" height="1.5185184478759766" />
-                        </frame>
-                      </frame>
-                    </frame>
-                    <instance id="4126:457" name="ConfigAndData-Line-Don&#39;t remove!" x="0" y="0" width="8" height="8" hidden="true" />
-                  </frame>
-                </frame>
-                <frame id="4126:458" name="xAxis" x="0" y="176" width="345.6666564941406" height="24">
-                  <frame id="4126:459" name="xLabelBox" x="1.0238103866577148" y="0" width="49.23469161987305" height="12">
-                    <text id="4126:460" name="1" x="0" y="0" width="49.23469161987305" height="12" />
-                  </frame>
-                  <frame id="4126:461" name="xLabelBox" x="50.25850296020508" y="0" width="49.23469543457031" height="12">
-                    <text id="4126:462" name="2" x="0" y="0" width="49.23469543457031" height="12" />
-                  </frame>
-                  <frame id="4126:463" name="xLabelBox" x="99.49319458007812" y="0" width="49.23469543457031" height="12">
-                    <text id="4126:464" name="3" x="0" y="0" width="49.23469543457031" height="12" />
-                  </frame>
-                  <frame id="4126:465" name="xLabelBox" x="148.72789001464844" y="0" width="49.23469543457031" height="12">
-                    <text id="4126:466" name="4" x="0" y="0" width="49.23469543457031" height="12" />
-                  </frame>
-                  <frame id="4126:467" name="xLabelBox" x="197.96258544921875" y="0" width="49.23469543457031" height="12">
-                    <text id="4126:468" name="5" x="0" y="0" width="49.23469543457031" height="12" />
-                  </frame>
-                  <frame id="4126:469" name="xLabelBox" x="247.19728088378906" y="0" width="49.23469543457031" height="12">
-                    <text id="4126:470" name="6" x="0" y="0" width="49.23469543457031" height="12" />
-                  </frame>
-                  <frame id="4126:471" name="xLabelBox" x="296.4319763183594" y="0" width="49.23469543457031" height="12">
-                    <text id="4126:472" name="7" x="0" y="0" width="49.23469543457031" height="12" />
-                  </frame>
-                </frame>
-              </frame>
-            </frame>
-            <frame id="4126:473" name="Frame 194" x="345.6666564941406" y="39.5" width="109" height="121">
-              <frame id="4126:474" name="Chart label" x="0" y="0" width="108" height="35">
-                <frame id="4126:475" name="Frame 196" x="0" y="11.5" width="12" height="12" />
-                <frame id="4126:476" name="Frame 197" x="22" y="0" width="86" height="35">
-                  <text id="4126:477" name="Hisoblangan" x="0" y="0" width="59" height="13" />
-                  <text id="4126:478" name="1,234 mln kWh" x="0" y="19" width="86" height="16" />
-                </frame>
-              </frame>
-              <frame id="4126:479" name="Chart label" x="0" y="43" width="109" height="35">
-                <frame id="4126:480" name="Frame 196" x="0" y="11.5" width="12" height="12" />
-                <frame id="4126:481" name="Frame 197" x="22" y="0" width="87" height="35">
-                  <text id="4126:482" name="Iste’mol" x="0" y="0" width="38" height="13" />
-                  <text id="4126:483" name="1,020 mln kWh" x="0" y="19" width="87" height="16" />
-                </frame>
-              </frame>
-              <frame id="4126:484" name="Chart label" x="0" y="86" width="109" height="35">
-                <frame id="4126:485" name="Frame 196" x="0" y="11.5" width="12" height="12" />
-                <frame id="4126:486" name="Frame 197" x="22" y="0" width="87" height="35">
-                  <text id="4126:487" name="Yo’qotish" x="0" y="0" width="43" height="13" />
-                  <text id="4126:488" name="0,214 mln kWh" x="0" y="19" width="87" height="16" />
-                </frame>
-              </frame>
-            </frame>
-          </frame>
-          <frame id="4126:489" name="Slider" x="16" y="264" width="454.6666564941406" height="18">
-            <vector id="4126:490" name="Vector 1" x="0" y="9" width="455" height="0" />
-            <frame id="4126:491" name="Frame 260" x="6" y="0" width="114" height="18">
-              <text id="4126:492" name="7 kun" x="41.5" y="1" width="31" height="16" />
-              <frame id="4126:493" name="Frame 261" x="108" y="3" width="12" height="12">
-                <vector id="4126:494" name="Vector 2" x="6" y="4" width="0" height="4" />
-              </frame>
-              <frame id="4126:495" name="Frame 262" x="-6" y="3" width="12" height="12">
-                <vector id="4126:496" name="Vector 2" x="6" y="4" width="0" height="4" />
-              </frame>
-            </frame>
-          </frame>
-        </frame>
-        <frame id="4126:538" name="Card" x="494.6666564941406" y="754" width="486.6666564941406" height="298">
+        <frame id="4126:538" name="Card" x="0" y="754" width="486.6666564941406" height="298">
           <frame id="4126:539" name="Header" x="16" y="16" width="454.6666564941406" height="32">
             <text id="4126:540" name="Eng ko’p sarfga ega podstansiyalar" x="0" y="7" width="241" height="18" />
             <frame id="4126:541" name="Right" x="352.6666564941406" y="0" width="102" height="32">
@@ -1050,7 +890,7 @@
             <text id="4126:609" name="Podstansiyalar sahifasini ochish" x="137.3333282470703" y="8" width="180" height="16" />
           </frame>
         </frame>
-        <frame id="4220:109" name="Card" x="989.3333740234375" y="754" width="486.6666564941406" height="298">
+        <frame id="4220:109" name="Card" x="494.6666564941406" y="754" width="486.6666564941406" height="298">
           <frame id="4220:110" name="Header" x="16" y="16" width="454.6666564941406" height="32">
             <text id="4220:111" name="Eng ko’p sarfga ega fiderlar" x="0" y="7" width="190" height="18" />
             <frame id="4220:112" name="Right" x="352.6666564941406" y="0" width="102" height="32">
@@ -1189,7 +1029,292 @@
             <text id="4220:172" name="Podstansiyalar sahifasini ochish" x="137.3333282470703" y="8" width="180" height="16" />
           </frame>
         </frame>
-        <frame id="4126:1005" name="Card" x="0" y="1060" width="651.5555419921875" height="209">
+        <frame id="4301:2607" name="Card" x="989.3333740234375" y="754" width="486.6666564941406" height="298">
+          <frame id="4301:2608" name="Header" x="16" y="16" width="454.6666564941406" height="32">
+            <text id="4301:2609" name="Eng ko’p sarfga ega transformatorlar" x="0" y="7" width="253" height="18" />
+            <frame id="4301:2610" name="Right" x="352.6666564941406" y="0" width="102" height="32">
+              <frame id="4301:2611" name="Toggle btn" x="0" y="0" width="62" height="32">
+                <frame id="4301:2612" name="Frame 241" x="2" y="2" width="28" height="28">
+                  <frame id="4301:2613" name="lucide/chart-no-axes-column" x="5" y="5" width="18" height="18" />
+                </frame>
+                <frame id="4301:2615" name="Frame 240" x="32" y="2" width="28" height="28">
+                  <frame id="4301:2616" name="lucide/table" x="5" y="5" width="18" height="18" />
+                </frame>
+              </frame>
+              <frame id="4301:2618" name="Toggle btn" x="70" y="0" width="32" height="32">
+                <frame id="4301:2619" name="Frame 241" x="2" y="2" width="28" height="28">
+                  <frame id="4301:2620" name="lucide/file-down" x="5" y="5" width="18" height="18" />
+                </frame>
+              </frame>
+            </frame>
+          </frame>
+          <frame id="4301:2622" name="BarLineChart" x="16" y="48" width="454.6666564941406" height="218">
+            <frame id="4301:2623" name="BarLineChart" x="0" y="8" width="454.6666564941406" height="210">
+              <frame id="4301:2624" name="yAxisTop" x="0" y="0" width="454.6666564941406" height="15">
+                <frame id="4301:2625" name="Scale" x="68" y="0" width="16" height="15">
+                  <text id="4301:2626" name="0" x="4" y="0" width="8" height="15" />
+                </frame>
+                <frame id="4301:2627" name="Scale" x="113.45832824707031" y="0" width="16" height="15">
+                  <text id="4301:2628" name="25" x="0.5" y="0" width="15" height="15" />
+                </frame>
+                <frame id="4301:2629" name="Scale" x="158.91665649414062" y="0" width="16" height="15">
+                  <text id="4301:2630" name="50" x="0.5" y="0" width="15" height="15" />
+                </frame>
+                <frame id="4301:2631" name="Scale" x="204.37498474121094" y="0" width="16" height="15">
+                  <text id="4301:2632" name="75" x="0.5" y="0" width="15" height="15" />
+                </frame>
+                <frame id="4301:2633" name="Scale" x="249.83331298828125" y="0" width="16" height="15">
+                  <text id="4301:2634" name="100" x="-2.5" y="0" width="21" height="15" />
+                </frame>
+                <frame id="4301:2635" name="Scale" x="295.2916564941406" y="0" width="16" height="15">
+                  <text id="4301:2636" name="125" x="-2.5" y="0" width="21" height="15" />
+                </frame>
+                <frame id="4301:2637" name="Scale" x="340.75" y="0" width="16" height="15">
+                  <text id="4301:2638" name="150" x="-2.5" y="0" width="21" height="15" />
+                </frame>
+                <frame id="4301:2639" name="Scale" x="386.2083435058594" y="0" width="16" height="15">
+                  <text id="4301:2640" name="175" x="-2" y="0" width="20" height="15" />
+                </frame>
+                <frame id="4301:2641" name="Scale" x="431.66668701171875" y="0" width="23" height="15">
+                  <text id="4301:2642" name="200" x="0" y="0" width="23" height="15" />
+                </frame>
+              </frame>
+              <frame id="4301:2643" name="MainChart" x="0" y="15" width="454.6666564941406" height="195">
+                <frame id="4301:2644" name="xAxis" x="0" y="0" width="46" height="195">
+                  <frame id="4301:2645" name="xLabelBox" x="2" y="0" width="42" height="32.5">
+                    <text id="4301:2646" name="TP 303" x="0" y="8.75" width="42" height="15" />
+                  </frame>
+                  <frame id="4301:2647" name="xLabelBox" x="11" y="32.5" width="33" height="32.5">
+                    <text id="4301:2648" name="TP 87" x="0" y="8.75" width="33" height="15" />
+                  </frame>
+                  <frame id="4301:2649" name="xLabelBox" x="9" y="65" width="35" height="32.5">
+                    <text id="4301:2650" name="TP A3" x="0" y="8.75" width="35" height="15" />
+                  </frame>
+                  <frame id="4301:2651" name="xLabelBox" x="9" y="97.5" width="35" height="32.5">
+                    <text id="4301:2652" name="TP 43" x="0" y="8.75" width="35" height="15" />
+                  </frame>
+                  <frame id="4301:2653" name="xLabelBox" x="2" y="130" width="42" height="32.5">
+                    <text id="4301:2654" name="TP 332" x="0" y="8.75" width="42" height="15" />
+                  </frame>
+                  <frame id="4301:2655" name="xLabelBox" x="17" y="162.5" width="27" height="32.5">
+                    <text id="4301:2656" name="TP 4" x="0" y="8.75" width="27" height="15" />
+                  </frame>
+                </frame>
+                <frame id="4301:2657" name="Graphi&amp;Grid" x="454.6666564941406" y="-1.4210854715202004e-14" width="406.6666564941406" height="195">
+                  <frame id="4301:2658" name="xLines" x="0" y="0" width="406.6666564941406" height="195">
+                    <line id="4301:2659" name="Line" x="0" y="1" width="0" height="195" />
+                    <line id="4301:2660" name="Line" x="0" y="51.70833206176758" width="0" height="195" />
+                    <line id="4301:2661" name="Line" x="0" y="102.41666412353516" width="0" height="195" />
+                    <line id="4301:2662" name="Line" x="0" y="153.125" width="0" height="195" />
+                    <line id="4301:2663" name="Line" x="0" y="203.8333282470703" width="0" height="195" />
+                    <line id="4301:2664" name="Line" x="0" y="254.54165649414062" width="0" height="195" />
+                    <line id="4301:2665" name="Line" x="0" y="305.25" width="0" height="195" />
+                    <line id="4301:2666" name="Line" x="0" y="355.9583435058594" width="0" height="195" />
+                    <line id="4301:2667" name="Line" x="0" y="406.66668701171875" width="0" height="195" />
+                  </frame>
+                  <frame id="4301:2668" name="yLines" x="0" y="0" width="406.6666564941406" height="195">
+                    <line id="4301:2669" name="Line" x="1" y="405.6666564941406" width="404.6666564941406" height="0" />
+                    <line id="4301:2670" name="Line" x="33.16666793823242" y="405.6666564941406" width="404.6666564941406" height="0" />
+                    <line id="4301:2671" name="Line" x="65.33333587646484" y="405.6666564941406" width="404.6666564941406" height="0" />
+                    <line id="4301:2672" name="Line" x="97.5" y="405.6666564941406" width="404.6666564941406" height="0" />
+                    <line id="4301:2673" name="Line" x="129.6666717529297" y="405.6666564941406" width="404.6666564941406" height="0" />
+                    <line id="4301:2674" name="Line" x="161.83334350585938" y="405.6666564941406" width="404.6666564941406" height="0" />
+                    <line id="4301:2675" name="Line" x="194.00001525878906" y="405.6666564941406" width="404.6666564941406" height="0" />
+                  </frame>
+                  <frame id="4301:2676" name="BarArea" x="0" y="1" width="404.6666564941406" height="195">
+                    <frame id="4301:2677" name="BarGroup" x="0" y="0" width="404.6666564941406" height="32.5">
+                      <frame id="4301:2678" name="BarBlock" x="9.6899995803833" y="0" width="404.6666564941406" height="13.120000839233398">
+                        <frame id="4301:2679" name="BarBG" x="0" y="0" width="404.6666564941406" height="13" />
+                        <frame id="4301:2680" name="SingleBar" x="0" y="307.74896240234375" width="96.91765594482422" height="13" />
+                      </frame>
+                    </frame>
+                    <frame id="4301:2682" name="BarGroup" x="32.5" y="0" width="404.6666564941406" height="32.499996185302734">
+                      <frame id="4301:2683" name="BarBlock" x="9.6899995803833" y="0" width="404.6666564941406" height="13.119997024536133">
+                        <frame id="4301:2684" name="BarBG" x="0" y="0" width="404.6666564941406" height="13" />
+                        <frame id="4301:2685" name="SingleBar" x="0" y="366.6279602050781" width="38.03868103027344" height="13" />
+                      </frame>
+                    </frame>
+                    <frame id="4301:2687" name="BarGroup" x="65" y="0" width="404.6666564941406" height="32.499996185302734">
+                      <frame id="4301:2688" name="BarBlock" x="9.6899995803833" y="0" width="404.6666564941406" height="13.119997024536133">
+                        <frame id="4301:2689" name="BarBG" x="0" y="0" width="404.6666564941406" height="13" />
+                        <frame id="4301:2690" name="SingleBar" x="0" y="287.71795654296875" width="116.94865417480469" height="13" />
+                      </frame>
+                    </frame>
+                    <frame id="4301:2692" name="BarGroup" x="97.5" y="0" width="404.6666564941406" height="32.499996185302734">
+                      <frame id="4301:2693" name="BarBlock" x="9.6899995803833" y="0" width="404.6666564941406" height="13.119997024536133">
+                        <frame id="4301:2694" name="BarBG" x="0" y="0" width="404.6666564941406" height="13" />
+                        <frame id="4301:2695" name="SingleBar" x="0" y="248.87001037597656" width="155.79664611816406" height="13" />
+                      </frame>
+                    </frame>
+                    <frame id="4301:2697" name="BarGroup" x="130" y="0" width="404.6666564941406" height="32.499996185302734">
+                      <frame id="4301:2698" name="BarBlock" x="9.6899995803833" y="0" width="404.6666564941406" height="13.119997024536133">
+                        <frame id="4301:2699" name="BarBG" x="0" y="0" width="404.6666564941406" height="13" />
+                        <frame id="4301:2700" name="SingleBar" x="0" y="347.2040100097656" width="57.462650299072266" height="13" />
+                      </frame>
+                    </frame>
+                    <frame id="4301:2702" name="BarGroup" x="162.5" y="0" width="404.6666564941406" height="32.499996185302734">
+                      <frame id="4301:2703" name="BarBlock" x="9.6899995803833" y="0" width="404.6666564941406" height="13.119997024536133">
+                        <frame id="4301:2704" name="BarBG" x="0" y="0" width="404.6666564941406" height="13" />
+                        <frame id="4301:2705" name="SingleBar" x="0" y="186.95602416992188" width="217.71063232421875" height="13" />
+                      </frame>
+                    </frame>
+                  </frame>
+                  <instance id="4301:2707" name="ConfigAndData-Bar-Don&#39;t remove!" x="0" y="0" width="8" height="8" hidden="true" />
+                </frame>
+              </frame>
+            </frame>
+          </frame>
+          <frame id="4301:2708" name="Footer" x="16" y="266" width="454.6666564941406" height="24">
+            <text id="4301:2709" name="Podstansiyalar sahifasini ochish" x="137.3333282470703" y="8" width="180" height="16" />
+          </frame>
+        </frame>
+        <frame id="4126:369" name="Card" x="0" y="1060" width="486.6666564941406" height="298">
+          <frame id="4126:370" name="Header" x="16" y="16" width="454.6666564941406" height="32">
+            <text id="4126:371" name="Foydali oqim dinamikasi" x="0" y="7" width="164" height="18" />
+            <frame id="4126:372" name="Right" x="352.6666564941406" y="0" width="102" height="32">
+              <frame id="4126:373" name="Toggle btn" x="0" y="0" width="62" height="32">
+                <frame id="4126:374" name="Frame 240" x="2" y="2" width="28" height="28">
+                  <frame id="4126:375" name="lucide/chart-no-axes-column" x="5" y="5" width="18" height="18" />
+                </frame>
+                <frame id="4126:377" name="Frame 241" x="32" y="2" width="28" height="28">
+                  <frame id="4126:378" name="lucide/table" x="5" y="5" width="18" height="18" />
+                </frame>
+              </frame>
+              <frame id="4126:380" name="Toggle btn" x="70" y="0" width="32" height="32">
+                <frame id="4126:381" name="Frame 241" x="2" y="2" width="28" height="28">
+                  <frame id="4126:382" name="lucide/file-down" x="5" y="5" width="18" height="18" />
+                </frame>
+              </frame>
+            </frame>
+          </frame>
+          <frame id="4126:384" name="Main" x="16" y="56" width="454.6666564941406" height="200">
+            <frame id="4126:385" name="Chart" x="0" y="0" width="345.6666564941406" height="200">
+              <frame id="4126:386" name="Chart&amp;Axis" x="0" y="0" width="345.6666564941406" height="200">
+                <frame id="4126:387" name="MainChart" x="0" y="0" width="345.6666564941406" height="178">
+                  <frame id="4126:388" name="yAxisLeft" x="0" y="0" width="33" height="178">
+                    <text id="4126:389" name="2000" x="4" y="0" width="25" height="12" />
+                    <text id="4126:390" name="500" x="10" y="83" width="19" height="12" />
+                    <text id="4126:391" name="0" x="22" y="166" width="7" height="12" />
+                  </frame>
+                  <frame id="4126:392" name="Graphi&amp;Grid" x="33" y="0" width="312.6666564941406" height="178">
+                    <frame id="4126:393" name="xLines" x="0" y="0" width="284.6904602050781" height="178">
+                      <line id="4126:394" name="Line" x="1" y="6" width="282.6904602050781" height="0" />
+                      <line id="4126:395" name="Line" x="1" y="89" width="282.6904602050781" height="0" />
+                      <line id="4126:396" name="Line" x="1" y="172" width="282.6904602050781" height="0" />
+                    </frame>
+                    <frame id="4126:397" name="yLines" x="0" y="0" width="284.6904602050781" height="178">
+                      <line id="4126:398" name="Line" x="0.7268550992012024" y="162.742919921875" width="0" height="147.4857177734375" />
+                      <line id="4126:399" name="Line" x="47.933101654052734" y="162.742919921875" width="0" height="147.4857177734375" />
+                      <line id="4126:400" name="Line" x="95.13896942138672" y="162.742919921875" width="0" height="147.4857177734375" />
+                      <line id="4126:401" name="Line" x="142.34521484375" y="162.742919921875" width="0" height="147.4857177734375" />
+                      <line id="4126:402" name="Line" x="189.5514678955078" y="162.742919921875" width="0" height="147.4857177734375" />
+                      <line id="4126:403" name="Line" x="236.75770568847656" y="162.742919921875" width="0" height="147.4857177734375" />
+                      <line id="4126:404" name="Line" x="283.963623046875" y="162.742919921875" width="0" height="147.4857177734375" />
+                    </frame>
+                    <frame id="4126:405" name="LineArea" x="0" y="7" width="284.6904602050781" height="164">
+                      <frame id="4126:406" name="LineGroup2" x="0" y="3.93603515625" width="285.47320556640625" height="157.15426635742188">
+                        <vector id="4126:407" name="singleLine2" x="0" y="3.936000168323517" width="284.6904602050781" height="155.63600158691406" />
+                        <frame id="4126:408" name="LineNodes2" x="0" y="3.93603515625" width="285.47320556640625" height="157.15426635742188">
+                          <frame id="4126:409" name="basicNode" x="0" y="34.27599334716797" width="0.7827818393707275" height="1.5185184478759766" />
+                          <frame id="4126:411" name="basicNode" x="47.44829177856445" y="3.935982584953308" width="0.7827818393707275" height="1.5185184478759766" />
+                          <frame id="4126:413" name="basicNode" x="94.89696502685547" y="133.00404357910156" width="0.7827818393707275" height="1.5185184478759766" />
+                          <frame id="4126:415" name="basicNode" x="142.34521484375" y="159.57196044921875" width="0.7827818393707275" height="1.5185184478759766" />
+                          <frame id="4126:417" name="basicNode" x="189.79351806640625" y="46.576011657714844" width="0.7827818393707275" height="1.5185184478759766" />
+                          <frame id="4126:419" name="basicNode" x="237.24217224121094" y="73.80000305175781" width="0.7827818393707275" height="1.5185184478759766" />
+                          <frame id="4126:421" name="basicNode" x="284.6904296875" y="42.14797592163086" width="0.7827818393707275" height="1.5185184478759766" />
+                        </frame>
+                      </frame>
+                      <frame id="4126:423" name="LineGroup1" x="0" y="75.1119384765625" width="285.47320556640625" height="83.68257904052734">
+                        <vector id="4126:424" name="singleLine1" x="0" y="75.11199855804443" width="284.6904602050781" height="82.16400146484375" />
+                        <frame id="4126:425" name="LineNodes1" x="0" y="75.1119384765625" width="285.47320556640625" height="83.68257904052734">
+                          <frame id="4126:426" name="basicNode" x="0" y="113.97999572753906" width="0.7827818393707275" height="1.5185184478759766" />
+                          <frame id="4126:428" name="basicNode" x="47.44829177856445" y="146.28800201416016" width="0.7827818393707275" height="1.5185184478759766" />
+                          <frame id="4126:430" name="basicNode" x="94.89696502685547" y="75.11199855804443" width="0.7827818393707275" height="1.5185184478759766" />
+                          <frame id="4126:432" name="basicNode" x="142.34521484375" y="127.0999984741211" width="0.7827818393707275" height="1.5185184478759766" />
+                          <frame id="4126:434" name="basicNode" x="189.79351806640625" y="90.36401748657227" width="0.7827818393707275" height="1.5185184478759766" />
+                          <frame id="4126:436" name="basicNode" x="237.24217224121094" y="157.27600860595703" width="0.7827818393707275" height="1.5185184478759766" />
+                          <frame id="4126:438" name="basicNode" x="284.6904296875" y="118.40793991088867" width="0.7827818393707275" height="1.5185184478759766" />
+                        </frame>
+                      </frame>
+                      <frame id="4126:440" name="LineGroup0" x="0" y="5.5760498046875" width="285.47320556640625" height="152.56246948242188">
+                        <vector id="4126:441" name="singleLine0" x="0" y="5.575999736785889" width="284.6904602050781" height="151.0440216064453" />
+                        <frame id="4126:442" name="LineNodes0" x="0" y="5.5760498046875" width="285.47320556640625" height="152.56246948242188">
+                          <frame id="4126:443" name="basicNode" x="0" y="156.62002563476562" width="0.7827818393707275" height="1.5185184478759766" />
+                          <frame id="4126:445" name="basicNode" x="47.44829177856445" y="71.83193969726562" width="0.7827818393707275" height="1.5185184478759766" />
+                          <frame id="4126:447" name="basicNode" x="94.89696502685547" y="5.576011419296265" width="0.7827818393707275" height="1.5185184478759766" />
+                          <frame id="4126:449" name="basicNode" x="142.34521484375" y="129.23193359375" width="0.7827818393707275" height="1.5185184478759766" />
+                          <frame id="4126:451" name="basicNode" x="189.79351806640625" y="91.1839599609375" width="0.7827818393707275" height="1.5185184478759766" />
+                          <frame id="4126:453" name="basicNode" x="237.24217224121094" y="58.38396072387695" width="0.7827818393707275" height="1.5185184478759766" />
+                          <frame id="4126:455" name="basicNode" x="284.6904296875" y="104.95996856689453" width="0.7827818393707275" height="1.5185184478759766" />
+                        </frame>
+                      </frame>
+                    </frame>
+                    <instance id="4126:457" name="ConfigAndData-Line-Don&#39;t remove!" x="0" y="0" width="8" height="8" hidden="true" />
+                  </frame>
+                </frame>
+                <frame id="4126:458" name="xAxis" x="0" y="176" width="345.6666564941406" height="24">
+                  <frame id="4126:459" name="xLabelBox" x="1.0238102674484253" y="0" width="49.23469161987305" height="12">
+                    <text id="4126:460" name="1" x="0" y="0" width="49.23469161987305" height="12" />
+                  </frame>
+                  <frame id="4126:461" name="xLabelBox" x="50.25850296020508" y="0" width="49.23469543457031" height="12">
+                    <text id="4126:462" name="2" x="0" y="0" width="49.23469543457031" height="12" />
+                  </frame>
+                  <frame id="4126:463" name="xLabelBox" x="99.49319458007812" y="0" width="49.23469543457031" height="12">
+                    <text id="4126:464" name="3" x="0" y="0" width="49.23469543457031" height="12" />
+                  </frame>
+                  <frame id="4126:465" name="xLabelBox" x="148.72789001464844" y="0" width="49.23469543457031" height="12">
+                    <text id="4126:466" name="4" x="0" y="0" width="49.23469543457031" height="12" />
+                  </frame>
+                  <frame id="4126:467" name="xLabelBox" x="197.96258544921875" y="0" width="49.23469543457031" height="12">
+                    <text id="4126:468" name="5" x="0" y="0" width="49.23469543457031" height="12" />
+                  </frame>
+                  <frame id="4126:469" name="xLabelBox" x="247.19728088378906" y="0" width="49.23469543457031" height="12">
+                    <text id="4126:470" name="6" x="0" y="0" width="49.23469543457031" height="12" />
+                  </frame>
+                  <frame id="4126:471" name="xLabelBox" x="296.4319763183594" y="0" width="49.23469543457031" height="12">
+                    <text id="4126:472" name="7" x="0" y="0" width="49.23469543457031" height="12" />
+                  </frame>
+                </frame>
+              </frame>
+            </frame>
+            <frame id="4126:473" name="Frame 194" x="345.6666564941406" y="39.5" width="109" height="121">
+              <frame id="4126:474" name="Chart label" x="0" y="0" width="108" height="35">
+                <frame id="4126:475" name="Frame 196" x="0" y="11.5" width="12" height="12" />
+                <frame id="4126:476" name="Frame 197" x="22" y="0" width="86" height="35">
+                  <text id="4126:477" name="Umumiy oqim" x="0" y="0" width="64" height="13" />
+                  <text id="4126:478" name="1,234 mln kWh" x="0" y="19" width="86" height="16" />
+                </frame>
+              </frame>
+              <frame id="4126:479" name="Chart label" x="0" y="43" width="109" height="35">
+                <frame id="4126:480" name="Frame 196" x="0" y="11.5" width="12" height="12" />
+                <frame id="4126:481" name="Frame 197" x="22" y="0" width="87" height="35">
+                  <text id="4126:482" name="Foydali oqim" x="0" y="0" width="60" height="13" />
+                  <text id="4126:483" name="1,020 mln kWh" x="0" y="19" width="87" height="16" />
+                </frame>
+              </frame>
+              <frame id="4126:484" name="Chart label" x="0" y="86" width="109" height="35">
+                <frame id="4126:485" name="Frame 196" x="0" y="11.5" width="12" height="12" />
+                <frame id="4126:486" name="Frame 197" x="22" y="0" width="87" height="35">
+                  <text id="4126:487" name="Yo’qotish" x="0" y="0" width="43" height="13" />
+                  <text id="4126:488" name="0,214 mln kWh" x="0" y="19" width="87" height="16" />
+                </frame>
+              </frame>
+            </frame>
+          </frame>
+          <frame id="4126:489" name="Slider" x="16" y="264" width="454.6666564941406" height="18">
+            <vector id="4126:490" name="Vector 1" x="0" y="9" width="455" height="0" />
+            <frame id="4126:491" name="Frame 260" x="6" y="0" width="114" height="18">
+              <text id="4126:492" name="7 kun" x="41.5" y="1" width="31" height="16" />
+              <frame id="4126:493" name="Frame 261" x="108" y="3" width="12" height="12">
+                <vector id="4126:494" name="Vector 2" x="6" y="4" width="0" height="4" />
+              </frame>
+              <frame id="4126:495" name="Frame 262" x="-6" y="3" width="12" height="12">
+                <vector id="4126:496" name="Vector 2" x="6" y="4" width="0" height="4" />
+              </frame>
+            </frame>
+          </frame>
+        </frame>
+        <frame id="4126:1005" name="Card" x="494.6666564941406" y="1060" width="651.5555419921875" height="298">
           <frame id="4126:1006" name="Header" x="16" y="16" width="619.5555419921875" height="32">
             <text id="4126:1007" name="Rejalashtirilgan ishlar" x="0" y="7" width="151" height="18" />
             <frame id="4126:1008" name="Right" x="587.5555419921875" y="0" width="32" height="32">
@@ -1200,7 +1325,7 @@
               </frame>
             </frame>
           </frame>
-          <frame id="4126:1013" name="Frame 243" x="16" y="48" width="619.5555419921875" height="145">
+          <frame id="4126:1013" name="Frame 243" x="16" y="48" width="619.5555419921875" height="234">
             <frame id="4126:1014" name="Frame" x="0" y="8" width="619.5555419921875" height="30">
               <text id="4126:1015" name="Transformtator" x="6" y="8" width="96" height="14" />
               <text id="4126:1016" name="Ish" x="102" y="8" width="319.5555419921875" height="14" />
@@ -1217,7 +1342,37 @@
               </frame>
               <text id="4126:1025" name="7-sentabr, 2026" x="517.5555419921875" y="7" width="96" height="16" />
             </frame>
-            <frame id="4126:1026" name="Frame" x="0" y="68" width="619.5555419921875" height="30">
+            <frame id="4301:2711" name="Frame" x="0" y="68" width="619.5555419921875" height="30">
+              <text id="4301:2712" name="TP-A303" x="6" y="7" width="96" height="16" />
+              <text id="4301:2713" name="Transformatorni tekshirish" x="102" y="7" width="319.5555419921875" height="16" />
+              <frame id="4301:2714" name="Frame 259" x="421.5555419921875" y="6" width="96" height="18">
+                <frame id="4301:2715" name="Frame" x="27" y="0" width="42" height="18">
+                  <text id="4301:2716" name="Yangi" x="8" y="2.5" width="26" height="13" />
+                </frame>
+              </frame>
+              <text id="4301:2717" name="7-sentabr, 2026" x="517.5555419921875" y="7" width="96" height="16" />
+            </frame>
+            <frame id="4301:2719" name="Frame" x="0" y="98" width="619.5555419921875" height="30">
+              <text id="4301:2720" name="TP-A303" x="6" y="7" width="96" height="16" />
+              <text id="4301:2721" name="Transformatorni tekshirish" x="102" y="7" width="319.5555419921875" height="16" />
+              <frame id="4301:2722" name="Frame 259" x="421.5555419921875" y="6" width="96" height="18">
+                <frame id="4301:2723" name="Frame" x="27" y="0" width="42" height="18">
+                  <text id="4301:2724" name="Yangi" x="8" y="2.5" width="26" height="13" />
+                </frame>
+              </frame>
+              <text id="4301:2725" name="7-sentabr, 2026" x="517.5555419921875" y="7" width="96" height="16" />
+            </frame>
+            <frame id="4301:2727" name="Frame" x="0" y="128" width="619.5555419921875" height="30">
+              <text id="4301:2728" name="TP-A303" x="6" y="7" width="96" height="16" />
+              <text id="4301:2729" name="Transformatorni tekshirish" x="102" y="7" width="319.5555419921875" height="16" />
+              <frame id="4301:2730" name="Frame 259" x="421.5555419921875" y="6" width="96" height="18">
+                <frame id="4301:2731" name="Frame" x="27" y="0" width="42" height="18">
+                  <text id="4301:2732" name="Yangi" x="8" y="2.5" width="26" height="13" />
+                </frame>
+              </frame>
+              <text id="4301:2733" name="7-sentabr, 2026" x="517.5555419921875" y="7" width="96" height="16" />
+            </frame>
+            <frame id="4126:1026" name="Frame" x="0" y="158" width="619.5555419921875" height="30">
               <text id="4126:1027" name="TP-33" x="6" y="7" width="96" height="16" />
               <text id="4126:1028" name="Toka transformatorni ta’mirlash" x="102" y="7" width="319.5555419921875" height="16" />
               <frame id="4126:1029" name="Frame 259" x="421.5555419921875" y="6" width="96" height="18">
@@ -1227,7 +1382,7 @@
               </frame>
               <text id="4126:1032" name="23-avgust, 2026" x="517.5555419921875" y="7" width="96" height="16" />
             </frame>
-            <frame id="4126:1033" name="Frame" x="0" y="98" width="619.5555419921875" height="34">
+            <frame id="4126:1033" name="Frame" x="0" y="188" width="619.5555419921875" height="34">
               <text id="4126:1034" name="TP-08" x="6" y="9" width="96" height="16" />
               <text id="4126:1035" name="Hisoblagich chipini almashtirish. Hamda, qayta texnik ko’rikdan o’tkazish" x="102" y="9" width="319.5555419921875" height="16" />
               <frame id="4126:1036" name="Frame 259" x="421.5555419921875" y="8" width="96" height="18">
@@ -1239,41 +1394,7 @@
             </frame>
           </frame>
         </frame>
-        <frame id="4126:980" name="Card" x="659.5555419921875" y="1060" width="486.6666564941406" height="209">
-          <frame id="4126:981" name="Header" x="16" y="16" width="454.6666564941406" height="32">
-            <text id="4126:982" name="Bajarilgan ishlar" x="0" y="7" width="113" height="18" />
-            <frame id="4126:983" name="Right" x="422.6666564941406" y="0" width="32" height="32">
-              <frame id="4126:984" name="Toggle btn" x="0" y="0" width="32" height="32">
-                <frame id="4126:985" name="Frame 241" x="2" y="2" width="28" height="28">
-                  <frame id="4126:986" name="lucide/external-link" x="5" y="5" width="18" height="18" />
-                </frame>
-              </frame>
-            </frame>
-          </frame>
-          <frame id="4126:988" name="Frame 243" x="16" y="48" width="454.6666564941406" height="145">
-            <frame id="4126:989" name="Frame" x="0" y="8" width="454.6666564941406" height="30">
-              <text id="4126:990" name="Transformtator" x="6" y="8" width="96" height="14" />
-              <text id="4126:991" name="Bajarilgan Ish" x="102" y="8" width="250.66665649414062" height="14" />
-              <text id="4126:992" name="Sana" x="352.6666564941406" y="8" width="96" height="14" />
-            </frame>
-            <frame id="4126:993" name="Frame" x="0" y="38" width="454.6666564941406" height="28">
-              <text id="4126:994" name="TP-01" x="6" y="6" width="96" height="16" />
-              <text id="4126:995" name="Xatlov o’tkazish" x="102" y="6" width="250.66665649414062" height="16" />
-              <text id="4126:996" name="21-avgust, 2026" x="352.6666564941406" y="6" width="96" height="16" />
-            </frame>
-            <frame id="4126:997" name="Frame" x="0" y="66" width="454.6666564941406" height="28">
-              <text id="4126:998" name="TP-004" x="6" y="6" width="96" height="16" />
-              <text id="4126:999" name="Toka transformatorni ta’mirlash" x="102" y="6" width="250.66665649414062" height="16" />
-              <text id="4126:1000" name="1-avgust, 2026" x="352.6666564941406" y="6" width="96" height="16" />
-            </frame>
-            <frame id="4126:1001" name="Frame" x="0" y="94" width="454.6666564941406" height="32">
-              <text id="4126:1002" name="TP-005" x="6" y="8" width="96" height="16" />
-              <text id="4126:1003" name="Hisoblagich o’rnatish" x="102" y="8" width="250.66665649414062" height="16" />
-              <text id="4126:1004" name="18-avgust, 2026" x="352.6666564941406" y="8" width="96" height="16" />
-            </frame>
-          </frame>
-        </frame>
-        <frame id="4126:1040" name="Card" x="1154.2222900390625" y="1060" width="321.77777099609375" height="209">
+        <frame id="4126:1040" name="Card" x="1154.2222900390625" y="1060" width="321.77777099609375" height="298">
           <frame id="4126:1041" name="Header" x="16" y="16" width="289.77777099609375" height="18">
             <text id="4126:1042" name="Hisobotlarni yuklab olish" x="0" y="0" width="170" height="18" />
             <frame id="4126:1043" name="Right" x="187.77777099609375" y="0" width="102" height="32" hidden="true">
@@ -1292,7 +1413,7 @@
               </frame>
             </frame>
           </frame>
-          <frame id="4126:1055" name="Content" x="16" y="42" width="289.77777099609375" height="126">
+          <frame id="4126:1055" name="Content" x="16" y="42" width="289.77777099609375" height="215">
             <frame id="4126:1056" name="Frame 263" x="0" y="0" width="289.77777099609375" height="64.94000244140625">
               <frame id="4126:1057" name="Frame 264" x="0" y="0" width="64.94444274902344" height="64.94000244140625">
                 <frame id="4126:1058" name="lucide/file-text" x="22.47222137451172" y="11.470001220703125" width="20" height="20" />
@@ -1322,7 +1443,7 @@
               </frame>
             </frame>
           </frame>
-          <frame id="4126:1093" name="Footer" x="16" y="176" width="289.77777099609375" height="25">
+          <frame id="4126:1093" name="Footer" x="16" y="265" width="289.77777099609375" height="25">
             <text id="4126:1094" name="Ko’proq" x="123.38888549804688" y="9" width="43" height="16" />
           </frame>
         </frame>
