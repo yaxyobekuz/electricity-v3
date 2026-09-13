@@ -10,6 +10,7 @@ import {
   LayoutPanelTop,
   ListChecks,
   Map as MapIcon,
+  MessagesSquare,
   Search,
   Settings,
   Users,
@@ -57,6 +58,7 @@ export const RAIL_SECTIONS: RailSection[] = [
       "/staff",
       "/reports",
       "/settings",
+      "/appeals",
     ],
   },
   { key: "search", label: "Qidiruv", Icon: Search, href: "/search", match: ["/search"] },
@@ -82,7 +84,10 @@ export const WORKSPACE_LINKS: SidebarLink[] = [
   { key: "violations", label: "Qoidabuzarliklar", Icon: Hand, href: "/violations" },
   { key: "statistics", label: "Statistika", Icon: ChartNoAxesColumn, href: "/statistics" },
   { key: "works", label: "Ishlar", Icon: ListChecks, href: "/works" },
-  { key: "staff", label: "Ma'sul xodimlar", Icon: UserGroup, href: "/staff" },
+  { key: "staff", label: "Ma’sul xodimlar", Icon: UserGroup, href: "/staff" },
   { key: "reports", label: "Hisobotlar", Icon: FileText, href: "/reports" },
   { key: "settings", label: "Sozlamalar", Icon: Settings, href: "/settings" },
+  // Maketda (Figma `4263:2870`) bu havolaga "Sozlamalar" ning ikonkasi
+  // nusxalanib qolgan - ikki xil sahifada bir xil tishli g'ildirak chalg'itadi.
+  { key: "appeals", label: "Murojaatlar", Icon: MessagesSquare, href: "/appeals" },
 ];
