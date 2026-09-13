@@ -42,8 +42,9 @@ export function PortalMap({ className }: { className?: string }) {
 
       <DistrictMap className="absolute inset-0" />
 
-      {/* Kontekst chipi. */}
-      <div className="pointer-events-none absolute top-3 left-3 rounded-xl border border-white/12 bg-[#0e1620]/72 px-3.5 py-2.5 lg:top-4 lg:left-4">
+      {/* Kontekst chipi. Telefonda pastda: panel past (260px) va yuqorida
+          "Baliqchi" yorlig'i bilan to'qnashadi. */}
+      <div className="pointer-events-none absolute bottom-3 left-3 rounded-xl sm:top-3 sm:bottom-auto border border-white/12 bg-[#0e1620]/72 px-3.5 py-2.5 lg:top-4 lg:left-4">
         <p className="text-[11px] leading-3.5 font-medium tracking-widest text-[#8ea6bd] uppercase">
           Nazorat hududi
         </p>

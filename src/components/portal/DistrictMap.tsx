@@ -1,3 +1,5 @@
+import { Zap } from "lucide-react";
+
 import { ANDIJON_REGION, BALIQCHI_DISTRICT, type Ring } from "@/lib/geo/boundaries";
 import { NEIGHBOUR_DISTRICTS } from "@/lib/geo/districts";
 import { fitBbox, ringToPath, type Projector } from "@/lib/geo/project";
@@ -161,10 +163,13 @@ const BLEED = { x: -2000, y: -2000, width: 5000, height: 5000 } as const;
  */
 const UNIT = `max(${(100 / VIEW_W).toFixed(4)}cqw, ${(100 / VIEW_H).toFixed(4)}cqh)`;
 
-/** Yorliq uchi markaziy tugunning tashqi halqasidan (r=7) 6px yuqorida. */
+/**
+ * Yorliq pufagi markaziy tugunning tashqi halqasidan (r=7) 10px yuqorida:
+ * 12px lik uchning pastki yarmi (6px) va 4px bo'shliq.
+ */
 const HUB_LABEL_STYLE = {
   left: `calc(50cqw + ${(HUB[0] - VIEW_W / 2).toFixed(1)} * ${UNIT})`,
-  top: `calc(50cqh + ${(HUB[1] - VIEW_H / 2 - 7).toFixed(1)} * ${UNIT} - 6px)`,
+  top: `calc(50cqh + ${(HUB[1] - VIEW_H / 2 - 7).toFixed(1)} * ${UNIT} - 10px)`,
 } as const;
 
 /** Vektor xaritaning o'zi - konteynerni to'liq qoplaydi. */
@@ -454,8 +459,10 @@ function CurrentArt() {
 }
 
 /**
- * Markaziy tugun ustidagi tuman yorlig'i - HAR DOIM ko'rinadi: kirish
- * animatsiyasi ham, hover holati ham yo'q, birinchi kadrdanoq joyida.
+ * Markaziy tugun ustidagi tuman yorlig'i - xaritadagi yagona yirik matn.
+ * HAR DOIM ko'rinadi: kirish animatsiyasi ham, hover holati ham yo'q,
+ * birinchi kadrdanoq joyida. Faqat ortidagi nur "nafas oladi" - pufakning
+ * o'zi hech qachon xiralashmaydi.
  */
 function HubLabel() {
   return (
@@ -463,14 +470,17 @@ function HubLabel() {
       className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full"
       style={HUB_LABEL_STYLE}
     >
-      <div className="relative rounded-lg border border-white/12 bg-[#0e1620] px-2.5 py-1.5 whitespace-nowrap shadow-[0_6px_18px_rgb(7_11_16/0.5)]">
-        <p className="flex items-center gap-1.5 text-xs leading-4 font-semibold text-white">
-          <span className="size-1.5 rounded-full bg-[#7ec8f0] shadow-[0_0_6px_#7ec8f0]" />
-          Baliqchi tumani
-        </p>
+      <div className="relative isolate">
+        <span className="portal-hub-label-glow absolute -inset-2 -z-10 rounded-2xl bg-[#38bdf8]/35 blur-lg" />
+        <div className="flex items-center gap-2.5 rounded-xl border border-[#7dd3fc]/50 bg-linear-to-b from-[#15273a] to-[#0b131c] py-1.5 pr-4 pl-1.5 whitespace-nowrap shadow-[inset_0_1px_0_rgb(255_255_255/0.1),0_12px_28px_rgb(7_11_16/0.6)]">
+          <span className="grid size-8 place-items-center rounded-lg bg-linear-to-br from-[#7dd3fc] to-[#0a7cc9] shadow-[0_0_14px_rgb(56_189_248/0.65)]">
+            <Zap aria-hidden className="size-4.5 fill-white text-white" strokeWidth={1.5} />
+          </span>
+          <span className="text-2xl leading-8 font-bold tracking-tight text-white">Baliqchi</span>
+        </div>
         {/* Pastga qaragan uch: 45° burilgan kvadrat, yuqori yarmi pufak
-            ostida yashirinadi. */}
-        <span className="absolute top-full left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border-r border-b border-white/12 bg-[#0e1620]" />
+            ostida yashirinadi. Rangi pufak gradiyentining pastki rangi. */}
+        <span className="absolute top-full left-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rotate-45 border-r border-b border-[#7dd3fc]/50 bg-[#0b131c]" />
       </div>
     </div>
   );

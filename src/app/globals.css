@@ -203,6 +203,18 @@
   }
 }
 
+/* "Baliqchi" yorlig'i ortidagi elektr nuri. Faqat nur - pufak doim to'liq
+   ko'rinadi. */
+@keyframes hub-label-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 /* Impuls yetib kelganda markaziy tugundan tarqaluvchi to'lqin. */
 @keyframes hub-arrive {
   0%,
@@ -305,6 +317,10 @@
     transform-box: fill-box;
     transform-origin: center;
     animation: hub-arrive 3200ms var(--ease-portal-out) infinite both;
+  }
+  .portal-hub-label-glow {
+    opacity: 0.8;
+    animation: hub-label-glow 2400ms var(--ease-portal-in) infinite;
   }
 
   /* -------------------------------------------------------------------------
