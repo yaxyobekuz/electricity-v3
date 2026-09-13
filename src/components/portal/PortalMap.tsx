@@ -34,8 +34,9 @@ export function PortalMap({ className }: { className?: string }) {
       style={{ animationDelay: "60ms" }}
     >
       <p className="sr-only">
-        Xarita: Andijon viloyati tumanlari chegarasi, ular orasida Baliqchi
-        tumani ajratib ko&rsquo;rsatilgan. Bu tasvir — bezak;
+        Xarita: Andijon viloyati tumanlari chegarasi, har bir tuman o&rsquo;z
+        rangida, Baliqchi tumani esa yorqin ajratib ko&rsquo;rsatilgan. Bu
+        tasvir — bezak;
         yo&rsquo;nalishlar o&rsquo;ngdagi ro&rsquo;yxatda.
       </p>
 
@@ -60,12 +61,22 @@ export function PortalMap({ className }: { className?: string }) {
         >
           Viloyat chegarasi
         </LegendRow>
-        <LegendRow swatch={<span aria-hidden className="w-4 border-t border-[#a8c6e2]" />}>
+        <LegendRow
+          swatch={
+            <span
+              aria-hidden
+              className="h-2 w-4 rounded-xs border border-[#c4d8ea]/55 bg-linear-to-r from-[#34d399]/60 via-[#f472b6]/60 to-[#a78bfa]/60"
+            />
+          }
+        >
           Qo&rsquo;shni tumanlar
         </LegendRow>
         <LegendRow
           swatch={
-            <span aria-hidden className="h-0.5 w-4 rounded-full bg-[#eaf7ff]" />
+            <span
+              aria-hidden
+              className="h-2 w-4 rounded-xs border border-white bg-[#c7e6f9] shadow-[0_0_6px_#7ec8f0]"
+            />
           }
         >
           Baliqchi tumani
