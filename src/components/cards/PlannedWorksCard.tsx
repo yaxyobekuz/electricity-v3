@@ -9,9 +9,11 @@ import {
 } from "@/components/ui/DataTable";
 import { IconPill } from "@/components/ui/IconPill";
 
-type WorkStatus = "new" | "inProgress" | "planned";
+export type WorkStatus = "new" | "inProgress" | "planned";
 
-interface PlannedWork {
+export interface PlannedWork {
+  /** Qator kaliti - bir transformatorda bir nechta ish bo'lishi mumkin. */
+  id: string;
   tp: string;
   work: string;
   status: WorkStatus;
@@ -20,18 +22,21 @@ interface PlannedWork {
 
 const WORKS: readonly PlannedWork[] = [
   {
+    id: "a303-check",
     tp: "TP-A303",
     work: "Transformatorni tekshirish",
     status: "new",
     date: "7-sentabr, 2026",
   },
   {
+    id: "33-repair",
     tp: "TP-33",
     work: "Toka transformatorni ta\u2019mirlash",
     status: "inProgress",
     date: "23-avgust, 2026",
   },
   {
+    id: "08-chip",
     tp: "TP-08",
     work: "Hisoblagich chipini almashtirish. Hamda, qayta texnik ko\u2019rikdan o\u2019tkazish",
     status: "planned",
@@ -57,21 +62,34 @@ function StatusCell({ status }: { status: WorkStatus }) {
   return <Badge tone="blue">Yangi</Badge>;
 }
 
-const ROWS: TableRow[] = WORKS.map((item) => ({
-  key: item.tp,
-  cells: [
-    // Maketda 1-ustun qolganlaridan qalinroq (medium).
-    <span key="tp" className="font-medium">
-      {item.tp}
-    </span>,
-    item.work,
-    <StatusCell key="status" status={item.status} />,
-    item.date,
-  ],
-}));
+function buildRows(works: readonly PlannedWork[]): TableRow[] {
+  return works.map((item) => ({
+    key: item.id,
+    cells: [
+      // Maketda 1-ustun qolganlaridan qalinroq (medium).
+      <span key="tp" className="font-medium">
+        {item.tp}
+      </span>,
+      item.work,
+      <StatusCell key="status" status={item.status} />,
+      item.date,
+    ],
+  }));
+}
 
-/** Fider sahifasining 4-qatoridagi "Rejalashtirilgan ishlar" kartasi (span-8, 209px). */
-export function PlannedWorksCard({ className }: { className?: string }) {
+/**
+ * Fider sahifasining 4-qatoridagi "Rejalashtirilgan ishlar" kartasi (span-8, 209px).
+ *
+ * Bosh sahifada (Figma `4126:1005`) karta 298px va jadvalda 6 ta qator -
+ * ro'yxat `works` orqali uzatiladi, qator balandliklari o'zgarmaydi.
+ */
+export function PlannedWorksCard({
+  works = WORKS,
+  className,
+}: {
+  works?: readonly PlannedWork[];
+  className?: string;
+}) {
   return (
     <Card className={className}>
       <CardHeader title="Rejalashtirilgan ishlar">
@@ -79,7 +97,7 @@ export function PlannedWorksCard({ className }: { className?: string }) {
       </CardHeader>
       <CardBody>
         {/* Maketda bu jadval qatorlari 30px, oxirgisi 34px (XML: 4082:577). */}
-        <DataTable columns={COLUMNS} rows={ROWS} rowHeight={30} lastRowHeight={34} />
+        <DataTable columns={COLUMNS} rows={buildRows(works)} rowHeight={30} lastRowHeight={34} />
       </CardBody>
     </Card>
   );

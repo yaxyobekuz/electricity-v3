@@ -95,8 +95,21 @@ const chipMarker: MarkerRenderer = (marker, selected) => {
  * Pastki ichki bo'shliq maketda 8px (yuqorisi 16): 16 + 32 + 8 + 248 + 8 + 16
  * + 8 = 336. Sarlavha rangi bu kartada `#000000` - `ink` (#333333) emas
  * (o'lchangan; qo'shni "Qarzdorlik"/"Yo'qotish" kartalarida esa #333333).
+ *
+ * Bosh sahifada (Figma `4126:753`, 816x402) tultipdagi ko'rsatkich nomi
+ * boshqa ("Bu oygi Foydali oqim") va tultip pastdan 12px da turadi -
+ * `monthlyLabel` / `tooltipBottom` proplari.
  */
-export function InteractiveMapCard({ className }: { className?: string }) {
+export function InteractiveMapCard({
+  monthlyLabel = "Bu oygi iste’mol",
+  tooltipBottom = 14,
+  className,
+}: {
+  monthlyLabel?: string;
+  /** Tultipning xarita pastki chetidan masofasi, px. */
+  tooltipBottom?: number;
+  className?: string;
+}) {
   return (
     <Card className={cn("pb-2", className)}>
       <CardHeader title="Interaktiv ko&rsquo;rinish" titleClassName="text-black">
@@ -114,7 +127,10 @@ export function InteractiveMapCard({ className }: { className?: string }) {
             renderMarker={chipMarker}
             className="h-full w-full rounded-sm"
           />
-          <div className="absolute right-3 bottom-3.5 w-[215px] rounded-lg bg-surface p-2.5 shadow-[0_2px_12px_rgba(0,0,0,0.12)]">
+          <div
+            style={{ bottom: tooltipBottom }}
+            className="absolute right-3 w-[215px] rounded-lg bg-surface p-2.5 shadow-[0_2px_12px_rgba(0,0,0,0.12)]"
+          >
             <p className="text-xs leading-4 font-semibold text-ink">
               Yuqori sarfga ega transformator
             </p>
@@ -126,7 +142,7 @@ export function InteractiveMapCard({ className }: { className?: string }) {
             </div>
             {/* Maketda kulrang qism 10px, faqat qiymat 12px bold; qator qutisi 16px. */}
             <p className="mt-2 text-[10px] leading-4 text-[#999999]">
-              Bu oygi iste&rsquo;mol:{" "}
+              {monthlyLabel}:{" "}
               <span className="text-xs font-bold text-ink">51,5</span> ming kWh
             </p>
             {/* Ogohlantirish bloki: maketda tokeni yo'q - aniq hex (#f59e0b / #fefaf2) */}

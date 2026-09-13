@@ -11,7 +11,16 @@ import { type SegmentItem, SegmentedIcons } from "@/components/ui/Toggle";
 import { cn } from "@/lib/ui/cn";
 
 type ViewMode = "chart" | "table";
-type MetricId = "billed" | "consumed" | "loss";
+export type MetricId = "billed" | "consumed" | "loss";
+
+/** Seriya nomlari: legenda, jadval ustunlari va tultip uchun. */
+export type DynamicsLabels = Record<MetricId, string>;
+
+const DEFAULT_LABELS: DynamicsLabels = {
+  billed: "Hisoblangan",
+  consumed: "Iste’mol",
+  loss: "Yo’qotish",
+};
 
 interface DayRow {
   day: number;
@@ -73,12 +82,11 @@ const TRACK_PADDING = 6;
  * qiymatlar aynan chiqadi.
  */
 const SERIES = [
-  { id: "billed", label: "Hisoblangan", total: 1.234, color: "#467acf" },
-  { id: "consumed", label: "Iste’mol", total: 1.02, color: "#46cf61" },
-  { id: "loss", label: "Yo’qotish", total: 0.214, color: "#cf4646" },
+  { id: "billed", total: 1.234, color: "#467acf" },
+  { id: "consumed", total: 1.02, color: "#46cf61" },
+  { id: "loss", total: 0.214, color: "#cf4646" },
 ] as const satisfies ReadonlyArray<{
   id: MetricId;
-  label: string;
   total: number;
   color: string;
 }>;
@@ -234,12 +242,14 @@ const VIEW_ITEMS: ReadonlyArray<SegmentItem<ViewMode>> = [
   { value: "table", Icon: Table, label: "Jadval" },
 ];
 
-const COLUMNS: TableColumn[] = [
-  { key: "day", label: "Kun", grow: 12 },
-  { key: "billed", label: "Hisoblangan", grow: 24 },
-  { key: "consumed", label: "Iste’mol", grow: 24 },
-  { key: "loss", label: "Yo’qotish", grow: 24 },
-];
+function buildColumns(labels: DynamicsLabels): TableColumn[] {
+  return [
+    { key: "day", label: "Kun", grow: 12 },
+    { key: "billed", label: labels.billed, grow: 24 },
+    { key: "consumed", label: labels.consumed, grow: 24 },
+    { key: "loss", label: labels.loss, grow: 24 },
+  ];
+}
 
 function buildRows(days: readonly DayRow[]): TableRow[] {
   return days.map((row) => ({
@@ -463,8 +473,19 @@ function RangeSlider({
  *
  * Tana 200px: chapda 345.67px grafik (o'q uchun 33px chap, 28px o'ng chekka),
  * o'ngda 109px yorliq ustuni. Pastda 18px oraliq yo'lagi.
+ *
+ * Bosh sahifada (Figma `4126:369`) geometriya aynan shu, sarlavha va seriya
+ * nomlari esa boshqa ("Foydali oqim dinamikasi") - `title` / `labels` propi.
  */
-export function ConsumptionDynamicsCard({ className }: { className?: string }) {
+export function ConsumptionDynamicsCard({
+  title = "Iste’mol dinamikasi",
+  labels = DEFAULT_LABELS,
+  className,
+}: {
+  title?: string;
+  labels?: DynamicsLabels;
+  className?: string;
+}) {
   const [view, setView] = useState<ViewMode>("chart");
   // Standart holat - maketdagidek birinchi 7 kun.
   const [range, setRange] = useState({ start: 1, end: MIN_DAYS });
@@ -477,11 +498,13 @@ export function ConsumptionDynamicsCard({ className }: { className?: string }) {
   const chartData = useMemo(
     () =>
       SERIES.map((series) => ({
-        id: series.label,
+        id: labels[series.id],
         data: visibleDays.map((row) => ({ x: row.day, y: row[series.id] })),
       })),
-    [visibleDays],
+    [visibleDays, labels],
   );
+
+  const columns = useMemo(() => buildColumns(labels), [labels]);
 
   // Nivo qatlamlari ko'rinib turgan kunlarni bilishi kerak.
   const chartLayers = useMemo(
@@ -509,7 +532,7 @@ export function ConsumptionDynamicsCard({ className }: { className?: string }) {
 
   return (
     <Card className={className}>
-      <CardHeader title="Iste’mol dinamikasi">
+      <CardHeader title={title}>
         <SegmentedIcons items={VIEW_ITEMS} value={view} onChange={setView} />
         <IconPill icon={FileDown} label="Yuklab olish" />
       </CardHeader>
@@ -574,7 +597,7 @@ export function ConsumptionDynamicsCard({ className }: { className?: string }) {
                     />
                     <div className="min-w-0">
                       <span className="block truncate text-[10px] leading-[13px] text-[#999999]">
-                        {series.label}
+                        {labels[series.id]}
                       </span>
                       <span className="mt-1.5 block truncate text-xs leading-4 font-semibold text-ink">
                         {formatTotal(series.total * totalScale)}
@@ -590,7 +613,7 @@ export function ConsumptionDynamicsCard({ className }: { className?: string }) {
           </>
         ) : (
           <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto">
-            <DataTable columns={COLUMNS} rows={rows} />
+            <DataTable columns={columns} rows={rows} />
           </div>
         )}
       </CardBody>

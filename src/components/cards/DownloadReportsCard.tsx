@@ -46,8 +46,19 @@ const FORMATS: readonly FormatOption[] = [
  *
  * Davr tanlanadi, format tugmasi esa `/api/reports` dan tayyor faylni
  * yuklab beradi (javobda `Content-Disposition: attachment`).
+ *
+ * Bosh sahifada (Figma `4126:1040`) karta 298px, lekin plitkalar o'sha
+ * 64.94px da qoladi va bo'sh joy ajratgich ustida to'planadi -
+ * `stretchPeriods={false}`.
  */
-export function DownloadReportsCard({ className }: { className?: string }) {
+export function DownloadReportsCard({
+  stretchPeriods = true,
+  className,
+}: {
+  /** `true` - davr plitkalari bo'sh balandlikni egallaydi (fider sahifasi). */
+  stretchPeriods?: boolean;
+  className?: string;
+}) {
   const [period, setPeriod] = useState<ReportPeriod>("daily");
   const periodLabel = PERIODS.find((item) => item.id === period)?.label ?? "";
 
@@ -61,7 +72,12 @@ export function DownloadReportsCard({ className }: { className?: string }) {
       />
       <CardBody>
         {/* 4 x 64.94px, 10px oraliq; qolgan balandlikni shu qator yutadi. */}
-        <div className="grid min-h-0 flex-1 grid-cols-4 gap-2.5">
+        <div
+          className={cn(
+            "grid min-h-0 grid-cols-4 gap-2.5",
+            stretchPeriods ? "flex-1" : "h-[64.94px] shrink-0",
+          )}
+        >
           {PERIODS.map((option) => {
             const selected = option.id === period;
             return (
@@ -105,6 +121,7 @@ export function DownloadReportsCard({ className }: { className?: string }) {
         </div>
 
         {/* Maketdagi havola ustidagi ajratuvchi chiziq. */}
+        {stretchPeriods ? null : <div className="min-h-0 flex-1" />}
         <div className="mt-2 h-px shrink-0 bg-[#dddddd]" />
       </CardBody>
       <CardFooterLink>Ko&rsquo;proq</CardFooterLink>

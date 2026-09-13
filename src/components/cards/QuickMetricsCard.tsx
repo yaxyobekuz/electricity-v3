@@ -12,7 +12,7 @@ import { type GlyphIcon, Icon } from "@/components/ui/Icon";
 import { IconPill } from "@/components/ui/IconPill";
 import { cn } from "@/lib/ui/cn";
 
-interface QuickMetric {
+export interface QuickMetric {
   id: string;
   icon: GlyphIcon;
   /**
@@ -73,8 +73,17 @@ const METRICS: readonly QuickMetric[] = [
  * Matn uslubi bu kartada tokenlardan chetga chiqadi (maketdan piksel bo'yicha
  * o'lchangan): izoh 14px Medium `#999999` (`ink-soft` #767676 emas), qiymat
  * 16px Bold `#000000` (`ink` #333333 emas).
+ *
+ * Bosh sahifada (Figma `4126:936`) geometriya aynan shu, faqat izoh va
+ * qiymatlar boshqa - ular `metrics` orqali uzatiladi.
  */
-export function QuickMetricsCard({ className }: { className?: string }) {
+export function QuickMetricsCard({
+  metrics = METRICS,
+  className,
+}: {
+  metrics?: readonly QuickMetric[];
+  className?: string;
+}) {
   return (
     <Card className={className}>
       <CardHeader title="Tezkor ko&rsquo;rsatgichlar" titleClassName="text-black">
@@ -82,7 +91,7 @@ export function QuickMetricsCard({ className }: { className?: string }) {
       </CardHeader>
 
       <CardBody className="gap-[10px]">
-        {METRICS.map((metric) => (
+        {metrics.map((metric) => (
           <div key={metric.id} className="flex h-11 shrink-0 items-center gap-2">
             <span
               className={cn(
