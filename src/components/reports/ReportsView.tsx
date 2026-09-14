@@ -1,88 +1,85 @@
 "use client";
 
-import {
-  Building2,
-  CalendarCheck,
-  CalendarClock,
-  CalendarDays,
-  CalendarFold,
-  CalendarRange,
-  Clock,
-  Download,
-  FileText,
-  Send,
-  Settings2,
-} from "lucide-react";
-import { type ComponentType, type SVGProps, useState } from "react";
+// Qamrov tanlagichi holat (`useState`) talab qiladi - shuning uchun
+// ko'rinish mijozda. Yuklab olish tugmalari oddiy `<a download>` havolalari:
+// fayl `/api/reports` da so'rov kelganda shakllanadi.
+
+import { CalendarFold, CalendarRange, Check, Landmark, X } from "lucide-react";
+import { type ComponentType, type ReactNode, type SVGProps, useState } from "react";
 
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
-import { Badge, DataTable, type TableColumn } from "@/components/ui/DataTable";
-import { type FilterChip, FilterChips } from "@/components/ui/Filters";
 import { type GlyphIcon, Icon } from "@/components/ui/Icon";
 import { ExcelMark, PdfMark } from "@/components/ui/icons/BrandMarks";
-import { HeaderButton, PageHeader } from "@/components/ui/PageHeader";
-import { StatCard, StatRow } from "@/components/ui/StatCard";
-import { between, dec, num, pick, TODAY, TODAY_TIME } from "@/lib/data/seed";
-import { type ReportFormat, type ReportPeriod, REPORT_PERIODS } from "@/lib/reports/types";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { type SelectOption, SelectField } from "@/components/ui/SelectField";
+import type { TemplateType } from "@/generated/prisma";
+import { num } from "@/lib/format";
+import {
+  MONTHLY_SERIES_TITLE,
+  REPORT_PERIOD_LABEL,
+  type ReportFormat,
+  type ReportPeriod,
+  type ReportScopeKind,
+  YEARLY_SERIES_TITLE,
+} from "@/lib/reports/types";
 import { cn } from "@/lib/ui/cn";
 
 /* ---------------------------------------------------------------------------
-   Davr va format lug'atlari - `@/lib/reports/types` dagi kod qiymatlarini
-   o'zbekcha yorliqqa bog'laydi (kod inglizcha, UI o'zbekcha).
+   Props
    --------------------------------------------------------------------------- */
 
-const PERIOD_LABEL: Record<ReportPeriod, string> = {
-  daily: "Kunlik",
-  weekly: "Haftalik",
-  monthly: "Oylik",
-  yearly: "Yillik",
-};
-
-interface PeriodTile {
-  id: ReportPeriod;
-  hint: string;
-  icon: GlyphIcon;
-  /** Ikonka plitkasining foni. */
-  accent: string;
+export interface ReportEntityOption {
+  id: string;
+  name: string;
 }
 
-/** Yuklab olish plitkalari - `/api/reports` qabul qiladigan to'rt davr. */
-const PERIOD_TILES: readonly PeriodTile[] = [
-  {
-    id: "daily",
-    hint: "Sutkalik iste’mol, yo’qotish va yuklama dinamikasi",
-    icon: CalendarDays,
-    accent: "bg-accent-blue",
-  },
-  {
-    id: "weekly",
-    hint: "Hafta kesimidagi fider va TP ko’rsatkichlari",
-    icon: CalendarRange,
-    accent: "bg-accent-green",
-  },
-  {
-    id: "monthly",
-    hint: "Oylik hisob-kitob, to’lovlar va yo’qotish tahlili",
-    icon: CalendarFold,
-    accent: "bg-accent-purple",
-  },
-  {
-    id: "yearly",
-    hint: "Yil bo’yicha yakuniy ko’rsatkichlar va taqqoslash",
-    icon: CalendarCheck,
-    accent: "bg-accent-indigo",
-  },
-];
+export interface ReportFeederOption extends ReportEntityOption {
+  substationId: string;
+}
+
+export interface ReportTransformerOption extends ReportEntityOption {
+  substationId: string;
+  feederId: string;
+}
+
+/** Shablonning shu oyga yuklangan-yuklanmaganligi. */
+export interface ReportTemplateStatus {
+  type: TemplateType;
+  label: string;
+  uploaded: boolean;
+}
+
+export interface ReportsViewProps {
+  /** Tanlangan oy: kalit, "Sentabr 2026" va "13-sentabr, 2026". */
+  period: { key: string; label: string; reportDate: string };
+  /** Yillik hisobot qamraydigan oylar (bazadagi, tanlangan oygacha). */
+  yearly: { rangeLabel: string; months: number };
+  districtName: string;
+  /** Shu oyda holati bor obyektlar (fayl tartibida). */
+  substations: ReportEntityOption[];
+  feeders: ReportFeederOption[];
+  transformers: ReportTransformerOption[];
+  templates: ReportTemplateStatus[];
+  /** `?scope=` dan boshlang'ich tanlov. */
+  initial: ScopePick;
+}
+
+/** Tanlagichdagi uchta ro'yxatning tanlangan qiymatlari. */
+export interface ScopePick {
+  substationId: string | null;
+  feederId: string | null;
+  transformerId: string | null;
+}
+
+/* ---------------------------------------------------------------------------
+   Lug'atlar
+   --------------------------------------------------------------------------- */
 
 interface FormatOption {
   id: ReportFormat;
   label: string;
   Mark: ComponentType<SVGProps<SVGSVGElement>>;
-  /**
-   * Fon - format brend rangining ~10% shaffofligi (fider sahifasidagi
-   * `DownloadReportsCard` bilan bir xil qiymatlar), shuning uchun bu yerda
-   * `tint-*` tokenlari ishlatilmaydi.
-   */
+  /** Fon - `DownloadReportsCard` dagi format ranglari bilan bir xil. */
   tone: string;
 }
 
@@ -91,371 +88,338 @@ const FORMATS: readonly FormatOption[] = [
   { id: "pdf", label: "PDF", Mark: PdfMark, tone: "bg-[#f9e6e6] text-[#c80a0a]" },
 ];
 
+/** Shablon hisobotning qaysi qismini to'ldiradi. */
+const TEMPLATE_ROLE: Record<TemplateType, string> = {
+  SUBSTATIONS: "Tuman va podstansiya oqimi",
+  FEEDERS: "Fider oqimi",
+  TRANSFORMERS: "TP oqimi, TP jadvali, abonentlar soni",
+  SUBSCRIBERS: "Qarzdorlik",
+  VIOLATIONS: "Qoidabuzarliklar bo’limi",
+  APPEALS: "Murojaatlar bo’limi",
+};
+
+type Scope = { kind: "district" } | { kind: Exclude<ReportScopeKind, "district">; id: string };
+
 /* ---------------------------------------------------------------------------
-   Maket ma'lumotlari - `seed.ts` yordamchilari orqali DETERMINLASHGAN.
-   `Math.random` va `new Date()` ishlatilmaydi: server va mijoz bir xil markup
-   chizishi shart (gidratsiya xatosi bo'lmasligi uchun).
+   Qismlar
    --------------------------------------------------------------------------- */
 
-const REPORT_SCOPES = [
-  "Baliqchi-1 fideri",
-  "Baliqchi-2 fideri",
-  "35/10 kV Baliqchi PS",
-  "Tuman kesimi",
-  "Oqoltin fideri",
-] as const;
-
-const REPORT_AUTHORS = [
-  "A. Karimov",
-  "D. Yo’ldoshev",
-  "S. Rahmonova",
-  "N. Tursunov",
-  "M. Ergashev",
-] as const;
-
-interface RecentReport {
-  id: string;
-  name: string;
-  period: ReportPeriod;
-  format: ReportFormat;
-  /** Tayyor formatda: "1,2 MB". */
-  size: string;
-  /** "10-avgust 09:15". */
-  date: string;
-  author: string;
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1">
+      <span className="text-[11px] font-medium text-ink-soft">{label}</span>
+      {children}
+    </div>
+  );
 }
 
-const RECENT_REPORTS: readonly RecentReport[] = Array.from(
-  { length: 10 },
-  (_, index): RecentReport => {
-    const seed = index + 3;
-    // Davrlar navbat bilan almashadi - har bir filtr chipiga kamida bitta
-    // qator tushishi uchun (bo'sh jadval ko'rinmasin).
-    const period = REPORT_PERIODS[index % REPORT_PERIODS.length];
-    const sizeKb = between(seed * 5, 240, 2800, 10);
-    const hour = between(seed * 7, 8, 19);
-    const minute = between(seed * 11, 0, 55, 5);
-    const time = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-
-    return {
-      id: `report-${index}`,
-      name: `${PERIOD_LABEL[period]} hisobot · ${pick(seed * 13, REPORT_SCOPES)}`,
-      period,
-      // Har uchinchi hisobot PDF, qolganlari Excel - takrorlanuvchi naqsh.
-      format: index % 3 === 1 ? "pdf" : "xlsx",
-      size: `${dec(sizeKb / 1024)} MB`,
-      // Sanalar bugundan orqaga: 10-avgust, 9-avgust, ...
-      date: `${10 - index}-avgust ${time}`,
-      author: pick(seed * 17, REPORT_AUTHORS),
-    };
-  },
-);
-
-/** Bu oyda yuklab olingan hisobotlar va o'tgan oyga nisbatan o'sish. */
-const MONTHLY_DOWNLOADS = between(21, 90, 180);
-const DOWNLOADS_DELTA = between(23, 8, 26);
-
-interface Schedule {
-  id: string;
-  /** Kimga jo'natiladi. */
-  recipient: string;
-  /** "Har kuni, 08:00". */
-  cadence: string;
-  /** "Kunlik hisobot / PDF". */
-  payload: string;
+interface TileProps {
+  period: ReportPeriod;
   icon: GlyphIcon;
   accent: string;
-  /** `false` - jo'natma vaqtincha to'xtatilgan (nishon ohangi shundan olinadi). */
-  active: boolean;
+  coverage: string;
+  sections: readonly string[];
+  query: string;
 }
 
-const SCHEDULES: readonly Schedule[] = [
-  {
-    id: "hokimlik",
-    recipient: "Baliqchi tuman hokimligi",
-    cadence: "Har kuni, 08:00",
-    payload: "Kunlik hisobot, PDF",
-    icon: CalendarDays,
-    accent: "bg-accent-blue",
-    active: true,
-  },
-  {
-    id: "viloyat",
-    recipient: "Viloyat elektr tarmoqlari boshqarmasi",
-    cadence: "Har dushanba, 09:00",
-    payload: "Haftalik hisobot, Excel",
-    icon: CalendarRange,
-    accent: "bg-accent-green",
-    active: true,
-  },
-  {
-    id: "hududiy",
-    recipient: "Hududiy elektr tarmoqlari AJ",
-    cadence: "Har oyning 1-sanasi, 10:00",
-    payload: "Oylik hisobot, Excel + PDF",
-    icon: CalendarFold,
-    accent: "bg-accent-purple",
-    active: true,
-  },
-  {
-    id: "vazirlik",
-    recipient: "Energetika vazirligi",
-    cadence: "Har yil, 5-yanvar",
-    payload: "Yillik hisobot, PDF",
-    icon: CalendarCheck,
-    accent: "bg-accent-indigo",
-    active: true,
-  },
-  {
-    id: "dispetcher",
-    recipient: "Navbatchi dispetcher",
-    cadence: "Har kuni, 20:00",
-    payload: "Kunlik hisobot, Excel",
-    icon: Clock,
-    accent: "bg-accent-teal",
-    active: true,
-  },
-  {
-    id: "moliya",
-    recipient: "Tuman moliya bo’limi",
-    cadence: "Har chorak, 12:00",
-    payload: "Oylik hisobot, Excel",
-    icon: Building2,
-    accent: "bg-accent-brown",
-    active: false,
-  },
-];
+function ReportTile({ period, icon, accent, coverage, sections, query }: TileProps) {
+  const label = REPORT_PERIOD_LABEL[period];
+  return (
+    <div className="flex min-w-0 flex-col rounded-xl border border-solid border-[#dddddd] bg-canvas p-4">
+      <div className="flex items-center gap-3">
+        <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-lg text-white", accent)}>
+          <Icon icon={icon} size={22} />
+        </span>
+        <div className="min-w-0">
+          <span className="block truncate text-sm font-bold text-ink">{label} hisobot</span>
+          <span className="block truncate text-[11px] text-ink-soft">{coverage}</span>
+        </div>
+      </div>
 
-const ACTIVE_SCHEDULES = SCHEDULES.filter((item) => item.active).length;
+      <ol className="mt-3 flex flex-1 list-decimal flex-col gap-1 pl-5 text-[11px] leading-4 text-ink-muted">
+        {sections.map((section) => (
+          <li key={section}>{section}</li>
+        ))}
+      </ol>
 
-const RECENT_COLUMNS: TableColumn[] = [
-  { key: "name", label: "Nomi", grow: 3, align: "left" },
-  { key: "period", label: "Davr", grow: 1 },
-  { key: "format", label: "Format", grow: 1 },
-  { key: "size", label: "Hajmi", grow: 1 },
-  { key: "date", label: "Sana", grow: 1.4 },
-  { key: "author", label: "Yuklab olgan", grow: 1.6 },
-];
+      <div className="mt-3 grid h-10 shrink-0 grid-cols-2 gap-2">
+        {FORMATS.map((format) => (
+          <a
+            key={format.id}
+            href={`/api/reports?period=${period}&format=${format.id}&${query}`}
+            download
+            aria-label={`${label} hisobotni ${format.label} sifatida yuklab olish`}
+            className={cn(
+              "flex min-w-0 items-center justify-center gap-1.5 rounded-full text-xs font-semibold transition-opacity hover:opacity-80",
+              format.tone,
+            )}
+          >
+            <format.Mark width={18} height={18} />
+            {format.label}
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-/** Filtr "Barchasi" ni ham qamrab oladi, shuning uchun alohida tip. */
-type PeriodFilter = "all" | ReportPeriod;
-
-const PERIOD_CHIPS: ReadonlyArray<FilterChip<PeriodFilter>> = [
-  { value: "all", label: "Barchasi", count: RECENT_REPORTS.length },
-  ...REPORT_PERIODS.map((id) => ({
-    value: id,
-    label: PERIOD_LABEL[id],
-    count: RECENT_REPORTS.filter((report) => report.period === id).length,
-  })),
-];
+/* ---------------------------------------------------------------------------
+   Ko'rinish
+   --------------------------------------------------------------------------- */
 
 /**
- * "Hisobotlar" sahifasi.
- *
- * Fayllar loyihadagi mavjud generatorga (`GET /api/reports`) murojaat qiladi:
- * har bir plitkadagi tugma - oddiy `<a download>` havolasi, javobda
- * `Content-Disposition: attachment` bo'lgani uchun brauzer faylni saqlaydi.
- * Shu sababli yuklab olish uchun holat ham, `fetch` ham kerak emas.
- *
- * Balandlik qat'iy taqsimlangan (1064px ish maydoni):
- * 56 (yo'lak) + 104 (statistika) + 300 (yuklab olish) + qolgani pastki qator;
- * oraliqlar 8px. Skroll faqat kartalar ichida bo'ladi, sahifada emas.
+ * "Hisobotlar" sahifasi: qamrov (tuman / podstansiya / fider / TP) tanlanadi,
+ * so'ng oylik yoki yillik hisobot Excel / PDF ko'rinishida yuklab olinadi.
+ * Havola: `/api/reports?period=..&format=..&scope=<kind>:<id>&month=<key>`
+ * (tuman uchun `scope` yo'q).
  */
-export function ReportsView() {
-  const [filter, setFilter] = useState<PeriodFilter>("all");
+export function ReportsView({
+  period,
+  yearly,
+  districtName,
+  substations,
+  feeders,
+  transformers,
+  templates,
+  initial,
+}: ReportsViewProps) {
+  const [picked, setPicked] = useState<ScopePick>(initial);
 
-  const rows =
-    filter === "all"
-      ? RECENT_REPORTS
-      : RECENT_REPORTS.filter((report) => report.period === filter);
+  // Oy almashtirilganda sahifa qayta chiziladi, lekin holat saqlanadi. Shu
+  // oyning ro'yxatida yo'q obyekt tanlovdan tushadi - aks holda sarlavha bo'sh,
+  // havola esa eski obyektga ketardi. Obyektning ota obyektlari oylar davomida
+  // o'zgarmaydi, shuning uchun qolgan tanlov o'zaro mos.
+  const substation = substations.find((row) => row.id === picked.substationId) ?? null;
+  const feeder = feeders.find((row) => row.id === picked.feederId) ?? null;
+  const transformer = transformers.find((row) => row.id === picked.transformerId) ?? null;
+  const substationId = substation?.id ?? null;
+  const feederId = feeder?.id ?? null;
+  const transformerId = transformer?.id ?? null;
+
+  /** "TP-12 (Markaz)" - ota obyekt nomi topilmasa qavssiz. */
+  const withParent = (name: string, parent: string | undefined) => (parent ? `${name} (${parent})` : name);
+
+  const substationOptions: SelectOption[] = substations.map((row) => ({ value: row.id, label: row.name }));
+  const feederOptions: SelectOption[] = feeders
+    .filter((row) => !substationId || row.substationId === substationId)
+    .map((row) => ({
+      value: row.id,
+      label: substationId
+        ? row.name
+        : withParent(row.name, substations.find((item) => item.id === row.substationId)?.name),
+    }));
+  const transformerOptions: SelectOption[] = transformers
+    .filter((row) => (feederId ? row.feederId === feederId : !substationId || row.substationId === substationId))
+    .map((row) => ({
+      value: row.id,
+      label: feederId ? row.name : withParent(row.name, feeders.find((item) => item.id === row.feederId)?.name),
+    }));
+
+  // Har bir tanlovda uchala qiymat birga yoziladi - holatda ko'rinmaydigan
+  // (shu oyda yo'q) eski qiymat qolib ketmaydi.
+  function chooseSubstation(next: string | null) {
+    setPicked({
+      substationId: next,
+      feederId: next && feeder?.substationId === next ? feederId : null,
+      transformerId: next && transformer?.substationId === next ? transformerId : null,
+    });
+  }
+
+  function chooseFeeder(next: string | null) {
+    if (!next) {
+      setPicked({ substationId, feederId: null, transformerId: null });
+      return;
+    }
+    const nextFeeder = feeders.find((row) => row.id === next);
+    setPicked({
+      substationId: nextFeeder?.substationId ?? substationId,
+      feederId: next,
+      transformerId: transformer?.feederId === next ? transformerId : null,
+    });
+  }
+
+  function chooseTransformer(next: string | null) {
+    const tp = transformers.find((row) => row.id === next);
+    setPicked(
+      tp
+        ? { substationId: tp.substationId, feederId: tp.feederId, transformerId: tp.id }
+        : { substationId, feederId, transformerId: null },
+    );
+  }
+
+  function resetToDistrict() {
+    setPicked({ substationId: null, feederId: null, transformerId: null });
+  }
+
+  const scope: Scope = transformer
+    ? { kind: "transformer", id: transformer.id }
+    : feeder
+      ? { kind: "feeder", id: feeder.id }
+      : substation
+        ? { kind: "substation", id: substation.id }
+        : { kind: "district" };
+
+  const scopeTitle = transformer
+    ? `${transformer.name} transformatori`
+    : feeder
+      ? `${feeder.name} fideri`
+      : substation
+        ? `${substation.name} podstansiyasi`
+        : districtName;
+
+  // Qamrov obyekt ID lari faqat harf-raqamdan iborat - kodlash shart emas.
+  const query = scope.kind === "district" ? `month=${period.key}` : `scope=${scope.kind}:${scope.id}&month=${period.key}`;
+
+  const common = [
+    "Transformatorlar jadvali (oqim, yo’qotish ulushi, abonentlar)",
+    "Qoidabuzarliklar turi bo’yicha (soni, zarar so’m va kWh)",
+    "Murojaatlar holati bo’yicha",
+  ];
+  const monthlySections = [
+    "Umumiy ko’rsatkichlar: 6 ta, o’tgan oy bilan taqqoslash",
+    MONTHLY_SERIES_TITLE[scope.kind],
+    ...common,
+  ];
+  const yearlySections = [
+    `Umumiy ko’rsatkichlar: ${period.label} holati`,
+    // Oylar soni qamrovga bog'liq (obyekt keyinroq paydo bo'lgan bo'lishi mumkin) -
+    // shuning uchun son emas, oraliq yoziladi.
+    `${YEARLY_SERIES_TITLE}: ${yearly.rangeLabel} (ma’lumoti bor oylar)`,
+    ...common.map((section) => `${section} - ${period.label}`),
+  ];
+
+  const yearlyCoverage =
+    yearly.months < 12
+      ? `${yearly.rangeLabel} · bazada ${num(yearly.months)} oy`
+      : yearly.rangeLabel;
+
+  const missing = templates.filter((item) => !item.uploaded).length;
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-2">
+    <div className="scrollbar-none flex h-full min-h-0 flex-col gap-2 overflow-y-auto">
       <PageHeader
         title="Hisobotlar"
-        subtitle="Kunlik, haftalik, oylik va yillik hisobotlarni shakllantirish"
-      >
-        <HeaderButton icon={Settings2} href="/settings">
-          Jo&rsquo;natish sozlamalari
-        </HeaderButton>
-      </PageHeader>
+        subtitle={`Oylik va yillik hisobotlar · ${period.label} · ${period.reportDate} holatiga`}
+      />
 
-      <StatRow>
-        <StatCard
-          label="Tayyor shablon"
-          value={num(REPORT_PERIODS.length)}
-          unit="ta"
-          icon={FileText}
-          accent="bg-accent-blue"
-          tint="bg-tint-blue"
-          hint="Kunlik, haftalik, oylik, yillik"
-        />
-        <StatCard
-          label="Bu oyda yuklab olingan"
-          value={num(MONTHLY_DOWNLOADS)}
-          unit="ta"
-          icon={Download}
-          accent="bg-accent-green"
-          tint="bg-tint-green"
-          hint={`O’tgan oyga nisbatan +${num(DOWNLOADS_DELTA)} ta`}
-          hintTone="good"
-        />
-        <StatCard
-          label="Oxirgi hisobot"
-          value={TODAY}
-          icon={CalendarClock}
-          accent="bg-accent-purple"
-          tint="bg-tint-purple"
-          hint={`Kunlik hisobot · ${TODAY_TIME}`}
-        />
-        <StatCard
-          label="Avtomatik jo’natish"
-          value="Yoqilgan"
-          icon={Send}
-          accent="bg-accent-teal"
-          tint="bg-tint-teal"
-          hint={`${num(ACTIVE_SCHEDULES)} ta rejalashtirilgan jo’natma`}
-        />
-      </StatRow>
-
-      {/* Yuklab olish plitkalari - balandligi qat'iy, pastki qator esa qolgan
-          joyni egallaydi. */}
-      {/* 300px - plitkalar uchun ajratilgan qat'iy qator. `!` shart: `cn()`
-          Tailwind sinflarini birlashtirmaydi, `Card` dagi asosiy `h-full`
-          esa CSS da keyinroq turadi va aks holda ustun kelardi. */}
-      <Card className="h-[300px]! shrink-0">
-        <CardHeader title="Hisobot yuklab olish" titleClassName="text-black">
-          <span className="text-[11px] text-ink-soft">
-            Fayl so&rsquo;rov yuborilishi bilan shakllanadi
-          </span>
+      <Card className="h-auto! shrink-0">
+        <CardHeader title="Hisobot qamrovi">
+          <span className="truncate text-xs font-semibold text-brand">{scopeTitle}</span>
         </CardHeader>
-
         <CardBody>
-          <div className="grid min-h-0 flex-1 grid-cols-4 gap-2">
-            {PERIOD_TILES.map((tile) => (
-              <div
-                key={tile.id}
-                className="flex min-w-0 flex-col rounded-xl border border-solid border-[#dddddd] bg-canvas p-3"
+          <div className="grid grid-cols-[auto_repeat(3,minmax(0,1fr))] items-end gap-3">
+            <Field label="Tuman">
+              <button
+                type="button"
+                onClick={resetToDistrict}
+                aria-pressed={scope.kind === "district"}
+                className={cn(
+                  "flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-medium whitespace-nowrap transition-colors",
+                  scope.kind === "district" ? "bg-brand text-white" : "bg-canvas text-ink hover:bg-black/5",
+                )}
               >
-                <span
-                  className={cn(
-                    "flex size-10 shrink-0 items-center justify-center rounded-lg text-white",
-                    tile.accent,
-                  )}
-                >
-                  <Icon icon={tile.icon} size={22} />
-                </span>
-
-                <span className="mt-2.5 truncate text-sm font-bold text-ink">
-                  {PERIOD_LABEL[tile.id]} hisobot
-                </span>
-                {/* `flex-1` izohni cho'zadi - shu sababli tugmalar to'rtala
-                    plitkada bir chiziqda, plitka pastida turadi. */}
-                <p className="mt-1 flex-1 text-[11px] leading-4 text-ink-soft">
-                  {tile.hint}
-                </p>
-
-                <div className="mt-2 grid h-10 shrink-0 grid-cols-2 gap-2">
-                  {FORMATS.map((format) => (
-                    <a
-                      key={format.id}
-                      href={`/api/reports?period=${tile.id}&format=${format.id}`}
-                      download
-                      aria-label={`${PERIOD_LABEL[tile.id]} hisobotni ${format.label} sifatida yuklab olish`}
-                      className={cn(
-                        "flex min-w-0 items-center justify-center gap-1.5 rounded-full text-xs font-semibold transition-opacity hover:opacity-80",
-                        format.tone,
-                      )}
-                    >
-                      <format.Mark width={18} height={18} />
-                      {format.label}
-                    </a>
-                  ))}
-                </div>
-              </div>
-            ))}
+                <Icon icon={Landmark} size={16} />
+                {districtName}
+              </button>
+            </Field>
+            <Field label="Podstansiya">
+              <SelectField
+                value={substationId}
+                options={substationOptions}
+                placeholder="Barcha podstansiyalar"
+                onChange={chooseSubstation}
+                disabled={substationOptions.length === 0}
+              />
+            </Field>
+            <Field label="Fider">
+              <SelectField
+                value={feederId}
+                options={feederOptions}
+                placeholder="Barcha fiderlar"
+                onChange={chooseFeeder}
+                disabled={feederOptions.length === 0}
+              />
+            </Field>
+            <Field label="Transformator (TP)">
+              <SelectField
+                value={transformerId}
+                options={transformerOptions}
+                placeholder="Barcha TP lar"
+                onChange={chooseTransformer}
+                disabled={transformerOptions.length === 0}
+              />
+            </Field>
           </div>
+          <p className="pt-2 text-[11px] text-ink-soft">
+            Ro’yxatlarda {period.label} oyida ma’lumoti bor obyektlar: {num(substations.length)} ta podstansiya,{" "}
+            {num(feeders.length)} ta fider, {num(transformers.length)} ta TP.
+          </p>
         </CardBody>
       </Card>
 
-      <div className="grid min-h-0 flex-1 grid-cols-12 gap-2">
-        <Card className="col-span-8 min-h-0">
-          <CardHeader title="So&rsquo;nggi hisobotlar">
-            <span className="text-[11px] text-ink-soft">{num(rows.length)} ta yozuv</span>
+      <div className="grid shrink-0 grid-cols-12 gap-2">
+        <Card className="col-span-8">
+          <CardHeader title="Hisobot yuklab olish" titleClassName="text-black">
+            <span className="truncate text-[11px] text-ink-soft">Fayl so’rov yuborilganda shakllanadi</span>
           </CardHeader>
           <CardBody>
-            <div className="flex shrink-0 items-center gap-2 pb-3">
-              <FilterChips items={PERIOD_CHIPS} value={filter} onChange={setFilter} />
-            </div>
-
-            {/* Jadval karta ichida skroll qilinadi - qatorlar soni filtrga
-                qarab o'zgarganda ham karta chegarasidan chiqmaydi. */}
-            <div className="min-h-0 flex-1 overflow-y-auto scrollbar-none">
-              <DataTable
-                columns={RECENT_COLUMNS}
-                rowHeight={38}
-                lastRowHeight={42}
-                rows={rows.map((report) => ({
-                  key: report.id,
-                  cells: [
-                    <span key="name" className="truncate font-medium text-ink">
-                      {report.name}
-                    </span>,
-                    PERIOD_LABEL[report.period],
-                    <Badge key="format" tone={report.format === "pdf" ? "red" : "green"}>
-                      {report.format === "pdf" ? "PDF" : "Excel"}
-                    </Badge>,
-                    report.size,
-                    <span key="date" className="text-ink-muted">
-                      {report.date}
-                    </span>,
-                    report.author,
-                  ],
-                }))}
+            <div className="grid min-h-0 flex-1 grid-cols-2 gap-2">
+              <ReportTile
+                period="monthly"
+                icon={CalendarFold}
+                accent="bg-accent-purple"
+                coverage={period.label}
+                sections={monthlySections}
+                query={query}
+              />
+              <ReportTile
+                period="yearly"
+                icon={CalendarRange}
+                accent="bg-accent-indigo"
+                coverage={yearlyCoverage}
+                sections={yearlySections}
+                query={query}
               />
             </div>
           </CardBody>
         </Card>
 
-        <Card className="col-span-4 min-h-0">
-          <CardHeader title="Rejalashtirilgan jo&rsquo;natmalar">
-            <span className="text-[11px] text-ink-soft">{num(ACTIVE_SCHEDULES)} ta faol</span>
+        <Card className="col-span-4">
+          <CardHeader title={`${period.label} ma’lumotlari`}>
+            <span className={cn("text-[11px]", missing > 0 ? "text-trend-up" : "text-trend-down")}>
+              {missing > 0 ? `${num(missing)} ta shablon yuklanmagan` : "Hammasi yuklangan"}
+            </span>
           </CardHeader>
           <CardBody>
-            <ul className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto scrollbar-none">
-              {SCHEDULES.map((item) => (
-                <li
-                  key={item.id}
-                  className="flex shrink-0 items-center gap-3 rounded-lg bg-canvas p-3"
-                >
+            <ul className="flex flex-col gap-1.5">
+              {templates.map((item) => (
+                <li key={item.type} className="flex items-center gap-3 rounded-lg bg-canvas px-3 py-2">
                   <span
                     className={cn(
-                      "flex size-9 shrink-0 items-center justify-center rounded-lg text-white",
-                      item.accent,
+                      "flex size-6 shrink-0 items-center justify-center rounded-full text-white",
+                      item.uploaded ? "bg-accent-green" : "bg-[#b3b3bb]",
                     )}
                   >
-                    <Icon icon={item.icon} size={18} />
+                    <Icon icon={item.uploaded ? Check : X} size={14} />
                   </span>
-
-                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="truncate text-xs font-semibold text-ink">
-                      {item.recipient}
-                    </span>
-                    <span className="truncate text-[10px] text-ink-soft">
-                      {item.cadence} &middot; {item.payload}
-                    </span>
+                  <div className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-semibold text-ink">{item.label}</span>
+                    <span className="block truncate text-[10px] text-ink-soft">{TEMPLATE_ROLE[item.type]}</span>
                   </div>
-
-                  {/* `Badge` o'zi `flex` konteyner - qatorda siqilib ketmasligi
-                      uchun `shrink-0` o'ramchi kerak. */}
-                  <span className="shrink-0">
-                    <Badge tone={item.active ? "green" : "amber"}>
-                      {item.active ? "Faol" : "To’xtatilgan"}
-                    </Badge>
+                  <span
+                    className={cn(
+                      "shrink-0 text-[10px] font-medium",
+                      item.uploaded ? "text-trend-down" : "text-ink-soft",
+                    )}
+                  >
+                    {item.uploaded ? "Yuklangan" : "Yuklanmagan"}
                   </span>
                 </li>
               ))}
             </ul>
+            <p className="pt-2 text-[10px] leading-4 text-ink-soft">
+              Yuklanmagan shablonga bog’liq bo’limlar faylda &ldquo;Ma’lumot yuklanmagan&rdquo; deb chiqadi.
+            </p>
           </CardBody>
         </Card>
       </div>

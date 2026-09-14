@@ -8,6 +8,8 @@
  * o'suvchi o'qiga shu yerda o'giriladi.
  */
 
+import { transliterate } from "./text";
+
 /** Helvetica va Helvetica-Bold uchun belgi enlari (1000 em birlikda). */
 const WIDTHS_REGULAR = [
   278, 278, 355, 556, 556, 889, 667, 191, 333, 333, 389, 584, 278, 333, 278, 278, 556, 556,
@@ -27,25 +29,48 @@ const WIDTHS_BOLD = [
   500, 389, 280, 389, 584,
 ];
 
-/** Unicode -> WinAnsi. O'zbekcha matnda uchraydigan tipografik belgilar. */
+/**
+ * Unicode -> WinAnsi. O'zbekcha matnda uchraydigan tipografik belgilar.
+ * Apostrofning barcha turlari (ʻ ʼ ‘ ’ ′) WinAnsi dagi ‘ / ’ ga o'giriladi -
+ * "o‘" va "g‘" "?" bo'lib qolmasin.
+ */
 const WIN_ANSI: Record<number, number> = {
+  0x02bb: 0x91,
+  0x02bc: 0x92,
   0x2018: 0x91,
   0x2019: 0x92,
+  0x2032: 0x92,
+  0x201a: 0x82,
   0x201c: 0x93,
   0x201d: 0x94,
+  0x201e: 0x84,
   0x2022: 0x95,
   0x2013: 0x96,
   0x2014: 0x97,
+  0x2212: 0x2d,
   0x2026: 0x85,
   0x00a0: 0x20,
+  0x2009: 0x20,
+  0x202f: 0x20,
 };
 
 function toWinAnsi(text: string): number[] {
   const bytes: number[] = [];
-  for (const char of text) {
+  // Kirill harflari lotinga o'giriladi (Helvetica WinAnsi da kirill yo'q).
+  for (const char of transliterate(text)) {
     const code = char.codePointAt(0) ?? 63;
-    if (code < 256) bytes.push(code);
-    else bytes.push(WIN_ANSI[code] ?? 63);
+    if (code < 256) {
+      bytes.push(code);
+      continue;
+    }
+    const mapped = WIN_ANSI[code];
+    if (mapped !== undefined) {
+      bytes.push(mapped);
+      continue;
+    }
+    // "ş", "ğ" kabi harflar - diakritikasiz asosiy harf.
+    const base = char.normalize("NFD").codePointAt(0) ?? 63;
+    bytes.push(base < 256 ? base : 63);
   }
   return bytes;
 }
