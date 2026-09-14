@@ -122,6 +122,74 @@ async function transformerIds(tx: Tx, feeders: Map<string, FeederRef>): Promise<
   return result;
 }
 
+/*
+ * 4.4: ota shablon shu oyga yuklanmagan bo'lsa, fayldagi nom bo'yicha obyekt
+ * yaratiladi (holatsiz). Yuklangan bo'lsa tekshiruv nom ro'yxatda borligini
+ * kafolatlagan - `skipDuplicates` mavjud obyektni o'zgartirmaydi.
+ */
+
+async function ensureSubstations(tx: Tx, names: Iterable<string>): Promise<Map<string, string>> {
+  const byKey = new Map<string, string>();
+  for (const name of names) if (!byKey.has(substationKey(name))) byKey.set(substationKey(name), name);
+  for (const chunk of chunked([...byKey], LOOKUP_CHUNK)) {
+    await tx.substation.createMany({
+      data: chunk.map(([key, name]) => ({ name, nameKey: key })),
+      skipDuplicates: true,
+    });
+  }
+  return substationIds(tx, byKey.keys());
+}
+
+async function ensureFeeders(
+  tx: Tx,
+  refs: readonly { substationName: string; feederName: string }[],
+): Promise<Map<string, FeederRef>> {
+  const substations = await ensureSubstations(tx, refs.map((ref) => ref.substationName));
+  const byKey = new Map<string, { substationName: string; feederName: string }>();
+  for (const ref of refs) {
+    const key = feederKey(ref.substationName, ref.feederName);
+    if (!byKey.has(key)) byKey.set(key, ref);
+  }
+  for (const chunk of chunked([...byKey.values()], LOOKUP_CHUNK)) {
+    await tx.feeder.createMany({
+      data: chunk.map((ref) => ({
+        substationId: need(substations, substationKey(ref.substationName), "Podstansiya"),
+        name: ref.feederName,
+        nameKey: nameKey(ref.feederName),
+      })),
+      skipDuplicates: true,
+    });
+  }
+  return feederIds(tx, substations);
+}
+
+async function ensureTransformers(
+  tx: Tx,
+  refs: readonly { substationName: string; feederName: string; transformerName: string }[],
+): Promise<Map<string, string>> {
+  const feeders = await ensureFeeders(tx, refs);
+  const byKey = new Map<string, { substationName: string; feederName: string; transformerName: string }>();
+  for (const ref of refs) {
+    const key = transformerKey(ref.substationName, ref.feederName, ref.transformerName);
+    if (!byKey.has(key)) byKey.set(key, ref);
+  }
+  for (const chunk of chunked([...byKey.values()], LOOKUP_CHUNK)) {
+    await tx.transformer.createMany({
+      data: chunk.map((ref) => {
+        const feeder = need(feeders, feederKey(ref.substationName, ref.feederName), "Fider");
+        return {
+          substationId: feeder.substationId,
+          feederId: feeder.id,
+          name: ref.transformerName,
+          nameKey: nameKey(ref.transformerName),
+        };
+      }),
+      skipDuplicates: true,
+    });
+  }
+  return transformerIds(tx, feeders);
+}
+
 const need = <V>(map: Map<string, V>, key: string, what: string): V => {
   const value = map.get(key);
   // Tekshiruvdan o'tgan ma'lumotda bo'lishi mumkin emas - tranzaksiya bekor qilinadi.
@@ -175,18 +243,10 @@ async function writeSubstations(ctx: WriteContext, rows: SubstationRow[]) {
 
 async function writeFeeders(ctx: WriteContext, rows: FeederRow[]) {
   const { tx, periodId, importBatchId } = ctx;
-  const substations = await substationIds(tx, rows.map((row) => substationKey(row.substationName)));
-  for (const chunk of chunked(rows, LOOKUP_CHUNK)) {
-    await tx.feeder.createMany({
-      data: chunk.map((row) => ({
-        substationId: need(substations, substationKey(row.substationName), "Podstansiya"),
-        name: row.name,
-        nameKey: nameKey(row.name),
-      })),
-      skipDuplicates: true,
-    });
-  }
-  const feeders = await feederIds(tx, substations);
+  const feeders = await ensureFeeders(
+    tx,
+    rows.map((row) => ({ substationName: row.substationName, feederName: row.name })),
+  );
 
   await tx.feederSnapshot.deleteMany({ where: { periodId } });
   for (const chunk of chunked(rows, INSERT_CHUNK)) {
@@ -209,23 +269,10 @@ async function writeFeeders(ctx: WriteContext, rows: FeederRow[]) {
 
 async function writeTransformers(ctx: WriteContext, rows: TransformerRow[]) {
   const { tx, periodId, importBatchId } = ctx;
-  const substations = await substationIds(tx, rows.map((row) => substationKey(row.substationName)));
-  const feeders = await feederIds(tx, substations);
-  for (const chunk of chunked(rows, LOOKUP_CHUNK)) {
-    await tx.transformer.createMany({
-      data: chunk.map((row) => {
-        const feeder = need(feeders, feederKey(row.substationName, row.feederName), "Fider");
-        return {
-          substationId: feeder.substationId,
-          feederId: feeder.id,
-          name: row.name,
-          nameKey: nameKey(row.name),
-        };
-      }),
-      skipDuplicates: true,
-    });
-  }
-  const transformers = await transformerIds(tx, feeders);
+  const transformers = await ensureTransformers(
+    tx,
+    rows.map((row) => ({ substationName: row.substationName, feederName: row.feederName, transformerName: row.name })),
+  );
 
   await tx.transformerSnapshot.deleteMany({ where: { periodId } });
   for (const chunk of chunked(rows, INSERT_CHUNK)) {
@@ -254,9 +301,7 @@ async function writeTransformers(ctx: WriteContext, rows: TransformerRow[]) {
 
 async function writeSubscribers(ctx: WriteContext, rows: SubscriberRow[]) {
   const { tx, periodId, importBatchId } = ctx;
-  const substations = await substationIds(tx, rows.map((row) => substationKey(row.substationName)));
-  const feeders = await feederIds(tx, substations);
-  const transformers = await transformerIds(tx, feeders);
+  const transformers = await ensureTransformers(tx, rows);
 
   for (const chunk of chunked(rows, LOOKUP_CHUNK)) {
     await tx.subscriber.createMany({
@@ -333,12 +378,23 @@ async function subscriberLinker(tx: Tx, periodId: string) {
   };
 }
 
-/** Shu oy TP lari: "TP Nomi" kaliti -> id (tekshiruv bir ma'noliligini kafolatlagan). */
+/**
+ * Shu oy TP lari: "TP Nomi" kaliti -> id (tekshiruv bir ma'noliligini
+ * kafolatlagan). Transformatorlar shu oyga yuklanmagan bo'lsa - abonentlar
+ * bog'langan TP lar (4.4, `validate.ts` dagi `checkEvents` bilan bir xil).
+ */
 async function transformersByName(tx: Tx, periodId: string): Promise<Map<string, string[]>> {
-  const rows = await tx.transformerSnapshot.findMany({
+  let rows = await tx.transformerSnapshot.findMany({
     where: { periodId },
     select: { transformerId: true, transformer: { select: { nameKey: true } } },
   });
+  if (rows.length === 0) {
+    rows = await tx.subscriberSnapshot.findMany({
+      where: { periodId },
+      distinct: ["transformerId"],
+      select: { transformerId: true, transformer: { select: { nameKey: true } } },
+    });
+  }
   const result = new Map<string, string[]>();
   for (const row of rows) {
     const key = row.transformer.nameKey;

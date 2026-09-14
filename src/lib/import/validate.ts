@@ -62,6 +62,13 @@ interface SubscriberState {
   fullNameKey: string;
 }
 
+/** TP kaliti bo'yicha ko'rsatish nomlari (holati bo'lmagan TP lar uchun ham). */
+interface TpInfo {
+  substationName: string;
+  feederName: string;
+  name: string;
+}
+
 /**
  * Bitta hisobot oyining holati. Avval bazadan o'qiladi, keyin submission
  * ichidagi fayllar tartib bilan ustiga yoziladi (keyingi fayl oldingisining
@@ -74,6 +81,8 @@ interface MonthState {
   feeders: Map<string, FeederState>;
   transformers: Map<string, TransformerState>;
   subscribers: Map<string, SubscriberState>;
+  /** TP kaliti -> nomlar: TP holatlari, abonentlar va hodisalar bog'langan TP lar. */
+  tpInfo: Map<string, TpInfo>;
   /** TP kaliti -> qoidabuzarliklar soni. */
   violationsByTp: Map<string, number>;
   appealsByTp: Map<string, number>;
@@ -97,6 +106,7 @@ async function loadMonthState(db: Db, month: Date, incoming: Set<TemplateType>):
     feeders: new Map(),
     transformers: new Map(),
     subscribers: new Map(),
+    tpInfo: new Map(),
     violationsByTp: new Map(),
     appealsByTp: new Map(),
     violationCount: 0,
@@ -114,9 +124,12 @@ async function loadMonthState(db: Db, month: Date, incoming: Set<TemplateType>):
   //   - abonentlar: TP (osilib qolish, 4.5), Abonentlar (farq),
   //     qoidabuzarlik/murojaat (bir xil ism ogohlantirishi);
   //   - qoidabuzarlik/murojaatlar: TP (osilib qolish) va o'z fayli (o'chiriladi soni).
+  // Ota shablon keyinroq yuklanishi mumkin (4.4) - Podstansiyalar/Fiderlar
+  // yuklanganda ham TP va abonentlar o'qiladi: ular bog'langan obyekt yangi
+  // faylda bo'lishi shart.
   const has = (...types: TemplateType[]) => types.some((type) => incoming.has(type));
-  const needTransformers = has("FEEDERS", "TRANSFORMERS", "SUBSCRIBERS", "VIOLATIONS", "APPEALS");
-  const needSubscribers = has("TRANSFORMERS", "SUBSCRIBERS", "VIOLATIONS", "APPEALS");
+  const needTransformers = has("SUBSTATIONS", "FEEDERS", "TRANSFORMERS", "SUBSCRIBERS", "VIOLATIONS", "APPEALS");
+  const needSubscribers = has("SUBSTATIONS", "FEEDERS", "TRANSFORMERS", "SUBSCRIBERS", "VIOLATIONS", "APPEALS");
   const needViolations = has("TRANSFORMERS", "VIOLATIONS");
   const needAppeals = has("TRANSFORMERS", "APPEALS");
 
@@ -169,6 +182,7 @@ async function loadMonthState(db: Db, month: Date, incoming: Set<TemplateType>):
     const fKey = `${tp.substation.nameKey}${KEY_SEP}${tp.feeder.nameKey}`;
     const key = `${fKey}${KEY_SEP}${tp.nameKey}`;
     tpKeyById.set(snapshot.transformerId, key);
+    state.tpInfo.set(key, { substationName: tp.substation.name, feederName: tp.feeder.name, name: tp.name });
     state.transformers.set(key, {
       feederKey: fKey,
       substationName: tp.substation.name,
@@ -207,7 +221,8 @@ async function loadMonthState(db: Db, month: Date, incoming: Set<TemplateType>):
         _count: { _all: true },
       });
 
-  // Holati yo'q TP ga bog'langan yozuvlar (bo'lmasligi kerak) - kaliti obyektdan olinadi.
+  // Holati yo'q TP ga bog'langan yozuvlar (Transformatorlar shu oyga hali
+  // yuklanmagan) - kaliti va nomlari obyektdan olinadi.
   const missingIds = new Set<string>();
   for (const item of [...subscribers, ...violations, ...appeals]) {
     if (!tpKeyById.has(item.transformerId)) missingIds.add(item.transformerId);
@@ -217,13 +232,16 @@ async function loadMonthState(db: Db, month: Date, incoming: Set<TemplateType>):
       where: { id: { in: ids } },
       select: {
         id: true,
+        name: true,
         nameKey: true,
-        feeder: { select: { nameKey: true } },
-        substation: { select: { nameKey: true } },
+        feeder: { select: { name: true, nameKey: true } },
+        substation: { select: { name: true, nameKey: true } },
       },
     });
     for (const tp of rows) {
-      tpKeyById.set(tp.id, `${tp.substation.nameKey}${KEY_SEP}${tp.feeder.nameKey}${KEY_SEP}${tp.nameKey}`);
+      const key = `${tp.substation.nameKey}${KEY_SEP}${tp.feeder.nameKey}${KEY_SEP}${tp.nameKey}`;
+      tpKeyById.set(tp.id, key);
+      state.tpInfo.set(key, { substationName: tp.substation.name, feederName: tp.feeder.name, name: tp.name });
     }
   }
 
@@ -418,12 +436,122 @@ function checkLossBalance(file: ParsedFile, records: readonly ParsedRecord<Subst
   }
 }
 
-function missingParentFile(file: ParsedFile, state: MonthState, parent: TemplateType): void {
-  file.errors.add(
-    null,
-    null,
-    `${state.label} uchun ${TEMPLATE_LABEL[parent]} ma’lumoti yo’q. Avval shu oy uchun ${TEMPLATE_LABEL[parent]} faylini yuklang (yoki shu yuklashga qo’shing)`,
-  );
+/*
+ * 4.4 ota qoidasi. Har bir daraja (podstansiya, fider, TP) faqat o'z shabloni
+ * shu oyga YUKLANGAN bo'lsa tekshiriladi - shunda nom ro'yxatda bo'lishi
+ * shart. Yuklanmagan bo'lsa, obyekt nomidan yaratiladi (`commit.ts`), shablon
+ * esa keyinroq yuklanganda o'sha obyektlarni o'z ichiga olishi shart
+ * (`referencedBy*` - osilib qolish tekshiruvi).
+ */
+
+/** "podstansiya|fider|tp" kalitidan ota kalitlar. */
+const tpKeyParts = (tpKey: string) => {
+  const [substation, feeder] = tpKey.split(KEY_SEP);
+  return { substationKey: substation, feederKey: `${substation}${KEY_SEP}${feeder}` };
+};
+
+interface Dependents {
+  label: string;
+  feeders: string[];
+  transformers: string[];
+  subscribers: number;
+}
+
+function describeDependents(entry: Dependents): string {
+  return [
+    entry.feeders.length > 0 ? `${entry.feeders.length} ta fider (${listSample(entry.feeders)})` : null,
+    entry.transformers.length > 0 ? `${entry.transformers.length} ta TP (${listSample(entry.transformers)})` : null,
+    entry.subscribers > 0 ? `${entry.subscribers} ta abonent` : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
+/** Shu oyda podstansiyaga bog'langan fider, TP va abonentlar (shu yuklashda qayta kelmayotganlari). */
+function referencedBySubstation(state: MonthState): Map<string, Dependents> {
+  const result = new Map<string, Dependents>();
+  const touch = (key: string, label: string) => {
+    const entry = result.get(key) ?? { label, feeders: [], transformers: [], subscribers: 0 };
+    result.set(key, entry);
+    return entry;
+  };
+  if (!state.incoming.has("FEEDERS")) {
+    for (const feeder of state.feeders.values()) touch(feeder.substationKey, feeder.substationName).feeders.push(feeder.name);
+  }
+  if (!state.incoming.has("TRANSFORMERS")) {
+    for (const [key, tp] of state.transformers) {
+      touch(tpKeyParts(key).substationKey, tp.substationName).transformers.push(tp.name);
+    }
+  }
+  if (!state.incoming.has("SUBSCRIBERS")) {
+    for (const subscriber of state.subscribers.values()) {
+      const info = state.tpInfo.get(subscriber.transformerKey);
+      touch(tpKeyParts(subscriber.transformerKey).substationKey, info?.substationName ?? "").subscribers += 1;
+    }
+  }
+  return result;
+}
+
+/** Shu oyda fiderga bog'langan TP va abonentlar (shu yuklashda qayta kelmayotganlari). */
+function referencedByFeeder(state: MonthState): Map<string, Dependents> {
+  const result = new Map<string, Dependents>();
+  const touch = (key: string, label: string) => {
+    const entry = result.get(key) ?? { label, feeders: [], transformers: [], subscribers: 0 };
+    result.set(key, entry);
+    return entry;
+  };
+  if (!state.incoming.has("TRANSFORMERS")) {
+    for (const tp of state.transformers.values()) {
+      touch(tp.feederKey, `${tp.substationName} / ${tp.feederName}`).transformers.push(tp.name);
+    }
+  }
+  if (!state.incoming.has("SUBSCRIBERS")) {
+    for (const subscriber of state.subscribers.values()) {
+      const info = state.tpInfo.get(subscriber.transformerKey);
+      const label = info ? `${info.substationName} / ${info.feederName}` : "";
+      touch(tpKeyParts(subscriber.transformerKey).feederKey, label).subscribers += 1;
+    }
+  }
+  return result;
+}
+
+/** Podstansiya / fider / TP nomlarini shu oyda yuklangan darajalar bo'yicha tekshiradi. */
+function checkHierarchy(
+  file: ParsedFile,
+  state: MonthState,
+  row: number,
+  names: { substation: string; feeder?: string; transformer?: string },
+): boolean {
+  if (state.substations.size > 0 && !state.substations.has(substationKey(names.substation))) {
+    file.errors.add(
+      row,
+      "Podstansiya",
+      `${quote(names.substation)} podstansiyasi ${state.label} uchun Podstansiyalar ro’yxatida topilmadi`,
+    );
+    return false;
+  }
+  if (names.feeder == null) return true;
+  if (state.feeders.size > 0 && !state.feeders.has(feederKey(names.substation, names.feeder))) {
+    file.errors.add(
+      row,
+      "Fider",
+      `${quote(names.feeder)} fideri ${quote(names.substation)} podstansiyasida (${state.label} Fiderlar ro’yxati) topilmadi`,
+    );
+    return false;
+  }
+  if (names.transformer == null) return true;
+  if (
+    state.transformers.size > 0 &&
+    !state.transformers.has(transformerKey(names.substation, names.feeder, names.transformer))
+  ) {
+    file.errors.add(
+      row,
+      "TP",
+      `${quote(names.transformer)} TP ${quote(`${names.substation} / ${names.feeder}`)} fiderida (${state.label} Transformatorlar ro’yxati) topilmadi`,
+    );
+    return false;
+  }
+  return true;
 }
 
 /* ---------------------------------------------------------------------------
@@ -438,22 +566,14 @@ function checkSubstations(file: ParsedFile, state: MonthState): FileCounts {
   const next = new Set(byKey.keys());
   const counts = diffCounts(state.substations, next);
 
-  // 4.3: shu oyda fideri bor podstansiya yangi faylda bo'lishi shart.
-  if (!state.incoming.has("FEEDERS")) {
-    const orphans = new Map<string, { name: string; feeders: string[] }>();
-    for (const feeder of state.feeders.values()) {
-      if (next.has(feeder.substationKey)) continue;
-      const entry = orphans.get(feeder.substationKey) ?? { name: feeder.substationName, feeders: [] };
-      entry.feeders.push(feeder.name);
-      orphans.set(feeder.substationKey, entry);
-    }
-    for (const { name, feeders } of orphans.values()) {
-      file.errors.add(
-        null,
-        "Podstansiya Nomi",
-        `${quote(name)} podstansiyasi faylda yo’q, lekin ${state.label} da uning ${feeders.length} ta fideri bor (${listSample(feeders)}). Podstansiyani faylga qo’shing yoki shu oy uchun Fiderlar faylini ham qayta yuklang`,
-      );
-    }
+  // 4.3 / 4.4: shu oyda fideri, TP si yoki abonenti bor podstansiya yangi faylda bo'lishi shart.
+  for (const [key, entry] of referencedBySubstation(state)) {
+    if (next.has(key)) continue;
+    file.errors.add(
+      null,
+      "Podstansiya Nomi",
+      `${quote(entry.label)} podstansiyasi faylda yo’q, lekin ${state.label} da unga ${describeDependents(entry)} bog’langan. Podstansiyani faylga qo’shing yoki bog’liq fayllarni ham qayta yuklang`,
+    );
   }
 
   state.substations = new Map([...byKey].map(([key, record]) => [key, { name: record.data.name! }]));
@@ -467,39 +587,22 @@ function checkFeeders(file: ParsedFile, state: MonthState): FileCounts {
   );
   checkLossBalance(file, records);
 
-  // Ota: podstansiya shu oyda.
-  if (state.substations.size === 0) {
-    missingParentFile(file, state, "SUBSTATIONS");
-  } else {
-    for (const { data } of records) {
-      if (!data.substationName || state.substations.has(substationKey(data.substationName))) continue;
-      file.errors.add(
-        data.row,
-        "Podstansiya",
-        `${quote(data.substationName)} podstansiyasi ${state.label} uchun Podstansiyalar ro’yxatida topilmadi`,
-      );
-    }
+  // Ota: podstansiya (Podstansiyalar shu oyga yuklangan bo'lsa).
+  for (const { data } of records) {
+    if (data.substationName) checkHierarchy(file, state, data.row, { substation: data.substationName });
   }
 
   const next = new Set(byKey.keys());
   const counts = diffCounts(state.feeders, next);
 
-  // 4.3: shu oyda TP si bor fider yangi faylda bo'lishi shart.
-  if (!state.incoming.has("TRANSFORMERS")) {
-    const orphans = new Map<string, { label: string; tps: string[] }>();
-    for (const tp of state.transformers.values()) {
-      if (next.has(tp.feederKey)) continue;
-      const entry = orphans.get(tp.feederKey) ?? { label: `${tp.substationName} / ${tp.feederName}`, tps: [] };
-      entry.tps.push(tp.name);
-      orphans.set(tp.feederKey, entry);
-    }
-    for (const { label, tps } of orphans.values()) {
-      file.errors.add(
-        null,
-        "Fider Nomi",
-        `${quote(label)} fideri faylda yo’q, lekin ${state.label} da unga ${tps.length} ta TP bog’langan (${listSample(tps)}). Fiderni faylga qo’shing yoki shu oy uchun Transformatorlar faylini ham qayta yuklang`,
-      );
-    }
+  // 4.3 / 4.4: shu oyda TP si yoki abonenti bor fider yangi faylda bo'lishi shart.
+  for (const [key, entry] of referencedByFeeder(state)) {
+    if (next.has(key)) continue;
+    file.errors.add(
+      null,
+      "Fider Nomi",
+      `${quote(entry.label)} fideri faylda yo’q, lekin ${state.label} da unga ${describeDependents(entry)} bog’langan. Fiderni faylga qo’shing yoki bog’liq fayllarni ham qayta yuklang`,
+    );
   }
 
   state.feeders = new Map(
@@ -532,26 +635,10 @@ function checkTransformers(file: ParsedFile, state: MonthState): FileCounts {
   );
   checkLossBalance(file, records);
 
-  // Ota: podstansiya va uning fideri shu oyda.
-  if (state.feeders.size === 0) {
-    missingParentFile(file, state, state.substations.size === 0 ? "SUBSTATIONS" : "FEEDERS");
-  } else {
-    for (const { data } of records) {
-      if (!data.substationName || !data.feederName) continue;
-      if (!state.substations.has(substationKey(data.substationName))) {
-        file.errors.add(
-          data.row,
-          "Podstansiya",
-          `${quote(data.substationName)} podstansiyasi ${state.label} uchun Podstansiyalar ro’yxatida topilmadi`,
-        );
-      } else if (!state.feeders.has(feederKey(data.substationName, data.feederName))) {
-        file.errors.add(
-          data.row,
-          "Fider",
-          `${quote(data.feederName)} fideri ${quote(data.substationName)} podstansiyasida (${state.label}) topilmadi`,
-        );
-      }
-    }
+  // Ota: podstansiya va fider (o'z shablonlari shu oyga yuklangan bo'lsa).
+  for (const { data } of records) {
+    if (!data.substationName || !data.feederName) continue;
+    checkHierarchy(file, state, data.row, { substation: data.substationName, feeder: data.feederName });
   }
 
   const next = new Set(byKey.keys());
@@ -576,7 +663,7 @@ function checkTransformers(file: ParsedFile, state: MonthState): FileCounts {
     for (const [key, count] of state.appealsByTp) if (!next.has(key)) touch(key).appeals += count;
   }
   for (const [key, entry] of dependents) {
-    const tp = state.transformers.get(key);
+    const tp = state.tpInfo.get(key);
     const label = tp ? `${tp.substationName} / ${tp.feederName} / ${tp.name}` : key.split(KEY_SEP).join(" / ");
     const parts = [
       entry.subscribers > 0 ? `${entry.subscribers} ta abonent` : null,
@@ -628,6 +715,9 @@ function checkTransformers(file: ParsedFile, state: MonthState): FileCounts {
     }
   }
 
+  for (const [key, { data }] of byKey) {
+    state.tpInfo.set(key, { substationName: data.substationName!, feederName: data.feederName!, name: data.name! });
+  }
   state.transformers = new Map(
     [...byKey].map(([key, { data }]) => [
       key,
@@ -652,43 +742,19 @@ function checkSubscribers(file: ParsedFile, state: MonthState): FileCounts {
     r.data.contractNumber ? contractKey(r.data.contractNumber) : null,
   );
 
+  // Ota: podstansiya, fider, TP (o'z shablonlari shu oyga yuklangan bo'lsa).
   let parentsOk = true;
-  if (state.transformers.size === 0) {
-    missingParentFile(
-      file,
-      state,
-      state.substations.size === 0 ? "SUBSTATIONS" : state.feeders.size === 0 ? "FEEDERS" : "TRANSFORMERS",
-    );
-    parentsOk = false;
-  } else {
-    for (const { data } of records) {
-      if (!data.substationName || !data.feederName || !data.transformerName) {
-        parentsOk = false;
-        continue;
-      }
-      if (!state.substations.has(substationKey(data.substationName))) {
-        file.errors.add(
-          data.row,
-          "Podstansiya",
-          `${quote(data.substationName)} podstansiyasi ${state.label} uchun Podstansiyalar ro’yxatida topilmadi`,
-        );
-        parentsOk = false;
-      } else if (!state.feeders.has(feederKey(data.substationName, data.feederName))) {
-        file.errors.add(
-          data.row,
-          "Fider",
-          `${quote(data.feederName)} fideri ${quote(data.substationName)} podstansiyasida (${state.label}) topilmadi`,
-        );
-        parentsOk = false;
-      } else if (!state.transformers.has(transformerKey(data.substationName, data.feederName, data.transformerName))) {
-        file.errors.add(
-          data.row,
-          "TP",
-          `${quote(data.transformerName)} TP ${quote(`${data.substationName} / ${data.feederName}`)} fiderida (${state.label}) topilmadi`,
-        );
-        parentsOk = false;
-      }
+  for (const { data } of records) {
+    if (!data.substationName || !data.feederName || !data.transformerName) {
+      parentsOk = false;
+      continue;
     }
+    const ok = checkHierarchy(file, state, data.row, {
+      substation: data.substationName,
+      feeder: data.feederName,
+      transformer: data.transformerName,
+    });
+    if (!ok) parentsOk = false;
   }
 
   const next = new Set(byKey.keys());
@@ -701,11 +767,19 @@ function checkSubscribers(file: ParsedFile, state: MonthState): FileCounts {
       complete = false;
       continue;
     }
+    const tpKey = transformerKey(data.substationName, data.feederName, data.transformerName);
     subscribers.set(key, {
-      transformerKey: transformerKey(data.substationName, data.feederName, data.transformerName),
+      transformerKey: tpKey,
       online: data.meterStatus === "ONLINE",
       fullNameKey: data.fullName ? nameKey(data.fullName) : "",
     });
+    if (!state.tpInfo.has(tpKey)) {
+      state.tpInfo.set(tpKey, {
+        substationName: data.substationName,
+        feederName: data.feederName,
+        name: data.transformerName,
+      });
+    }
   }
 
   // 4.5: TP jadvalidagi sonlar = ro'yxat. Qatorlarda holat/TP xatosi bo'lsa
@@ -746,14 +820,26 @@ function checkEvents(file: ParsedFile, state: MonthState): FileCounts {
     removedRows: isViolations ? state.violationCount : state.appealCount,
   };
 
-  if (state.transformers.size === 0) {
-    missingParentFile(file, state, "TRANSFORMERS");
+  // TP lar: Transformatorlar shu oyga yuklangan bo'lsa - uning ro'yxati, aks
+  // holda shu oy abonentlari bog'langan TP lar (4.4). Ikkalasi ham yo'q bo'lsa -
+  // "TP Nomi" ni hech narsaga bog'lab bo'lmaydi.
+  const tpKeys =
+    state.transformers.size > 0
+      ? [...state.transformers.keys()]
+      : [...new Set([...state.subscribers.values()].map((subscriber) => subscriber.transformerKey))];
+  if (tpKeys.length === 0) {
+    file.errors.add(
+      null,
+      null,
+      `${state.label} uchun Transformatorlar ham, Abonentlar ham yuklanmagan - “TP Nomi” ni bog’lab bo’lmaydi. Avval shu oy uchun Transformatorlar yoki Abonentlar faylini yuklang (yoki shu yuklashga qo’shing)`,
+    );
     return counts;
   }
 
   const tpsByName = new Map<string, string[]>();
-  for (const [key, tp] of state.transformers) {
-    tpsByName.set(tp.nameKey, [...(tpsByName.get(tp.nameKey) ?? []), key]);
+  for (const key of tpKeys) {
+    const tpNameKey = key.split(KEY_SEP)[2];
+    tpsByName.set(tpNameKey, [...(tpsByName.get(tpNameKey) ?? []), key]);
   }
   const subscribersByName = new Map<string, number>();
   for (const subscriber of state.subscribers.values()) {
@@ -766,17 +852,18 @@ function checkEvents(file: ParsedFile, state: MonthState): FileCounts {
     if (!data.transformerName) continue;
     const matches = tpsByName.get(nameKey(data.transformerName)) ?? [];
     if (matches.length === 0) {
+      const source = state.transformers.size > 0 ? "Transformatorlar ro’yxatida" : "abonentlar bog’langan TP lar orasida";
       file.errors.add(
         data.row,
         "TP Nomi",
-        `${quote(data.transformerName)} nomli TP ${state.label} uchun Transformatorlar ro’yxatida topilmadi`,
+        `${quote(data.transformerName)} nomli TP ${state.label} uchun ${source} topilmadi`,
       );
       continue;
     }
     if (matches.length > 1) {
       const places = matches.map((key) => {
-        const tp = state.transformers.get(key)!;
-        return `${tp.substationName} / ${tp.feederName}`;
+        const tp = state.tpInfo.get(key);
+        return tp ? `${tp.substationName} / ${tp.feederName}` : key.split(KEY_SEP).slice(0, 2).join(" / ");
       });
       file.errors.add(
         data.row,
