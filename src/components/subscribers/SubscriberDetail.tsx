@@ -1,313 +1,391 @@
-"use client";
-
-import { ResponsiveBar } from "@nivo/bar";
+import { Gauge, HandCoins, PiggyBank, Wallet } from "lucide-react";
 import Link from "next/link";
-import { Coins, Gauge, Phone, PlugZap, Wallet, Wifi, WifiOff } from "lucide-react";
+import type { ReactNode } from "react";
 
+import type { AppealStatus } from "@/generated/prisma";
+import { ReadingDiffChart } from "@/components/subscribers/ReadingDiffChart";
+import {
+  METER_STATUS_TEXT,
+  METER_STATUS_TONE,
+  exactMoney,
+  reading,
+  signedMoney,
+  signedReading,
+} from "@/components/subscribers/subscriber-ui";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
-import {
-  Badge,
-  type BadgeTone,
-  DataTable,
-  type TableColumn,
-} from "@/components/ui/DataTable";
-import { Icon } from "@/components/ui/Icon";
+import { Badge, type BadgeTone, DataTable, type TableColumn } from "@/components/ui/DataTable";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { InfoGrid, type InfoItem } from "@/components/ui/InfoGrid";
-import { HeaderButton, PageHeader } from "@/components/ui/PageHeader";
-import { StatCard, StatRow } from "@/components/ui/StatCard";
-import { between, dec, MONTHS_SHORT_UZ, MONTHS_UZ, money, num } from "@/lib/data/seed";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard, type StatTone, StatRow } from "@/components/ui/StatCard";
 import {
+  APPEAL_STATUS_LABEL,
+  METER_STATUS_LABEL,
   SUBSCRIBER_KIND_LABEL,
-  SUBSCRIBER_STATUS_LABEL,
-  type Subscriber,
-  type SubscriberStatus,
-} from "@/lib/data/subscribers";
+  VIOLATOR_TYPE_LABEL,
+} from "@/lib/domain/labels";
+import { delta, sum } from "@/lib/domain/metrics";
+import { dec, EMPTY, formatDate, formatDateTime, money, monthLabel, num, parseMonthKey } from "@/lib/format";
+import type { PeriodInfo } from "@/lib/period";
+import type { SubscriberHistoryPoint, SubscriberDetail as SubscriberEntity } from "@/lib/queries/entities";
+import type { SubscriberRelated } from "@/lib/queries/subscribers-related";
+import { scopedHref } from "@/lib/scope-param";
 
 // O'zbekcha apostrof - U+2019: JSX matnida `&rsquo;`, string proplarda ’.
 
-const STATUS_TONE: Record<SubscriberStatus, BadgeTone> = {
-  active: "green",
-  debtor: "red",
-  disconnected: "amber",
+const LINK_CLASS = "text-brand transition-opacity hover:opacity-70";
+
+const APPEAL_STATUS_TONE: Record<AppealStatus, BadgeTone> = {
+  RESOLVED: "green",
+  IN_PROGRESS: "blue",
+  REJECTED: "amber",
+  OVERDUE: "red",
 };
 
-const STATUS_TEXT: Record<SubscriberStatus, string> = {
-  active: "text-state-ok",
-  debtor: "text-state-bad",
-  disconnected: "text-state-warn",
-};
-
-/**
- * Maketdagi "bugun" - 10-avgust, 2026 (`seed.ts` dagi `TODAY`). Grafik va
- * jadvallardagi oylar shu nuqtadan orqaga sanaladi.
- */
-const CURRENT_MONTH = 7;
-const CURRENT_YEAR = 2026;
-const TODAY_DAY = 10;
-
-/** To'lovlar tarixidagi qatorlar soni. */
-const PAYMENT_ROWS = 8;
-/** Hisoblagich ko'rsatkichlari jadvalidagi qatorlar soni. */
-const READING_ROWS = 6;
-
-const PAYMENT_METHODS = ["Click", "Payme", "Uzum Bank", "Bank o’tkazmasi", "Naqd pul"] as const;
-
-interface PaymentRow {
-  key: string;
-  date: string;
-  amount: number;
-  method: string;
-  status: { label: string; tone: BadgeTone };
-}
-
-interface ReadingRow {
-  key: string;
-  date: string;
-  reading: number;
-  diff: number;
-}
-
-/** "12-iyul, 2026" ko'rinishidagi sana - oy nomi kichik harflar bilan. */
-function formatDate(day: number, monthIndex: number): string {
-  return `${day}-${MONTHS_UZ[monthIndex].toLowerCase()}, ${CURRENT_YEAR}`;
-}
-
-/**
- * To'lovlar tarixi - oxirgi 8 oy. Summalar oylik hisob (`monthlyKwh * tariff`)
- * atrofida tebranadi, hammasi seed'dan hisoblanadi: server va mijoz bir xil
- * markup chizadi.
- */
-function buildPayments(subscriber: Subscriber, seed: number): PaymentRow[] {
-  const invoice = subscriber.monthlyKwh * subscriber.tariff;
-
-  return Array.from({ length: PAYMENT_ROWS }, (_, index) => {
-    const monthIndex = CURRENT_MONTH - index;
-    // Joriy oyda to'lov bugundan keyingi sanaga tushib qolmasligi kerak.
-    const lastDay = monthIndex === CURRENT_MONTH ? TODAY_DAY - 1 : 27;
-    const day = between(seed * 3.7 + index * 11.3, 3, lastDay, 1);
-    const amount = between(seed * 5.3 + index * 13.7, invoice * 0.6, invoice * 1.25, 1_000);
-    const roll = between(seed * 7.9 + index * 17.1, 0, 9, 1);
-
-    // Joriy oy qarzdorda hali yopilmagan, ba'zi oylar esa qisman to'langan.
-    const status =
-      subscriber.status !== "active" && index === 0
-        ? { label: "Kutilmoqda", tone: "blue" as BadgeTone }
-        : roll < 2
-          ? { label: "Qisman", tone: "amber" as BadgeTone }
-          : { label: "To’landi", tone: "green" as BadgeTone };
-
-    return {
-      key: `payment-${index}`,
-      date: formatDate(day, monthIndex),
-      amount,
-      method: PAYMENT_METHODS[(seed + index) % PAYMENT_METHODS.length],
-      status,
-    };
-  });
-}
-
-/**
- * Hisoblagich ko'rsatkichlari - oxirgi 6 oy. Eng yangi qator `lastReading`,
- * har bir oldingi qator undan o'sha oyning iste'moli ayirilgan holda olinadi
- * (ya'ni "Farq" ustuni doim yuqoridagi qatorga mos keladi).
- *
- * `lastReading` (hisoblagichning jami soni) va `monthly` (oylik iste'mol)
- * seed'da bir-biridan mustaqil hosil bo'ladi, shuning uchun yirik yuridik
- * iste'molchida 5 oylik iste'mol jami sondan katta chiqib qolishi mumkin.
- * Shunday holatda farqlar bitta koeffitsiyent bilan siqiladi: hisoblagich
- * orqaga aylanmaydi, jadvalda manfiy ko'rsatkich chiqmasligi kerak.
- */
-function buildReadings(subscriber: Subscriber, seed: number): ReadingRow[] {
-  const diffs = Array.from(
-    { length: READING_ROWS },
-    (_, index) => subscriber.monthly[subscriber.monthly.length - 1 - index],
-  );
-  // Oxirgi qatordan pastda qator yo'q - undan ayirilmaydi ham.
-  const drop = diffs.slice(0, READING_ROWS - 1).reduce((sum, value) => sum + value, 0);
-  // Eng eski qator ham ishonchli musbat qolsin: pasayish 80% dan oshmaydi.
-  const limit = subscriber.lastReading * 0.8;
-  const scale = drop > limit ? limit / drop : 1;
-
-  let reading = subscriber.lastReading;
-
-  return diffs.map((value, index) => {
-    const diff = Math.round(value * scale);
-    const row: ReadingRow = {
-      key: `reading-${index}`,
-      // Birinchi qator - aynan `lastReading`, demak sanasi ham o'shaniki
-      // (ro'yxat sahifasi va yuqoridagi ko'rsatkich bilan bir xil bo'lsin).
-      date:
-        index === 0
-          ? subscriber.lastReadingDate
-          : formatDate(
-              between(seed * 19.1 + index * 7.3, 2, 9, 1),
-              CURRENT_MONTH - index,
-            ),
-      reading,
-      diff,
-    };
-    reading -= diff;
-    return row;
-  });
-}
-
-const PAYMENT_COLUMNS: TableColumn[] = [
-  { key: "date", label: "Sana", grow: 1.3, align: "left" },
-  { key: "amount", label: "Summa", grow: 1.2, align: "right" },
-  { key: "method", label: "Usul", grow: 1.3 },
-  { key: "status", label: "Holat", grow: 1 },
+const HISTORY_COLUMNS: TableColumn[] = [
+  { key: "month", label: "Oy", grow: 1.1, align: "left" },
+  { key: "transformer", label: "TP", grow: 0.8 },
+  { key: "reading", label: "Ko’rsatkich", grow: 0.9, align: "right" },
+  { key: "diff", label: "Farq", grow: 0.7, align: "right" },
+  { key: "debt", label: "Qarzdorlik", grow: 1.1, align: "right" },
+  { key: "credit", label: "Haqdorlik", grow: 1, align: "right" },
+  { key: "status", label: "Holati", grow: 1.4 },
+  { key: "payment-date", label: "To’lov sanasi", grow: 1.1, align: "right" },
+  { key: "payment-sum", label: "To’lov summasi", grow: 1.1, align: "right" },
 ];
 
-const READING_COLUMNS: TableColumn[] = [
-  { key: "date", label: "Sana", grow: 1.4, align: "left" },
-  { key: "reading", label: "Ko’rsatkich", grow: 1.2, align: "right" },
-  { key: "diff", label: "Farq (kWh)", grow: 1.1, align: "right" },
+/** Tor katakdagi matn: kesilib qolsa to'liq qiymat `title` da ko'rinadi. */
+function Cell({ text, className }: { text: string; className?: string }) {
+  return (
+    <span title={text === EMPTY ? undefined : text} className={className}>
+      {text}
+    </span>
+  );
+}
+
+const VIOLATION_COLUMNS: TableColumn[] = [
+  { key: "date", label: "Sana", grow: 1.2, align: "left" },
+  { key: "type", label: "Turi", grow: 0.9 },
+  { key: "uzs", label: "Zarar, so’m", grow: 1.2, align: "right" },
+  { key: "kwh", label: "Zarar, kWh", grow: 1, align: "right" },
 ];
 
-const CHART_THEME = {
-  text: { fontFamily: "inherit", fontSize: 10, fill: "#767676" },
-  axis: {
-    ticks: { text: { fontFamily: "inherit", fontSize: 10, fill: "#767676" } },
-    domain: { line: { stroke: "transparent" } },
-  },
-  grid: { line: { stroke: "#e8e8ec", strokeDasharray: "2 2" } },
-} as const;
+const APPEAL_COLUMNS: TableColumn[] = [
+  { key: "date", label: "Sana", grow: 1.1, align: "left" },
+  { key: "text", label: "Murojaat", grow: 2, align: "left" },
+  { key: "status", label: "Holati", grow: 1.3 },
+];
 
-/** O'qda joy tor: mingdan katta qiymatlar "12,4K" ko'rinishida qisqaradi. */
-function formatAxisValue(value: number): string {
-  return Math.abs(value) >= 1_000 ? `${dec(value / 1_000)}K` : num(value);
+/** O'tgan oyga nisbatan pul farqi uchun izoh va ohang. */
+function moneyTrend(
+  current: number,
+  previous: number | undefined,
+  increaseTone: StatTone,
+): { hint: string; tone: StatTone } | null {
+  const change = delta(current, previous);
+  if (!change) return null;
+  if (change.diff === 0) return { hint: "O’tgan oyga nisbatan o’zgarmagan", tone: "flat" };
+  const decreaseTone: StatTone = increaseTone === "bad" ? "good" : increaseTone === "good" ? "bad" : "flat";
+  return {
+    hint: `O’tgan oyga nisbatan: ${signedMoney(change.diff)}`,
+    tone: change.diff > 0 ? increaseTone : decreaseTone,
+  };
+}
+
+function staffHref(name: string): string {
+  return `/staff?${new URLSearchParams({ q: name })}`;
+}
+
+/** Kichik jadvalli karta ichidagi bo'sh / yuklanmagan holat. */
+function InlineNote({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex h-full min-h-0 items-center justify-center rounded-md bg-canvas px-3 text-center text-xs text-ink-muted">
+      {children}
+    </div>
+  );
 }
 
 /**
- * Abonent kartochkasi: yuqorida to'lov va iste'mol ko'rsatkichlari, pastda
- * ikki qator karta (ma'lumotlar + grafik, to'lovlar + ko'rsatkichlar).
- *
- * Grafik uchun `@nivo/bar` ishlatilgani sababli fayl mijoz komponenti; sahifa
- * (`page.tsx`) esa serverda qoladi va metadata beradi.
+ * Abonent sahifasi. Server komponent - faqat grafik (`ReadingDiffChart`)
+ * mijozda chiziladi. Barcha qiymatlar "Elektr Abonentlar.xlsx" shablonidan
+ * (passport va PINFL ko'rsatilmaydi), qoidabuzarlik va murojaatlar - shu
+ * abonentga bog'langan yozuvlar.
  */
-export function SubscriberDetail({ subscriber }: { subscriber: Subscriber }) {
-  // Mock jadvallar uchun barqaror seed - abonent id'sidagi tartib raqami.
-  const seed = Number.parseInt(subscriber.id.replace(/\D/g, ""), 10) || 1;
+export function SubscriberDetail({
+  subscriber,
+  period,
+  history,
+  previous,
+  related,
+}: {
+  subscriber: SubscriberEntity;
+  period: PeriodInfo;
+  /** Tanlangan oygacha (u ham kiradi) holatlar, eskidan yangiga. */
+  history: SubscriberHistoryPoint[];
+  /** Aynan o'tgan oy (`month - 1`) holati; yo'q bo'lsa - null. */
+  previous: SubscriberHistoryPoint | null;
+  /** Holat yo'q oyda - null. */
+  related: SubscriberRelated | null;
+}) {
+  const snapshot = subscriber.snapshot;
+  const current = history.find((point) => point.key === period.key) ?? null;
+  const sourceLabel = monthLabel(parseMonthKey(subscriber.sourcePeriodKey));
 
-  const payments = buildPayments(subscriber, seed);
-  const readings = buildReadings(subscriber, seed);
-  const paidTotal = payments.reduce((sum, item) => sum + item.amount, 0);
-  const averageKwh = Math.round(
-    subscriber.monthly.reduce((sum, value) => sum + value, 0) / subscriber.monthly.length,
+  const header = (
+    <PageHeader
+      title={subscriber.fullName}
+      subtitle={`Shartnoma raqami: ${subscriber.contractNumber} · ${formatDate(period.reportDate)} holatiga`}
+      backHref="/subscribers"
+      backLabel="Ro’yxatga qaytish"
+    >
+      {snapshot ? (
+        <Badge tone={METER_STATUS_TONE[snapshot.meterStatus]}>{METER_STATUS_LABEL[snapshot.meterStatus]}</Badge>
+      ) : null}
+    </PageHeader>
   );
-  const debtor = subscriber.balance < 0;
 
-  const chartData = subscriber.monthly.map((value, index) => ({
-    month: MONTHS_SHORT_UZ[index],
-    value,
-  }));
+  const diffPoints = history.flatMap((point) =>
+    point.readingDiff == null
+      ? []
+      : [{ key: point.key, shortLabel: point.shortLabel, label: point.label, diff: point.readingDiff }],
+  );
+
+  const chartCard = (className: string) => (
+    <Card className={className}>
+      <CardHeader title="Ko’rsatkich farqi">
+        {diffPoints.length > 0 ? (
+          <span className="text-[11px] text-ink-soft">{num(diffPoints.length)} oy</span>
+        ) : null}
+      </CardHeader>
+      <CardBody>
+        {diffPoints.length === 0 ? (
+          <EmptyState
+            variant="inline"
+            action={false}
+            title="Farqni hisoblash uchun ma’lumot yetarli emas"
+            description="Kamida ikki oylik holatda hisoblagich ko’rsatkichi bo’lishi kerak."
+          />
+        ) : (
+          <div className="min-h-0 flex-1">
+            <ReadingDiffChart points={diffPoints} />
+          </div>
+        )}
+        <p className="shrink-0 pt-2 text-[10px] text-ink-soft">
+          Farq &mdash; oldingi mavjud oy holatidagi hisoblagich ko&rsquo;rsatkichidan ayirma. Hisoblagich
+          koeffitsiyenti hisobga olinmagan, shuning uchun bu kWh iste&rsquo;mol emas.
+        </p>
+      </CardBody>
+    </Card>
+  );
+
+  const historyCard = (className: string) => (
+    <Card className={className}>
+      <CardHeader title="Oylar bo’yicha holat">
+        <span className="text-[11px] text-ink-soft">{num(history.length)} oy</span>
+      </CardHeader>
+      <CardBody>
+        <div className="min-h-0 flex-1 overflow-y-auto scrollbar-none">
+          <DataTable
+            columns={HISTORY_COLUMNS}
+            lastRowFooter={false}
+            emptyText="Holatlar yo’q"
+            rows={[...history].reverse().map((point) => ({
+              key: point.periodId,
+              cells: [
+                <Cell
+                  key="month"
+                  text={point.label}
+                  className={point.key === period.key ? "font-semibold text-brand" : undefined}
+                />,
+                <Link
+                  key="transformer"
+                  href={`/transformers/${point.transformer.id}`}
+                  title={point.transformer.name}
+                  className={LINK_CLASS}
+                >
+                  {point.transformer.name}
+                </Link>,
+                <Cell key="reading" text={reading(point.meterReading)} />,
+                <Cell key="diff" text={signedReading(point.readingDiff)} className="text-ink-muted" />,
+                <Cell
+                  key="debt"
+                  text={exactMoney(point.debtUzs)}
+                  className={point.debtUzs > 0 ? "font-semibold text-trend-up" : "text-ink-soft"}
+                />,
+                <Cell
+                  key="credit"
+                  text={exactMoney(point.creditUzs)}
+                  className={point.creditUzs > 0 ? "text-trend-down" : "text-ink-soft"}
+                />,
+                <Cell
+                  key="status"
+                  text={METER_STATUS_LABEL[point.meterStatus]}
+                  className={METER_STATUS_TEXT[point.meterStatus]}
+                />,
+                <Cell key="payment-date" text={formatDate(point.lastPaymentDate)} />,
+                <Cell key="payment-sum" text={exactMoney(point.lastPaymentUzs)} />,
+              ],
+            }))}
+          />
+        </div>
+      </CardBody>
+    </Card>
+  );
+
+  if (!snapshot) {
+    return (
+      <div className="flex h-full min-h-0 flex-col gap-2 overflow-y-auto scrollbar-none">
+        {header}
+        <Card className="h-56 shrink-0">
+          <EmptyState
+            variant="inline"
+            action={false}
+            title={`${subscriber.fullName} uchun ${period.label} oyida ma’lumot yo’q`}
+            description={`Sarlavhadagi ma’lumotlar ${sourceLabel} oyi holatidan olingan.`}
+          />
+        </Card>
+        {history.length > 0 ? (
+          <div className="grid shrink-0 grid-cols-12 grid-rows-[360px] gap-2">
+            {historyCard("col-span-7")}
+            {chartCard("col-span-5")}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  const debtTrend = moneyTrend(snapshot.debtUzs, previous?.debtUzs, "bad");
+  const creditTrend = moneyTrend(snapshot.creditUzs, previous?.creditUzs, "flat");
 
   const info: InfoItem[] = [
-    { key: "code", label: "Shartnoma raqami", value: subscriber.code },
-    { key: "kind", label: "Turi", value: SUBSCRIBER_KIND_LABEL[subscriber.kind] },
+    { key: "contract", label: "Shartnoma raqami", value: subscriber.contractNumber },
+    { key: "contract-date", label: "Shartnoma sanasi", value: formatDate(snapshot.contractDate) },
+    { key: "kind", label: "Turi", value: SUBSCRIBER_KIND_LABEL[snapshot.kind] },
     {
       key: "status",
-      label: "Holat",
-      value: (
-        <span className={STATUS_TEXT[subscriber.status]}>
-          {SUBSCRIBER_STATUS_LABEL[subscriber.status]}
-        </span>
-      ),
+      label: "Holati",
+      value: <span className={METER_STATUS_TEXT[snapshot.meterStatus]}>{METER_STATUS_LABEL[snapshot.meterStatus]}</span>,
     },
-    { key: "contract", label: "Shartnoma sanasi", value: subscriber.contractDate },
     {
-      key: "transformer",
-      label: "Transformator",
+      key: "substation",
+      label: "Podstansiya",
       value: (
-        <Link
-          href={`/transformers/${subscriber.transformerId}`}
-          className="text-brand transition-opacity hover:opacity-70"
-        >
-          {subscriber.transformerCode}
+        <Link href={`/substations/${subscriber.substation.id}`} className={LINK_CLASS}>
+          {subscriber.substation.name}
         </Link>
       ),
     },
-    { key: "area", label: "Hudud", value: subscriber.area },
-    { key: "phone", label: "Telefon", value: subscriber.phone },
-    { key: "meter-no", label: "Hisoblagich raqami", value: subscriber.meterNo },
-    { key: "meter-type", label: "Hisoblagich turi", value: subscriber.meterType },
     {
-      key: "online",
-      label: "Aloqa holati",
+      key: "feeder",
+      label: "Fider",
       value: (
-        <span
-          className={`flex items-center gap-1 ${
-            subscriber.online ? "text-state-ok" : "text-state-warn"
-          }`}
-        >
-          <Icon icon={subscriber.online ? Wifi : WifiOff} size={14} />
-          {subscriber.online ? "Aloqada" : "Aloqada emas"}
-        </span>
+        <Link href={`/feeders/${subscriber.feeder.id}`} className={LINK_CLASS}>
+          {subscriber.feeder.name}
+        </Link>
       ),
     },
-    { key: "tariff", label: "Tarif", value: `${num(subscriber.tariff)} so’m/kWh` },
-    { key: "average", label: "Oylik o’rtacha", value: `${num(averageKwh)} kWh` },
-    { key: "address", label: "Manzil", value: subscriber.address, wide: true },
+    {
+      key: "transformer",
+      label: "TP",
+      value: (
+        <Link href={`/transformers/${subscriber.transformer.id}`} className={LINK_CLASS}>
+          {subscriber.transformer.name}
+        </Link>
+      ),
+    },
+    {
+      key: "staff",
+      label: "Biriktirilgan xodim",
+      value: snapshot.staff ? (
+        <Link href={staffHref(snapshot.staff.name)} className={LINK_CLASS}>
+          {snapshot.staff.name}
+        </Link>
+      ) : (
+        EMPTY
+      ),
+    },
+    { key: "meter-serial", label: "Hisoblagich zavod raqami", value: snapshot.meterSerial ?? EMPTY },
+    { key: "meter-type", label: "Hisoblagich turi", value: snapshot.meterType ?? EMPTY },
+    { key: "meter-installed", label: "O’rnatilgan sana", value: formatDate(snapshot.meterInstalledAt) },
+    { key: "last-reading", label: "Oxirgi olingan ma’lumot", value: formatDateTime(snapshot.lastReadingAt) },
+    { key: "payment-date", label: "Oxirgi to’lov sanasi", value: formatDate(snapshot.lastPaymentDate) },
+    { key: "payment-sum", label: "Oxirgi to’lov summasi", value: exactMoney(snapshot.lastPaymentUzs) },
+    {
+      key: "address",
+      label: "Manzil",
+      value: snapshot.address ? <span title={snapshot.address}>{snapshot.address}</span> : EMPTY,
+    },
+    {
+      key: "location",
+      label: "Lokatsiya",
+      value:
+        snapshot.lat != null && snapshot.lng != null ? (
+          <Link
+            href={`/map?${new URLSearchParams({ node: `subscriber:${subscriber.id}` })}`}
+            className={LINK_CLASS}
+          >
+            {dec(snapshot.lat, 6)} · {dec(snapshot.lng, 6)}
+          </Link>
+        ) : (
+          EMPTY
+        ),
+    },
   ];
+
+  const transformerScope = { kind: "transformer", id: subscriber.transformer.id } as const;
+  const violations = related?.violations;
+  const appeals = related?.appeals;
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2 overflow-y-auto scrollbar-none">
-      <PageHeader
-        title={subscriber.name}
-        subtitle={`${subscriber.code} · ${SUBSCRIBER_KIND_LABEL[subscriber.kind]} · ${subscriber.area}`}
-        backHref="/subscribers"
-        backLabel="Ro’yxatga qaytish"
-      >
-        <Badge tone={STATUS_TONE[subscriber.status]}>
-          {SUBSCRIBER_STATUS_LABEL[subscriber.status]}
-        </Badge>
-        <HeaderButton icon={Phone}>Bog&rsquo;lanish</HeaderButton>
-      </PageHeader>
+      {header}
 
       <StatRow>
         <StatCard
-          label={"Oylik iste’mol"}
-          value={num(subscriber.monthlyKwh)}
-          unit="kWh"
-          icon={PlugZap}
-          accent="bg-accent-teal"
-          tint="bg-tint-teal"
-          hint={`12 oylik o’rtacha: ${num(averageKwh)} kWh`}
+          label="Qarzdorlik"
+          value={money(snapshot.debtUzs)}
+          icon={HandCoins}
+          accent="bg-accent-red"
+          tint="bg-tint-red"
+          hint={debtTrend?.hint ?? (snapshot.debtUzs > 0 ? "Qarzdorlik mavjud" : "Qarzdorlik yo’q")}
+          hintTone={debtTrend?.tone ?? "flat"}
         />
         <StatCard
-          label="Balans"
-          value={money(subscriber.balance)}
-          icon={Wallet}
-          accent={debtor ? "bg-accent-red" : "bg-accent-green"}
-          tint={debtor ? "bg-tint-red" : "bg-tint-green"}
-          hint={debtor ? "Qarzdorlik mavjud" : "Qarzdorlik yo’q"}
-          hintTone={debtor ? "bad" : "good"}
+          label="Haqdorlik"
+          value={money(snapshot.creditUzs)}
+          icon={PiggyBank}
+          accent="bg-accent-green"
+          tint="bg-tint-green"
+          hint={creditTrend?.hint ?? (snapshot.creditUzs > 0 ? "Haqdorlik mavjud" : "Haqdorlik yo’q")}
+          hintTone={creditTrend?.tone ?? "flat"}
         />
         <StatCard
-          label="Tarif"
-          value={num(subscriber.tariff)}
-          unit={"so’m/kWh"}
-          icon={Coins}
-          accent="bg-accent-purple"
-          tint="bg-tint-purple"
-          hint={`Oylik hisob: ${money(subscriber.monthlyKwh * subscriber.tariff)}`}
-        />
-        <StatCard
-          label={"So’nggi ko’rsatkich"}
-          value={num(subscriber.lastReading)}
-          unit="kWh"
+          label="Hisoblagich ko’rsatkichi"
+          value={reading(snapshot.meterReading)}
           icon={Gauge}
           accent="bg-accent-indigo"
           tint="bg-tint-indigo"
-          hint={`Olingan sana: ${subscriber.lastReadingDate}`}
+          hint={
+            current?.readingDiff != null
+              ? `Oldingi holatga nisbatan farq: ${signedReading(current.readingDiff)}`
+              : `Olingan: ${formatDateTime(snapshot.lastReadingAt)}`
+          }
+        />
+        <StatCard
+          label="Oxirgi to’lov"
+          value={money(snapshot.lastPaymentUzs)}
+          icon={Wallet}
+          accent="bg-accent-blue"
+          tint="bg-tint-blue"
+          hint={snapshot.lastPaymentDate ? `Sana: ${formatDate(snapshot.lastPaymentDate)}` : "To’lov sanasi ko’rsatilmagan"}
         />
       </StatRow>
 
-      {/* Qator balandliklari qat'iy: 468px ma'lumot/grafik, 372px jadvallar -
-          shunda 1064px ish maydoniga ikkala qator ham sig'adi. */}
-      <div className="grid shrink-0 grid-cols-12 grid-rows-[468px_372px] gap-2">
+      <div className="grid shrink-0 grid-cols-12 grid-rows-[512px_372px] gap-2">
         <Card className="col-span-5">
-          <CardHeader title="Umumiy ma&rsquo;lumotlar" />
+          <CardHeader title="Umumiy ma’lumotlar">
+            <span className="text-[11px] text-ink-soft">{period.label}</span>
+          </CardHeader>
           <CardBody>
             <div className="min-h-0 flex-1 overflow-y-auto scrollbar-none">
               <InfoGrid items={info} columns={2} />
@@ -315,104 +393,89 @@ export function SubscriberDetail({ subscriber }: { subscriber: Subscriber }) {
           </CardBody>
         </Card>
 
-        <Card className="col-span-7">
-          <CardHeader title="12 oylik iste&rsquo;mol">
-            <span className="text-[11px] text-ink-soft">kWh</span>
-          </CardHeader>
-          <CardBody>
-            {/* Nivo SVG'si ota elementdan balandlik oladi - `min-h-0 flex-1`
-                bo'lmasa grafik umuman chizilmaydi. */}
-            <div className="min-h-0 flex-1">
-              <ResponsiveBar
-                data={chartData}
-                keys={["value"]}
-                indexBy="month"
-                margin={{ top: 8, right: 8, bottom: 24, left: 48 }}
-                padding={0.35}
-                colors={["#007cd2"]}
-                borderRadius={4}
-                enableLabel={false}
-                enableGridX={false}
-                axisTop={null}
-                axisRight={null}
-                axisBottom={{ tickSize: 0, tickPadding: 8 }}
-                axisLeft={{
-                  tickSize: 0,
-                  tickPadding: 8,
-                  tickValues: 5,
-                  format: (value) => formatAxisValue(Number(value)),
-                }}
-                theme={CHART_THEME}
-                animate={false}
-                tooltip={({ indexValue, value }) => (
-                  <div className="rounded-md bg-surface px-2 py-1 whitespace-nowrap shadow-md">
-                    <div className="text-[9px] text-ink-soft">{indexValue}</div>
-                    <div className="mt-0.5 text-[11px] font-semibold text-ink">
-                      {num(value)} kWh
-                    </div>
-                  </div>
-                )}
-              />
-            </div>
-          </CardBody>
-        </Card>
+        {chartCard("col-span-7")}
 
-        <Card className="col-span-7">
-          <CardHeader title="To&rsquo;lovlar tarixi">
-            <span className="text-[11px] text-ink-soft">Jami: {money(paidTotal)}</span>
-          </CardHeader>
-          <CardBody>
-            <div className="min-h-0 flex-1 overflow-y-auto scrollbar-none">
-              <DataTable
-                columns={PAYMENT_COLUMNS}
-                rows={payments.map((row) => ({
-                  key: row.key,
-                  cells: [
-                    row.date,
-                    <span key="amount" className="font-medium">
-                      {money(row.amount)}
-                    </span>,
-                    row.method,
-                    <Badge key="status" tone={row.status.tone}>
-                      {row.status.label}
-                    </Badge>,
-                  ],
-                }))}
-              />
-            </div>
-            <p className="shrink-0 pt-2 text-[10px] text-ink-soft">
-              So&rsquo;nggi 8 oy uchun to&rsquo;lovlar ko&rsquo;rsatilgan.
-            </p>
-          </CardBody>
-        </Card>
+        {historyCard("col-span-7")}
 
-        <Card className="col-span-5">
-          <CardHeader title="Hisoblagich ko&rsquo;rsatkichlari">
-            <span className="text-[11px] text-ink-soft">{subscriber.meterNo}</span>
-          </CardHeader>
-          <CardBody>
-            <div className="min-h-0 flex-1 overflow-y-auto scrollbar-none">
-              <DataTable
-                columns={READING_COLUMNS}
-                rows={readings.map((row) => ({
-                  key: row.key,
-                  cells: [
-                    row.date,
-                    <span key="reading" className="font-medium">
-                      {num(row.reading)}
-                    </span>,
-                    <span key="diff" className="text-ink-muted">
-                      +{num(row.diff)}
-                    </span>,
-                  ],
-                }))}
-              />
-            </div>
-            <p className="shrink-0 pt-2 text-[10px] text-ink-soft">
-              Farq &mdash; oldingi ko&rsquo;rsatkichga nisbatan oylik iste&rsquo;mol.
-            </p>
-          </CardBody>
-        </Card>
+        <div className="col-span-5 grid min-h-0 grid-rows-2 gap-2">
+          <Card>
+            <CardHeader title="Qoidabuzarliklar">
+              {violations?.uploaded && violations.rows.length > 0 ? (
+                <span className="text-[11px] text-ink-soft">
+                  Zarar: {money(sum(violations.rows.map((row) => row.damageUzs)))}
+                </span>
+              ) : null}
+              <Link
+                href={scopedHref("/violations", transformerScope, { q: subscriber.fullName })}
+                className="text-[11px] font-medium text-brand transition-opacity hover:opacity-70"
+              >
+                Ro&rsquo;yxat
+              </Link>
+            </CardHeader>
+            <CardBody>
+              {!violations?.uploaded ? (
+                <InlineNote>{period.label} oyi uchun qoidabuzarliklar yuklanmagan</InlineNote>
+              ) : violations.rows.length === 0 ? (
+                <InlineNote>{period.label} oyida bu abonentga qoidabuzarlik bog&rsquo;lanmagan</InlineNote>
+              ) : (
+                <div className="min-h-0 flex-1 overflow-y-auto scrollbar-none">
+                  <DataTable
+                    columns={VIOLATION_COLUMNS}
+                    lastRowFooter={false}
+                    rows={violations.rows.map((row) => ({
+                      key: row.id,
+                      cells: [
+                        formatDate(row.date),
+                        VIOLATOR_TYPE_LABEL[row.violatorType],
+                        <span key="uzs" className="font-medium">
+                          {num(row.damageUzs)}
+                        </span>,
+                        num(row.damageKwh),
+                      ],
+                    }))}
+                  />
+                </div>
+              )}
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader title="Murojaatlar">
+              <Link
+                href={scopedHref("/appeals", transformerScope, { q: subscriber.fullName })}
+                className="text-[11px] font-medium text-brand transition-opacity hover:opacity-70"
+              >
+                Ro&rsquo;yxat
+              </Link>
+            </CardHeader>
+            <CardBody>
+              {!appeals?.uploaded ? (
+                <InlineNote>{period.label} oyi uchun murojaatlar yuklanmagan</InlineNote>
+              ) : appeals.rows.length === 0 ? (
+                <InlineNote>{period.label} oyida bu abonentga murojaat bog&rsquo;lanmagan</InlineNote>
+              ) : (
+                <div className="min-h-0 flex-1 overflow-y-auto scrollbar-none">
+                  <DataTable
+                    columns={APPEAL_COLUMNS}
+                    lastRowFooter={false}
+                    rows={appeals.rows.map((row) => ({
+                      key: row.id,
+                      cells: [
+                        formatDate(row.date),
+                        <span key="text" title={row.text} className="block truncate">
+                          {row.text}
+                        </span>,
+                        <Badge key="status" tone={APPEAL_STATUS_TONE[row.status]}>
+                          {APPEAL_STATUS_LABEL[row.status]}
+                        </Badge>,
+                      ],
+                    }))}
+                  />
+                </div>
+              )}
+            </CardBody>
+          </Card>
+        </div>
       </div>
     </div>
   );

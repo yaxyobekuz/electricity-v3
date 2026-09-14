@@ -1,404 +1,496 @@
 import {
-  ArrowBigDownDash,
   ArrowDown,
   ArrowUp,
-  ClockArrowUp,
+  ChevronRight,
+  ClockAlert,
   Gauge,
   HandCoins,
+  MessagesSquare,
+  Minus,
+  PiggyBank,
   PlugZap,
-  SquareCheckBig,
-  Thermometer,
   UserCheck,
   UserMinus,
   Users,
   Zap,
   ZapOff,
 } from "lucide-react";
+import Link from "next/link";
 
-import { CompletedWorksCard } from "@/components/cards/CompletedWorksCard";
-import { ConsumptionDynamicsCard } from "@/components/cards/ConsumptionDynamicsCard";
+import { CompletedWorksCard, type RepairWork } from "@/components/cards/CompletedWorksCard";
+import { ConsumptionDynamicsCard, type DynamicsMonth } from "@/components/cards/ConsumptionDynamicsCard";
+import { DebtCard } from "@/components/cards/DebtCard";
 import { DownloadReportsCard } from "@/components/cards/DownloadReportsCard";
 import { InteractiveMapCard, type MapTooltip } from "@/components/cards/InteractiveMapCard";
+import type { KpiTone } from "@/components/cards/KpiCard";
 import { type KpiItem, KpiRow } from "@/components/cards/KpiRow";
-import { type LossKind, LossDamageCard } from "@/components/cards/LossDamageCard";
-import { type PlannedWork, PlannedWorksCard } from "@/components/cards/PlannedWorksCard";
+import { type DamageKind, LossDamageCard } from "@/components/cards/LossDamageCard";
+import { PlannedWorksCard } from "@/components/cards/PlannedWorksCard";
 import { type QuickMetric, QuickMetricsCard } from "@/components/cards/QuickMetricsCard";
 import { ResponsibleStaffCard } from "@/components/cards/ResponsibleStaffCard";
-import { RingStatsCard, type StatRing } from "@/components/cards/RingStatsCard";
 import { type TopRow, TopTransformersCard } from "@/components/cards/TopTransformersCard";
 import { ViolationsCard } from "@/components/cards/ViolationsCard";
-import { Badge, type BadgeTone, type TableColumn } from "@/components/ui/DataTable";
-import { dec, money, num } from "@/lib/data/seed";
-import {
-  SUBSCRIBER_STATUS_LABEL,
-  type SubscriberStatus,
-} from "@/lib/data/subscribers";
-import { transformerScope } from "@/lib/data/transformer-scope";
-import type { Transformer, TransformerStatus } from "@/lib/data/transformers";
+import type { MapMarker } from "@/components/map/MapCanvas";
+import type { TableColumn } from "@/components/ui/DataTable";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { type GlyphIcon, Icon } from "@/components/ui/Icon";
+import type { ViolatorType } from "@/generated/prisma";
+import { SUBSCRIBER_KIND_LABEL, VIOLATOR_TYPE_LABEL, VIOLATOR_TYPE_ORDER } from "@/lib/domain/labels";
+import { delta, fractions, share } from "@/lib/domain/metrics";
+import { EMPTY, count, energy, formatDate, money, monthName, num, percent, scaled } from "@/lib/format";
+import type { PeriodInfo } from "@/lib/period";
+import type { TransformerDetail as TransformerEntity } from "@/lib/queries/entities";
+import type { RepairRow } from "@/lib/queries/repairs";
+import type { ScopeSeriesPoint, ScopeSummary } from "@/lib/queries/scope";
+import type { TransformerDetailData, TransformerDetailStats } from "@/lib/queries/transformers-detail";
+import { scopedHref, scopeParam } from "@/lib/scope-param";
 
 /*
- * Maket - fider detal sahifasi (Figma `4029:930`), kartalar ham o'sha. Farqi
- * faqat ma'lumotda: har bir karta shu TP qamrovidagi sonlarni ko'rsatadi
- * (`@/lib/data/transformer-scope`). Bu fayl sonlarni kartalar kutgan matnga
- * aylantiradi va ikonka/rang tanlaydi.
+ * TP detal sahifasi - fider detal sahifasi maketi (Figma `4029:930`), har bir
+ * karta shu TP qamrovida. Sonlar `getTransformerDetailData` dan (umumiy
+ * so'rovlar), bu fayl ularni kartalar kutgan matnga (`format.ts`) aylantiradi
+ * va ikonka/rang tanlaydi. Yangi hisob-kitob yo'q - farq (`delta`), ulush
+ * (`share`) va ustunchalar (`fractions`) umumiy funksiyalardan. Shablonda
+ * manbasi yo'q ko'rsatkich (yuklama, harorat, holat, soatlik profil) yo'q.
  */
 
-/** Maket "bugun"i avgustda - halqali diagrammalardagi oy nomi. */
-const MONTH = "Avgust";
-
 const MAP_ZOOM = 15;
-/** Zoom 15 da 1° uzunlik ~23 300px, ya'ni 0,004° ~ 90px. */
+/** Marker tultip ostida qolmasin: zoom 15 da 0,004° (~90px) sharqqa surilgan markaz. */
 const MAP_CENTER_SHIFT = 0.004;
 
-const STATUS_DOT: Record<TransformerStatus, string> = {
-  ok: "bg-accent-green",
-  warning: "bg-accent-amber",
-  critical: "bg-accent-red",
-  offline: "bg-ink-soft",
+/** Qoidabuzar turi bo'yicha zarar halqalari rangi - fider sahifasi bilan bir xil. */
+const DAMAGE_COLOR: Record<ViolatorType, string> = {
+  LEGAL: "#f4cf3b",
+  INDIVIDUAL: "#ff928a",
+  INNOCENT: "#55c4ae",
 };
 
-const SUBSCRIBER_TONE: Record<SubscriberStatus, BadgeTone> = {
-  active: "green",
-  debtor: "amber",
-  disconnected: "red",
-};
-
-const SUBSCRIBER_COLUMNS: TableColumn[] = [
-  { key: "code", label: "Shartnoma", grow: 18 },
-  { key: "name", label: "Nomi", grow: 26, align: "left" },
-  { key: "status", label: "Holat", grow: 15 },
-  { key: "usage", label: "Iste’mol", grow: 15 },
-  // Manfiy balans ("-1,2 mln so'm") eng uzun katak - kesilmasligi uchun kengroq.
-  { key: "balance", label: "Balans", grow: 26 },
+const DEBTOR_COLUMNS: TableColumn[] = [
+  { key: "contract", label: "Shartnoma", grow: 20 },
+  { key: "name", label: "FISH", grow: 36, align: "left" },
+  { key: "kind", label: "Turi", grow: 14 },
+  { key: "debt", label: "Qarzdorlik", grow: 24 },
 ];
 
-/** "12,4" - ming kWh da, KPI kartalaridagi maket formati. */
-function thousands(kwh: number): string {
-  return dec(kwh / 1000);
+// ---------------------------------------------------------------------------
+// KPI
+// ---------------------------------------------------------------------------
+
+/** "2,1 ming kWh ga" - farq qiymati uchun. */
+function kwhDiff(value: number): string {
+  const parts = scaled(value, "kWh");
+  return `${parts.value} ${parts.unit} ga`;
 }
 
 /**
- * Oyma-oy farq qatori. Energiya va qarzdorlik kontekstida o'sish yomon
- * (maketdagi kabi: "ko'p" - qizil, "kam" - yashil).
+ * O'tgan oy bilan farq qatori. `increaseBad` - o'sishi yomon ko'rsatkich
+ * (yo'qotish, qarzdorlik); qolganlari neytral. O'tgan oy qiymati yo'q -
+ * qator yo'q.
  */
-function delta(current: number, previous: number, format: (value: number) => string) {
-  const up = current > previous;
+function deltaLine(
+  current: number | null,
+  previous: number | null,
+  formatDiff: (value: number) => string,
+  kind: "neutral" | "increaseBad",
+): Pick<KpiItem, "deltaIcon" | "deltaText" | "deltaTone"> {
+  const change = delta(current, previous);
+  if (!change) return {};
+  // Decimal(…, 2) yig'indilari farqidagi suzuvchi nuqta qoldig'i "o'zgarmagan" hisoblanadi.
+  if (Math.abs(change.diff) < 0.005) return { deltaIcon: Minus, deltaText: "O’zgarmagan", deltaTone: "neutral" };
+  const up = change.diff > 0;
+  const tone: KpiTone = kind === "neutral" ? "neutral" : up ? "bad" : "good";
   return {
     deltaIcon: up ? ArrowUp : ArrowDown,
-    deltaText: `${format(Math.abs(current - previous))} ga ${up ? "ko’p" : "kam"}`,
-    deltaTone: up ? ("bad" as const) : ("good" as const),
+    deltaText: `${formatDiff(Math.abs(change.diff))} ${up ? "ko’p" : "kam"}`,
+    deltaTone: tone,
   };
 }
 
-/** Summa va birlik: million so'mdan boshlab "mln", undan kichigi "ming". */
-function moneyParts(sum: number): { value: string; unit: string; divisor: number } {
-  return sum >= 1_000_000
-    ? { value: dec(sum / 1_000_000), unit: "mln so’m", divisor: 1_000_000 }
-    : { value: dec(sum / 1000), unit: "ming so’m", divisor: 1000 };
+/** "O’tgan oy: ..." - o'tgan oy davri bazada bo'lmasa qator yo'q. */
+function previousLine(
+  hasPreviousPeriod: boolean,
+  value: number | null,
+  format: (value: number) => string,
+  missing: string,
+): string | null {
+  if (!hasPreviousPeriod) return null;
+  return `O’tgan oy: ${value != null ? format(value) : missing}`;
 }
 
-/** 1-2-5 qatoridagi eng kichik qadam: `value` dan katta yoki teng. */
-function niceStep(value: number): number {
-  if (value <= 0) return 1;
-  const base = 10 ** Math.floor(Math.log10(value));
-  const step = [1, 2, 2.5, 5, 10].find((factor) => factor * base >= value) ?? 10;
-  return Number((step * base).toPrecision(6));
+/** 12 oylik ustunchalar: qiymati yo'q oy - 0 balandlik. */
+function barsOf(values: readonly (number | null)[]): Pick<KpiItem, "bars" | "barsLabel"> {
+  return {
+    bars: fractions(values.map((value) => value ?? 0)),
+    barsLabel: `${values.length} oy`,
+  };
 }
 
-function tick(value: number): string {
-  return String(Number(value.toFixed(2))).replace(".", ",");
-}
+function buildKpis(
+  { current, previous, previousPeriod }: TransformerDetailStats["comparison"],
+  series: readonly ScopeSeriesPoint[],
+): KpiItem[] {
+  const hasPrevious = previousPeriod !== null;
+  /*
+   * TP qamrovida energiya - TP ning o'z holati. O'tgan oyda TP holati yo'q
+   * bo'lsa (yangi TP) yig'indilar "0" chiqadi - ular bilan solishtirilmaydi.
+   */
+  const previousTp = previous?.energy ? previous : null;
+  const missing = (uploaded: boolean | undefined) => (uploaded ? "ma’lumot yo’q" : "yuklanmagan");
 
-export function TransformerDetail({ transformer }: { transformer: Transformer }) {
-  const scope = transformerScope(transformer);
-  const { energy } = scope;
+  const flow = (
+    id: string,
+    title: string,
+    key: "totalKwh" | "usefulKwh" | "lossKwh",
+    icon: GlyphIcon,
+    tint: string,
+    accent: string,
+  ): KpiItem => {
+    const value = current.energy?.[key] ?? null;
+    const previousValue = previousTp?.energy?.[key] ?? null;
+    const parts = scaled(value, "kWh");
+    const lossShare = key === "lossKwh" ? current.energy?.lossPercent : undefined;
+    return {
+      id,
+      title,
+      value: parts.value,
+      unit: lossShare != null ? `${parts.unit} · ${percent(lossShare)}` : parts.unit,
+      icon,
+      tint,
+      accent,
+      ...deltaLine(value, previousValue, kwhDiff, key === "lossKwh" ? "increaseBad" : "neutral"),
+      previous: previousLine(hasPrevious, previousValue, energy, missing(previous?.uploads.TRANSFORMERS)),
+      ...barsOf(series.map((point) => point[key])),
+    };
+  };
 
-  /* --- 1-qator: KPI --------------------------------------------------- */
+  const subscribers = current.subscribers;
+  const previousSubscribers = previousTp?.subscribers?.total ?? null;
+  const debt = current.subscriberList.uploaded ? current.subscriberList.debtUzs : null;
+  const previousDebt = previousTp?.subscriberList.uploaded ? previousTp.subscriberList.debtUzs : null;
+  const appeals = current.appeals.uploaded ? current.appeals.total : null;
+  const previousAppeals = previousTp?.appeals.uploaded ? previousTp.appeals.total : null;
 
-  const debtNow = moneyParts(scope.debt);
-  const kpis: KpiItem[] = [
-    {
-      id: "billed",
-      title: "Hisoblangan",
-      value: thousands(energy.billed),
-      unit: "ming kWh",
-      icon: Zap,
-      ...delta(energy.billed, energy.billedPrev, (value) => `${thousands(value)} ming kWh`),
-      previous: `O’tgan oy: ${thousands(energy.billedPrev)} ming kWh`,
-      bars: scope.bars.billed,
-      barsLabel: "30 kun",
-      tint: "bg-tint-blue",
-      accent: "bg-accent-blue",
-    },
-    {
-      id: "consumed",
-      title: "Iste’mol",
-      value: thousands(energy.consumed),
-      unit: "ming kWh",
-      icon: PlugZap,
-      ...delta(energy.consumed, energy.consumedPrev, (value) => `${thousands(value)} ming kWh`),
-      previous: `O’tgan oy: ${thousands(energy.consumedPrev)} ming kWh`,
-      bars: scope.bars.consumed,
-      barsLabel: "30 kun",
-      tint: "bg-tint-green",
-      accent: "bg-accent-green",
-    },
-    {
-      id: "loss",
-      title: "Yo’qotish",
-      value: thousands(energy.loss),
-      unit: "ming kWh",
-      icon: ZapOff,
-      ...delta(energy.loss, energy.lossPrev, (value) => `${thousands(value)} ming kWh`),
-      previous: `O’tgan oy: ${thousands(energy.lossPrev)} ming kWh`,
-      bars: scope.bars.loss,
-      barsLabel: "30 kun",
-      tint: "bg-tint-red",
-      accent: "bg-accent-red",
-    },
+  return [
+    flow("total", "Umumiy oqim", "totalKwh", Zap, "bg-tint-blue", "bg-accent-blue"),
+    flow("useful", "Foydali oqim", "usefulKwh", PlugZap, "bg-tint-green", "bg-accent-green"),
+    flow("loss", "Yo’qotish", "lossKwh", ZapOff, "bg-tint-red", "bg-accent-red"),
     {
       id: "subscribers",
       title: "Abonentlar",
-      value: num(scope.subscribers.length),
-      unit: "ta umumiy",
+      value: num(subscribers?.total),
+      unit: subscribers ? "ta umumiy" : "yuklanmagan",
       icon: Users,
-      deltaIcon: scope.offlineMeters > 0 ? UserMinus : UserCheck,
-      deltaText:
-        scope.offlineMeters > 0 ? `${scope.offlineMeters} ta aloqada emas` : "Hammasi aloqada",
-      deltaTone: scope.offlineMeters > 0 ? "bad" : "good",
-      previous: `Qarzdor: ${scope.debtors} ta`,
-      bars: scope.bars.usage,
-      barsLabel: "12 oy",
       tint: "bg-tint-purple",
       accent: "bg-accent-purple",
-    },
-    {
-      id: "load",
-      title: "Yuklama",
-      value: dec(transformer.loadPercent, 0),
-      unit: `% · ${num(transformer.powerKva)} kVA`,
-      icon: Gauge,
-      deltaIcon: Thermometer,
-      deltaText: `Harorat: ${num(transformer.temperature)}°C`,
-      deltaTone: transformer.temperature > 75 ? "bad" : "good",
-      previous: transformer.loadPercent > 100 ? "Nominaldan oshgan" : `Kuchlanish: ${transformer.voltage}`,
-      bars: scope.bars.hourly,
-      barsLabel: "24 soat",
-      tint: "bg-tint-indigo",
-      accent: "bg-accent-indigo",
+      ...(subscribers
+        ? {
+            deltaIcon: UserCheck,
+            deltaText: `${num(subscribers.online)} aloqada · ${num(subscribers.offline)} aloqadan chiqqan`,
+            deltaTone: "neutral" as const,
+          }
+        : {}),
+      previous: previousLine(hasPrevious, previousSubscribers, count, missing(previous?.uploads.TRANSFORMERS)),
+      ...barsOf(series.map((point) => point.subscribers)),
     },
     {
       id: "debt",
       title: "Qarzdorlik",
-      value: debtNow.value,
-      unit: debtNow.unit,
+      value: debt != null ? scaled(debt, "so’m").value : EMPTY,
+      unit: debt != null ? scaled(debt, "so’m").unit : "ro’yxat yuklanmagan",
       icon: HandCoins,
-      ...delta(scope.debt, scope.debtPrev, money),
-      previous: `O’tgan oy: ${money(scope.debtPrev)}`,
-      bars: scope.bars.debt,
-      barsLabel: "12 oy",
       tint: "bg-tint-brown",
       accent: "bg-accent-brown",
+      ...deltaLine(debt, previousDebt, (value) => `${money(value)} ga`, "increaseBad"),
+      previous: previousLine(hasPrevious, previousDebt, money, missing(previous?.uploads.SUBSCRIBERS)),
+      ...barsOf(series.map((point) => point.debtUzs)),
+    },
+    {
+      id: "appeals",
+      title: "Murojaatlar",
+      value: num(appeals),
+      unit: appeals != null ? "ta" : "yuklanmagan",
+      icon: MessagesSquare,
+      tint: "bg-tint-indigo",
+      accent: "bg-accent-indigo",
+      ...deltaLine(appeals, previousAppeals, (value) => `${num(value)} taga`, "neutral"),
+      previous: previousLine(hasPrevious, previousAppeals, count, missing(previous?.uploads.APPEALS)),
+      ...barsOf(series.map((point) => point.appeals)),
     },
   ];
+}
 
-  /* --- 2-qator: abonentlar jadvali ------------------------------------ */
+// ---------------------------------------------------------------------------
+// Kartalar
+// ---------------------------------------------------------------------------
 
-  const subscriberRows: TopRow[] = scope.subscribers.map((item) => ({
-    id: item.id,
-    label: item.code,
-    value: item.monthlyKwh,
-    cells: [
-      <span key="code" className="font-medium">
-        {item.code}
-      </span>,
-      <span key="name" className="block truncate">
-        {item.name}
-      </span>,
-      <Badge key="status" tone={SUBSCRIBER_TONE[item.status]}>
-        {SUBSCRIBER_STATUS_LABEL[item.status]}
-      </Badge>,
-      `${num(item.monthlyKwh)} kWh`,
-      <span key="balance" className={item.balance < 0 ? "font-medium text-accent-red" : undefined}>
-        {money(item.balance)}
-      </span>,
-    ],
-  }));
-
-  /* --- 3-qator: qarzdorlik, zarar, xarita, tezkor ko'rsatkichlar ------ */
-
-  const debtUnit = moneyParts(scope.debt);
-  const debtStep = niceStep((scope.debt / debtUnit.divisor) * 1.1 / 5);
-  const debtRings: StatRing[] = [
-    { id: "total", label: "Umumiy", amount: money(scope.debtByKind.total), color: "#3cc3df" },
-    { id: "household", label: "Aholi", amount: money(scope.debtByKind.household), color: "#ff928a" },
-    { id: "other", label: "Yuridik va budjet", amount: money(scope.debtByKind.other), color: "#8979ff" },
-  ].map((ring) => ({
-    ...ring,
-    arc: scope.debtByKind[ring.id as keyof typeof scope.debtByKind] / debtUnit.divisor,
-  }));
-
-  const damageUnit = moneyParts(Math.max(...Object.values(scope.damageByKind)));
-  const damageValues = {
-    natural: scope.damageByKind.natural / damageUnit.divisor,
-    technological: scope.damageByKind.technological / damageUnit.divisor,
-    theft: scope.damageByKind.theft / damageUnit.divisor,
-  };
-  const lossKinds: LossKind[] = [
-    { id: "Tabiiy", value: damageValues.natural, amount: dec(damageValues.natural), color: "#55c4ae" },
-    {
-      id: "Texnologik",
-      value: damageValues.technological,
-      amount: dec(damageValues.technological),
-      color: "#f4cf3b",
-    },
-    { id: "O’g’irlik", value: damageValues.theft, amount: dec(damageValues.theft), color: "#ff928a" },
-  ];
-  // Shkala 8 ta teng bo'linmaga bo'linadi - eng kattasi 85% atrofida to'lsin.
-  const damageMax = niceStep((Math.max(...lossKinds.map((kind) => kind.value)) * 1.15) / 8) * 8;
-
-  const billedDiff = energy.billed - energy.billedPrev;
-  const tooltip: MapTooltip = {
-    title: "Transformator holati",
-    label: transformer.code,
-    dot: STATUS_DOT[transformer.status],
-    value: thousands(energy.billed),
-    unit: "ming kWh",
-    note:
-      transformer.status === "offline" ? (
-        "Transformator o’chirilgan - abonentlar energiya olmayapti."
-      ) : transformer.loadPercent > 100 ? (
-        <>
-          Yuklama <span className="font-bold">{dec(transformer.loadPercent, 0)}%</span> - nominal
-          quvvatdan oshgan, ta’mirlash rejalashtirilgan.
-        </>
-      ) : transformer.temperature > 75 ? (
-        <>
-          Chulg&rsquo;am harorati{" "}
-          <span className="font-bold">{num(transformer.temperature)}&deg;C</span> - tekshiruv kerak.
-        </>
-      ) : (
-        <>
-          Ushbu transformator o&rsquo;tgan oyga nisbatan{" "}
-          <span className="font-bold">{thousands(Math.abs(billedDiff))}</span> ming kWh ga{" "}
-          {billedDiff > 0 ? "ko’p" : "kam"} energiya iste&rsquo;mol qilmoqda.
-        </>
-      ),
-  };
-
-  const peak = scope.peakHour;
-  const quickMetrics: QuickMetric[] = [
-    {
-      id: "avg-usage",
-      icon: Zap,
-      tile: "bg-accent-blue",
-      caption: "Kunlik o’rtacha iste’mol",
-      value: `${num(energy.billed / 30)} kWh`,
-    },
-    {
-      id: "avg-loss",
-      icon: ArrowBigDownDash,
-      tile: "bg-[#ff928a]",
-      caption: "Kunlik o’rtacha yo’qotish",
-      value: `${num(energy.loss / 30)} kWh`,
-    },
-    {
-      id: "temperature",
-      icon: Thermometer,
-      tile: "bg-[#ffae4c]",
-      caption: "Chulg’am harorati",
-      value: `${num(transformer.temperature)}°C`,
-    },
-    {
-      id: "peak-hours",
-      icon: ClockArrowUp,
-      tile: "bg-[#8979ff]",
-      caption: "Pik yuklama vaqti",
-      value: peak >= 0 ? `${peak}:00 - ${peak + 1}:00` : "—",
-    },
-    {
-      id: "last-check",
-      icon: SquareCheckBig,
-      tile: "bg-[#2bb7dc]",
-      caption: "So’nggi ko’rik",
-      value: transformer.lastCheck,
-    },
-  ];
-
-  /* --- 4-qator: ish jurnali ------------------------------------------- */
-
-  const completedWorks = scope.completedWorks.map((item) => ({ ...item, tp: transformer.code }));
-  const plannedWorks: PlannedWork[] = scope.plannedWorks.map((item) => ({
-    id: item.id,
-    tp: transformer.code,
-    work: item.work,
-    status: item.status ?? "planned",
-    date: item.date,
-  }));
-
-  return (
-    <div className="grid h-full min-h-0 grid-cols-[repeat(18,minmax(0,1fr))] grid-rows-[minmax(196px,196fr)_minmax(298px,298fr)_minmax(336px,336fr)_minmax(209px,209fr)] gap-2 overflow-y-auto scrollbar-none">
-      {/* 1-qator - KPI kartalari (6 x span-3) */}
-      <KpiRow kpis={kpis} />
-
-      {/* 2-qator */}
-      <ConsumptionDynamicsCard className="col-span-6" days={scope.days} />
-      <div className="col-span-6 grid min-h-0 grid-rows-[minmax(0,148fr)_minmax(0,142fr)] gap-2">
-        <ViolationsCard counts={scope.violationCounts} />
-        <ResponsibleStaffCard staff={scope.staff} footerHref="/staff" />
-      </div>
-      <TopTransformersCard
-        className="col-span-6"
-        title="Eng ko’p sarfga ega abonentlar"
-        columns={SUBSCRIBER_COLUMNS}
-        rows={subscriberRows}
-        valueSuffix="kWh"
-        valueDigits={0}
-        axisWidth={72}
-        footerHref="/subscribers"
-      />
-
-      {/* 3-qator */}
-      <RingStatsCard
-        className="col-span-4"
-        title="Qarzdorlik"
-        rings={debtRings}
-        max={debtStep * 5}
-        tickLabels={Array.from({ length: 6 }, (_, index) => tick(debtStep * index))}
-        month={MONTH}
-        columns={["Turi", "Summa"]}
-      />
-      <LossDamageCard
-        className="col-span-4"
-        kinds={lossKinds}
-        max={damageMax}
-        unit={damageUnit.unit}
-        total={dec(sumValues(damageValues))}
-        month={MONTH}
-      />
-      <InteractiveMapCard
-        className="col-span-6"
-        markers={[
-          { id: transformer.id, lat: transformer.lat, lng: transformer.lng, label: transformer.code },
-        ]}
-        // Tultip xaritaning o'ng yarmini egallaydi - marker chap tomonda
-        // ko'rinishi uchun markaz sharqqa surilgan (zoom 15 da ~90px).
-        center={{ lat: transformer.lat, lng: transformer.lng + MAP_CENTER_SHIFT }}
-        zoom={MAP_ZOOM}
-        selectedId={transformer.id}
-        fitDistrict={false}
-        tooltip={tooltip}
-      />
-      <QuickMetricsCard className="col-span-4" metrics={quickMetrics} />
-
-      {/* 4-qator */}
-      <CompletedWorksCard className="col-span-6" works={completedWorks} />
-      <PlannedWorksCard className="col-span-8" works={plannedWorks} />
-      <DownloadReportsCard className="col-span-4" />
-    </div>
+function buildMonths(series: readonly ScopeSeriesPoint[]): DynamicsMonth[] {
+  return series.flatMap((point) =>
+    point.hasData
+      ? [
+          {
+            key: point.key,
+            label: point.fullLabel,
+            billed: point.totalKwh ?? 0,
+            consumed: point.usefulKwh ?? 0,
+            loss: point.lossKwh ?? 0,
+          },
+        ]
+      : [],
   );
 }
 
-function sumValues(values: Record<string, number>): number {
-  return Object.values(values).reduce((total, value) => total + value, 0);
+function buildDebtorRows(debtors: TransformerDetailStats["debtors"]): TopRow[] {
+  return debtors.rows.map((row) => ({
+    id: row.id,
+    label: row.contractNumber,
+    value: row.debtUzs,
+    valueText: money(row.debtUzs),
+    cells: [
+      <Link key="contract" href={`/subscribers/${row.id}`} className="font-medium text-brand hover:underline">
+        {row.contractNumber}
+      </Link>,
+      <Link key="name" href={`/subscribers/${row.id}`} className="block truncate transition-colors hover:text-brand">
+        {row.fullName}
+      </Link>,
+      SUBSCRIBER_KIND_LABEL[row.kind],
+      <span key="debt" className="font-medium text-accent-red">
+        {money(row.debtUzs)}
+      </span>,
+    ],
+  }));
+}
+
+function buildMap(
+  transformer: TransformerEntity,
+  { current, previous }: TransformerDetailStats["comparison"],
+) {
+  const snapshot = transformer.snapshot;
+  const coordinates =
+    snapshot?.lat != null && snapshot.lng != null ? { lat: snapshot.lat, lng: snapshot.lng } : null;
+  const markers: MapMarker[] = coordinates
+    ? [{ id: transformer.id, ...coordinates, label: transformer.name, kind: "tp" }]
+    : [];
+
+  // Koordinata yo'q - xarita butun tumanni ko'rsatadi, tultip hech narsaga ishora qilmasin.
+  if (!coordinates) return { markers, tooltip: null, center: undefined, zoom: undefined };
+
+  const total = current.energy?.totalKwh ?? null;
+  const parts = scaled(total, "kWh");
+  const change = delta(total, previous?.energy?.totalKwh);
+  const tooltip: MapTooltip = {
+    title: "Transformator",
+    label: transformer.name,
+    // Tanlangan marker glifi rangi (`#ff383c`, `chipMarker`) - xaritadagi belgi izohi, holat emas.
+    dot: "bg-accent-red",
+    caption: "Bu oygi umumiy oqim",
+    value: parts.value,
+    unit: parts.unit,
+    note: change
+      ? Math.abs(change.diff) < 0.005
+        ? "O’tgan oyga nisbatan umumiy oqim o’zgarmagan."
+        : `O’tgan oyga nisbatan ${kwhDiff(Math.abs(change.diff))} ${change.diff > 0 ? "ko’p" : "kam"}.`
+      : undefined,
+  };
+
+  return {
+    markers,
+    tooltip,
+    center: { lat: coordinates.lat, lng: coordinates.lng + MAP_CENTER_SHIFT },
+    zoom: MAP_ZOOM,
+  };
+}
+
+function buildQuickMetrics(summary: ScopeSummary): QuickMetric[] {
+  const { subscribers, subscriberList, appeals, violations } = summary;
+  const notUploaded = "Yuklanmagan";
+  return [
+    {
+      id: "offline-share",
+      icon: UserMinus,
+      tile: "bg-[#3b82f6]",
+      caption: "Aloqadan chiqqan abonentlar ulushi",
+      value: subscribers ? percent(share(subscribers.offline, subscribers.total)) : notUploaded,
+    },
+    {
+      id: "debtors",
+      icon: HandCoins,
+      tile: "bg-[#ff928a]",
+      caption: "Qarzdor abonentlar",
+      value: subscriberList.uploaded ? count(subscriberList.debtors) : notUploaded,
+    },
+    {
+      id: "credit",
+      icon: PiggyBank,
+      tile: "bg-[#ffae4c]",
+      caption: "Haqdorlik",
+      value: subscriberList.uploaded ? money(subscriberList.creditUzs) : notUploaded,
+    },
+    {
+      id: "overdue-appeals",
+      icon: ClockAlert,
+      tile: "bg-[#8979ff]",
+      caption: "Muddati buzilgan murojaatlar",
+      value: appeals.uploaded ? `${count(appeals.byStatus.OVERDUE)} / ${num(appeals.total)}` : notUploaded,
+    },
+    {
+      id: "damage-kwh",
+      icon: Gauge,
+      tile: "bg-[#2bb7dc]",
+      caption: "Qoidabuzarlik zarari (taxminiy)",
+      value: violations.uploaded ? energy(violations.damageKwh) : notUploaded,
+    },
+  ];
+}
+
+function toWork(row: RepairRow): RepairWork {
+  return { id: row.id, tp: row.transformer.name, work: row.label, date: formatDate(row.date) };
+}
+
+// ---------------------------------------------------------------------------
+// Sahifa
+// ---------------------------------------------------------------------------
+
+/** Yuqori yo'lak: breadcrumb (Transformatorlar / podstansiya / fider / TP) va holat sanasi. */
+function TransformerHeader({ transformer, period }: { transformer: TransformerEntity; period: PeriodInfo }) {
+  const snapshot = transformer.snapshot;
+  const facts = [
+    snapshot?.capacityKva != null ? `Quvvati: ${num(snapshot.capacityKva)} kVA` : null,
+    snapshot?.address ? `Manzil: ${snapshot.address}` : null,
+    `${formatDate(period.reportDate)} holatiga`,
+  ].filter((fact): fact is string => fact !== null);
+  const crumbClass = "shrink-0 text-ink-muted transition-colors hover:text-brand";
+
+  return (
+    <header className="col-span-full flex h-10 min-w-0 items-center justify-between gap-4 rounded-xl bg-surface px-4">
+      <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-xs">
+        <Link href="/transformers" className={crumbClass}>
+          Transformatorlar
+        </Link>
+        <Icon icon={ChevronRight} size={14} className="shrink-0 text-ink-soft" />
+        <Link href={`/substations/${transformer.substation.id}`} className={crumbClass} title="Podstansiya sahifasi">
+          {transformer.substation.name} podstansiyasi
+        </Link>
+        <Icon icon={ChevronRight} size={14} className="shrink-0 text-ink-soft" />
+        <Link href={`/feeders/${transformer.feeder.id}`} className={crumbClass} title="Fider sahifasi">
+          {transformer.feeder.name} fideri
+        </Link>
+        <Icon icon={ChevronRight} size={14} className="shrink-0 text-ink-soft" />
+        <h1 className="truncate text-sm font-bold text-ink">{transformer.name}</h1>
+      </nav>
+      <p className="min-w-0 truncate text-[11px] text-ink-soft" title={facts.join(" · ")}>
+        {facts.join(" · ")}
+      </p>
+    </header>
+  );
+}
+
+/**
+ * TP detal sahifasi, `/transformers/[id]`. Grid va qator balandliklari fider
+ * sahifasi (`FeederDetail`) bilan bir xil: 18 ustun, 8px oraliq, sarlavha +
+ * 4 qator.
+ */
+export function TransformerDetail({ data }: { data: TransformerDetailData }) {
+  const { transformer, period, stats } = data;
+
+  if (!stats) {
+    return (
+      <div className="flex h-full min-h-0 flex-col gap-2">
+        <TransformerHeader transformer={transformer} period={period} />
+        <div className="min-h-0 flex-1 rounded-2xl bg-surface">
+          <EmptyState
+            variant="inline"
+            title={`${transformer.name} uchun ${period.label} oyida ma’lumot yo’q`}
+            description="Boshqa oyni tanlang yoki shu oy uchun Transformatorlar faylini yuklang."
+          />
+        </div>
+      </div>
+    );
+  }
+
+  const { comparison, series, debtors, repairs } = stats;
+  const summary = comparison.current;
+  const scope = { kind: "transformer", id: transformer.id } as const;
+  const month = monthName(period.month);
+  const staff = transformer.snapshot?.staff ?? null;
+  const map = buildMap(transformer, comparison);
+
+  const damageKinds: DamageKind[] = VIOLATOR_TYPE_ORDER.map((type) => ({
+    id: type,
+    label: VIOLATOR_TYPE_LABEL[type],
+    value: summary.violations.damageUzsByType[type],
+    color: DAMAGE_COLOR[type],
+  }));
+
+  // Bajarilganlar - eng yangisi yuqorida; rejalashtirilganlar - eng yaqini yuqorida.
+  const done = repairs.rows.filter((row) => row.done).reverse().map(toWork);
+  const planned = repairs.rows.filter((row) => !row.done).map(toWork);
+
+  return (
+    <div className="scrollbar-none grid h-full min-h-0 grid-cols-18 grid-rows-[auto_minmax(187px,196fr)_minmax(285px,298fr)_minmax(321px,336fr)_minmax(199px,209fr)] gap-2 overflow-y-auto">
+      <TransformerHeader transformer={transformer} period={period} />
+
+      {/* 1-qator - KPI kartalari (6 x span-3) */}
+      <KpiRow kpis={buildKpis(comparison, series)} />
+
+      {/* 2-qator */}
+      <ConsumptionDynamicsCard className="col-span-6" months={buildMonths(series)} />
+      <div className="col-span-6 grid min-h-0 grid-rows-[minmax(0,148fr)_minmax(0,142fr)] gap-2">
+        <ViolationsCard
+          counts={summary.violations.byType}
+          damageUzs={summary.violations.damageUzs}
+          uploaded={summary.violations.uploaded}
+        />
+        <ResponsibleStaffCard
+          staff={staff ? { name: staff.name } : null}
+          caption={`${transformer.name} transformatori`}
+          footerLabel="Xodim faoliyati"
+          footerHref={staff ? `/staff?q=${encodeURIComponent(staff.name)}` : undefined}
+        />
+      </div>
+      <TopTransformersCard
+        className="col-span-6"
+        title="Eng katta qarzdor abonentlar"
+        columns={DEBTOR_COLUMNS}
+        rows={buildDebtorRows(debtors)}
+        axisWidth={72}
+        footerLabel={`Barcha abonentlar (${num(summary.subscriberList.total)})`}
+        footerHref={debtors.uploaded ? scopedHref("/subscribers", scope) : undefined}
+        emptyText={debtors.uploaded ? "Qarzdor abonentlar yo’q" : "Abonentlar ro’yxati yuklanmagan"}
+      />
+
+      {/* 3-qator */}
+      <DebtCard
+        className="col-span-4"
+        month={month}
+        total={summary.subscriberList.debtUzs}
+        household={summary.subscriberList.debtByKind.HOUSEHOLD}
+        legal={summary.subscriberList.debtByKind.LEGAL}
+        uploaded={summary.subscriberList.uploaded}
+      />
+      <LossDamageCard
+        className="col-span-4"
+        title="Keltirilgan zarar"
+        kinds={damageKinds}
+        total={summary.violations.damageUzs}
+        month={month}
+        uploaded={summary.violations.uploaded}
+      />
+      <InteractiveMapCard
+        className="col-span-6"
+        markers={map.markers}
+        tooltip={map.tooltip}
+        selectedId={transformer.id}
+        fitDistrict={map.markers.length === 0}
+        center={map.center}
+        zoom={map.zoom}
+        footerHref={`/map?node=${scopeParam(scope)}`}
+      />
+      <QuickMetricsCard className="col-span-4" metrics={buildQuickMetrics(summary)} />
+
+      {/* 4-qator */}
+      <CompletedWorksCard className="col-span-6" works={done} />
+      <PlannedWorksCard className="col-span-8" works={planned} />
+      <DownloadReportsCard className="col-span-4" query={`scope=${scopeParam(scope)}&month=${period.key}`} />
+    </div>
+  );
 }

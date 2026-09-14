@@ -2,29 +2,47 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { SubscriberDetail } from "@/components/subscribers/SubscriberDetail";
-import { findSubscriber, SUBSCRIBERS } from "@/lib/data/subscribers";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { getPreviousPeriod, getSelectedPeriod } from "@/lib/period";
+import { getSubscriber, getSubscriberHistory } from "@/lib/queries/entities";
+import { getSubscriberRelated } from "@/lib/queries/subscribers-related";
 
-/**
- * 48 ta abonentning hammasi build vaqtida statik prerender qilinadi -
- * ma'lumot mock bo'lgani uchun sahifalar o'zgarmaydi.
- */
-export function generateStaticParams() {
-  return SUBSCRIBERS.map((item) => ({ id: item.id }));
+/** Dinamika: tanlangan oy va undan oldingi eng ko'pi 12 oy (`malumotlar.md` 2-bo'lim). */
+const HISTORY_LIMIT = 12;
+
+export async function generateMetadata({ params }: PageProps<"/subscribers/[id]">): Promise<Metadata> {
+  const [{ id }, period] = await Promise.all([params, getSelectedPeriod()]);
+  if (!period) return { title: "Abonent" };
+  // `getSubscriber` - `cache`: sahifa bilan bitta so'rov.
+  const subscriber = await getSubscriber(id, period.id);
+  return { title: subscriber ? subscriber.fullName : "Abonent topilmadi" };
 }
 
-export async function generateMetadata(
-  props: PageProps<"/subscribers/[id]">,
-): Promise<Metadata> {
-  const { id } = await props.params;
-  const subscriber = findSubscriber(id);
-  return { title: subscriber ? subscriber.name : "Abonent topilmadi" };
-}
+export default async function Page({ params }: PageProps<"/subscribers/[id]">) {
+  const period = await getSelectedPeriod();
+  if (!period) return <EmptyState />;
 
-export default async function Page(props: PageProps<"/subscribers/[id]">) {
-  const { id } = await props.params;
-  const subscriber = findSubscriber(id);
-  // Noto'g'ri id bilan kirilsa 404 - `notFound()` dan keyin kod bajarilmaydi.
+  const { id } = await params;
+  const subscriber = await getSubscriber(id, period.id);
   if (!subscriber) notFound();
 
-  return <SubscriberDetail subscriber={subscriber} />;
+  const [history, related, previousPeriod] = await Promise.all([
+    getSubscriberHistory(id),
+    subscriber.snapshot ? getSubscriberRelated(id, period.id) : Promise.resolve(null),
+    getPreviousPeriod(period),
+  ]);
+
+  // Tanlangan oydan keyingi oylar ko'rsatilmaydi - sahifa shu oy "holatiga".
+  const points = history.filter((point) => point.key <= period.key).slice(-HISTORY_LIMIT);
+  const previous = previousPeriod ? (points.find((point) => point.key === previousPeriod.key) ?? null) : null;
+
+  return (
+    <SubscriberDetail
+      subscriber={subscriber}
+      period={period}
+      history={points}
+      previous={previous}
+      related={related}
+    />
+  );
 }

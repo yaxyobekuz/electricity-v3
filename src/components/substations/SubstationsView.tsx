@@ -1,273 +1,203 @@
 "use client";
 
-// Qidiruv va holat filtri holat (`useState`) talab qiladi - shuning uchun
-// ro'yxatning o'zi mijoz komponenti, `page.tsx` esa server bo'lib qoladi.
+// Qidiruv holat (`useState`) talab qiladi - shuning uchun ro'yxatning o'zi
+// mijoz komponenti, ma'lumot esa `page.tsx` (server) dan props bo'lib keladi.
 
-import { Factory, FileDown, Gauge, PlugZap, Plus, Zap, ZapOff } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Factory } from "lucide-react";
+import { type ReactNode, useMemo } from "react";
 
+import {
+  CellLink,
+  FlowStatCards,
+  MissingTemplates,
+  type RegistryFlowSummary,
+  StaffCell,
+  TextCell,
+  matchesQuery,
+  useSearchQuery,
+} from "@/components/substations/registry-parts";
 import { Card } from "@/components/ui/Card";
-import { Badge, type BadgeTone } from "@/components/ui/DataTable";
-import { type FilterChip, FilterChips, SearchField } from "@/components/ui/Filters";
-import { HeaderButton, PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { SearchField } from "@/components/ui/Filters";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { type RegistryColumn, RegistryTable } from "@/components/ui/RegistryTable";
 import { StatCard, StatRow } from "@/components/ui/StatCard";
-import { transformerCount } from "@/lib/data/relations";
-import { dec, energy, num } from "@/lib/data/seed";
-import {
-  SUBSTATION_STATUS_LABEL,
-  SUBSTATIONS,
-  type SubstationStatus,
-  substationTotals,
-} from "@/lib/data/substations";
-import { cn } from "@/lib/ui/cn";
+import { formatDate, num, percent } from "@/lib/format";
 
-/** Holat -> nishon rangi: faol yashil, ta'mirda sariq, nosoz qizil. */
-const STATUS_TONE: Record<SubstationStatus, BadgeTone> = {
-  active: "green",
-  maintenance: "amber",
-  fault: "red",
-};
-
-/**
- * Yuklama chizig'ining rangi: 90% dan yuqorisi kritik, 75% dan yuqorisi
- * ogohlantirish, qolgani me'yorda. Chegaralar dispetcherlik reglamentidan.
- */
-function loadTone(load: number): string {
-  if (load > 90) return "bg-accent-red";
-  if (load > 75) return "bg-accent-amber";
-  return "bg-accent-green";
+/** Jadval qatori - `listSubstations` qatorining mijozga kerakli qismi. */
+export interface SubstationListItem {
+  id: string;
+  name: string;
+  totalKwh: number;
+  usefulKwh: number;
+  lossKwh: number;
+  lossPercent: number | null;
+  /** Fiderlar shu oyga yuklanmagan bo'lsa - null. */
+  feederCount: number | null;
+  /** Transformatorlar shu oyga yuklanmagan bo'lsa - null. */
+  transformerCount: number | null;
+  /** Σ TP holatlaridagi abonentlar; Transformatorlar yuklanmagan bo'lsa - null. */
+  subscriberCount: number | null;
+  capacityKva: number | null;
+  staffName: string | null;
+  address: string | null;
 }
 
-/**
- * Jadval katagidagi yuklama chizig'i.
- *
- * `ProgressBar` bu yerda ishlatilmaydi: uning yo'lagi `bg-canvas`, qator
- * ustiga borilganda esa qatorning foni ham `bg-canvas` bo'ladi - yo'lak
- * ko'rinmay qolardi. Shu sababli yo'lak `bg-black/10` (ikkala fonda ham
- * ajralib turadi). Ayni paytda katak `<span>` ichida bo'lgani uchun element
- * ham `<span>`: `<div>` ni `<span>`/`<a>` ichiga solish HTML qoidasiga zid.
- */
-function LoadBar({ load }: { load: number }) {
-  return (
-    <span className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-black/10">
-      <span
-        className={cn("block h-full rounded-full", loadTone(load))}
-        style={{ width: `${Math.max(0, Math.min(100, load))}%` }}
-      />
-    </span>
-  );
+export interface SubstationsSummary extends RegistryFlowSummary {
+  /** `getScopeSummary(tuman).counts` - shablon yuklanmagan bo'lsa null. */
+  counts: { substations: number | null; feeders: number | null; transformers: number | null };
 }
 
-type StatusFilter = SubstationStatus | "all";
-
-/**
- * Saralash va umumiy hisob-kitob modul darajasida bir marta bajariladi:
- * ma'lumot statik, har render'da qayta hisoblashning hojati yo'q.
- */
-const ROWS = [...SUBSTATIONS].sort((a, b) => b.loadPercent - a.loadPercent);
-const TOTALS = substationTotals();
-
-function countOf(status: SubstationStatus): number {
-  return SUBSTATIONS.filter((item) => item.status === status).length;
-}
-
-/** Filtr tugmalaridagi sonlar ham ma'lumotdan hisoblanadi (qo'lda yozilmaydi). */
-const CHIPS: ReadonlyArray<FilterChip<StatusFilter>> = [
-  { value: "all", label: "Barchasi", count: SUBSTATIONS.length },
-  {
-    value: "active",
-    label: SUBSTATION_STATUS_LABEL.active,
-    count: countOf("active"),
-    dot: "bg-accent-green",
-  },
-  {
-    value: "maintenance",
-    label: SUBSTATION_STATUS_LABEL.maintenance,
-    count: countOf("maintenance"),
-    dot: "bg-accent-amber",
-  },
-  {
-    value: "fault",
-    label: SUBSTATION_STATUS_LABEL.fault,
-    count: countOf("fault"),
-    dot: "bg-accent-red",
-  },
+/** Ustunlar: faqat shablondagi va undan hisoblangan qiymatlar. */
+const BASE_COLUMNS: RegistryColumn[] = [
+  { key: "name", label: "Nomi", grow: 14, align: "left" },
+  { key: "total", label: "Umumiy oqim, kWh", grow: 11 },
+  { key: "useful", label: "Foydali oqim, kWh", grow: 11 },
+  { key: "loss", label: "Yo’qotish, kWh", grow: 10 },
+  { key: "lossPercent", label: "Yo’qotish, %", grow: 8 },
+  { key: "feeders", label: "Fiderlar", grow: 7 },
+  { key: "transformers", label: "TP", grow: 6 },
+  { key: "subscribers", label: "Abonentlar", grow: 8 },
+  { key: "capacity", label: "Quvvati, kVA", grow: 9 },
+  { key: "staff", label: "Ma’sul xodim", grow: 15, align: "left" },
+  { key: "address", label: "Manzil", grow: 18, align: "left" },
 ];
 
-/** Eng yirik podstansiya - "Umumiy quvvat" kartasining izohi uchun. */
-const LARGEST = ROWS.reduce(
-  (best, item) => (item.capacityMva > best.capacityMva ? item : best),
-  ROWS[0],
-);
-
-const COLUMNS: RegistryColumn[] = [
-  { key: "code", label: "Kod", grow: 8, align: "left" },
-  { key: "name", label: "Nomi", grow: 22, align: "left" },
-  { key: "area", label: "Hudud", grow: 18, align: "left" },
-  { key: "voltage", label: "Kuchlanish", grow: 12 },
-  { key: "status", label: "Holat", grow: 12 },
-  { key: "capacity", label: "Quvvat, MVA", grow: 10 },
-  { key: "load", label: "Yuklama", grow: 12 },
-  { key: "feeders", label: "Fider", grow: 8 },
-  { key: "transformers", label: "TP", grow: 8 },
-  { key: "consumption", label: "Iste’mol", grow: 14 },
-  { key: "loss", label: "Yo’qotish", grow: 10 },
-];
+/** Qator kataklari ustun kalitlari bo'yicha - yashirilgan ustun oson tushib qoladi. */
+function rowCells(item: SubstationListItem): Record<string, ReactNode> {
+  return {
+    name: (
+      <CellLink href={`/substations/${item.id}`} strong>
+        {item.name}
+      </CellLink>
+    ),
+    total: num(item.totalKwh),
+    useful: num(item.usefulKwh),
+    loss: num(item.lossKwh),
+    lossPercent: percent(item.lossPercent),
+    feeders: num(item.feederCount),
+    transformers: num(item.transformerCount),
+    subscribers: num(item.subscriberCount),
+    capacity: num(item.capacityKva),
+    staff: <StaffCell name={item.staffName} />,
+    address: <TextCell value={item.address} />,
+  };
+}
 
 /**
  * Podstansiyalar ro'yxati (1476x1064 ish maydoni).
  *
  * Balandlik taqsimoti: yo'lak 56 + 8, ko'rsatkichlar 104 + 8, qolgani -
  * jadval kartasi. Sahifaning o'zi skroll bo'lmaydi, faqat jadval ichi
- * skroll qilinadi (`min-h-0 flex-1 overflow-y-auto`).
+ * skroll qilinadi. Qatorlar Excel fayldagi tartibda.
+ *
+ * Shablon shu oyga yuklanmagan bo'lsa unga bog'liq ustun (Fiderlar, TP,
+ * Abonentlar) ko'rsatilmaydi va asboblar qatorida "... yuklanmagan" turadi.
  */
-export function SubstationsView() {
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<StatusFilter>("all");
+export function SubstationsView({
+  periodLabel,
+  reportDate,
+  initialQuery,
+  rows,
+  uploads,
+  summary,
+}: {
+  periodLabel: string;
+  /** Davrning hisobot sanasi, ISO. */
+  reportDate: string;
+  /** `?q=` qiymati. */
+  initialQuery: string;
+  rows: readonly SubstationListItem[];
+  uploads: { substations: boolean; feeders: boolean; transformers: boolean };
+  summary: SubstationsSummary;
+}) {
+  const [query, setQuery] = useSearchQuery(initialQuery);
 
-  const rows = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return ROWS.filter((item) => {
-      if (status !== "all" && item.status !== status) return false;
-      if (!needle) return true;
-      // Qidiruv nom, kod va hudud bo'yicha - hujjatlarda shu uchtasi ishlatiladi.
-      return (
-        item.name.toLowerCase().includes(needle) ||
-        item.code.toLowerCase().includes(needle) ||
-        item.area.toLowerCase().includes(needle)
-      );
-    });
-  }, [query, status]);
+  const visible = useMemo(
+    () => rows.filter((item) => matchesQuery(query, [item.name, item.address, item.staffName])),
+    [rows, query],
+  );
+
+  const columns = useMemo(
+    () =>
+      BASE_COLUMNS.filter((column) => {
+        if (column.key === "feeders") return uploads.feeders;
+        if (column.key === "transformers" || column.key === "subscribers") return uploads.transformers;
+        return true;
+      }),
+    [uploads.feeders, uploads.transformers],
+  );
+
+  const missing = [
+    uploads.feeders ? null : "Fiderlar",
+    uploads.transformers ? null : "Transformatorlar",
+  ].filter((label): label is string => label !== null);
+
+  const { counts } = summary;
+  const countHint = [
+    counts.feeders != null ? `Fiderlar: ${num(counts.feeders)} ta` : null,
+    counts.transformers != null ? `TP: ${num(counts.transformers)} ta` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2">
       <PageHeader
         title="Podstansiyalar"
-        subtitle={`Baliqchi tumani — ${num(TOTALS.total)} ta podstansiya`}
-      >
-        <HeaderButton icon={FileDown} tone="muted">
-          Hisobot
-        </HeaderButton>
-        <HeaderButton icon={Plus} tone="brand">
-          Yangi podstansiya
-        </HeaderButton>
-      </PageHeader>
+        subtitle={`${formatDate(reportDate)} holatiga${
+          counts.substations != null ? ` — ${num(counts.substations)} ta podstansiya` : ""
+        }`}
+      />
 
       <StatRow>
         <StatCard
-          label="Jami podstansiya"
-          value={num(TOTALS.total)}
-          unit="ta"
+          label="Podstansiyalar"
+          value={num(counts.substations)}
+          unit={counts.substations != null ? "ta" : undefined}
           icon={Factory}
-          accent="bg-accent-blue"
-          tint="bg-tint-blue"
-          hint={`Faol: ${num(TOTALS.active)} ta`}
-        />
-        <StatCard
-          label="Umumiy quvvat"
-          value={dec(TOTALS.capacity)}
-          unit="MVA"
-          icon={Zap}
           accent="bg-accent-indigo"
           tint="bg-tint-indigo"
-          hint={`Eng yirigi: ${LARGEST.code} — ${num(LARGEST.capacityMva)} MVA`}
+          hint={uploads.substations ? countHint || undefined : "Podstansiyalar yuklanmagan"}
         />
-        <StatCard
-          label="O&rsquo;rtacha yuklama"
-          value={dec(TOTALS.load)}
-          unit="%"
-          icon={Gauge}
-          accent="bg-accent-green"
-          tint="bg-tint-green"
-          // 85% - dispetcher me'yori: undan yuqorisi qizil izoh bilan belgilanadi.
-          hint={
-            TOTALS.load > 85 ? "Me’yordan yuqori yuklama" : "Me’yor doirasida"
-          }
-          hintTone={TOTALS.load > 85 ? "bad" : "good"}
-        />
-        <StatCard
-          label="Oylik iste&rsquo;mol"
-          value={energy(TOTALS.consumption)}
-          icon={PlugZap}
-          accent="bg-accent-teal"
-          tint="bg-tint-teal"
-          hint={`Bittasiga o’rtacha: ${energy(TOTALS.consumption / TOTALS.total)}`}
-        />
-        <StatCard
-          label="O&rsquo;rtacha yo&rsquo;qotish"
-          value={dec(TOTALS.loss)}
-          unit="%"
-          icon={ZapOff}
-          accent="bg-accent-red"
-          tint="bg-tint-red"
-          hint={
-            TOTALS.loss > 10
-              ? "Me’yor (10%) dan yuqori"
-              : "Me’yor (10%) doirasida"
-          }
-          hintTone={TOTALS.loss > 10 ? "bad" : "good"}
-        />
+        <FlowStatCards summary={summary} missing="Podstansiyalar yuklanmagan" />
       </StatRow>
 
       <Card className="min-h-0 flex-1">
-        <div className="flex shrink-0 items-center gap-2 pb-3">
-          <SearchField
-            value={query}
-            onChange={setQuery}
-            placeholder="Nom, kod yoki hudud..."
-            label="Podstansiyalar ro&rsquo;yxatidan qidirish"
-            className="w-[240px]"
-          />
-          <FilterChips items={CHIPS} value={status} onChange={setStatus} />
-          <span className="ml-auto shrink-0 text-[11px] text-ink-soft">
-            {num(rows.length)} ta yozuv
-          </span>
-        </div>
+        {uploads.substations ? (
+          <>
+            <div className="flex shrink-0 items-center gap-2 pb-3">
+              <SearchField
+                value={query}
+                onChange={setQuery}
+                placeholder="Nom, manzil yoki xodim..."
+                label="Podstansiyalar ro’yxatidan qidirish"
+                className="w-60"
+              />
+              <MissingTemplates labels={missing} />
+              <span className="ml-auto shrink-0 text-[11px] text-ink-soft">
+                {num(visible.length)} ta yozuv
+              </span>
+            </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto scrollbar-none">
-          <RegistryTable
-            columns={COLUMNS}
-            emptyText={"So’rovga mos podstansiya topilmadi"}
-            rows={rows.map((item) => ({
-              key: item.id,
-              // Qator bosilganda detal sahifasi ochiladi - sahifaning asosiy amali.
-              href: `/substations/${item.id}`,
-              cells: [
-                <span key="code" className="font-semibold">
-                  {item.code}
-                </span>,
-                <span key="name" className="truncate font-medium">
-                  {item.name}
-                </span>,
-                <span key="area" className="truncate text-ink-muted">
-                  {item.area}
-                </span>,
-                item.voltage,
-                <Badge key="status" tone={STATUS_TONE[item.status]}>
-                  {SUBSTATION_STATUS_LABEL[item.status]}
-                </Badge>,
-                num(item.capacityMva),
-                // Son + chiziq yonma-yon: son qat'iy kenglikda, chiziq qolgan joyda.
-                <span key="load" className="flex w-full items-center gap-1.5">
-                  <span className="w-8 shrink-0 text-right font-medium">
-                    {dec(item.loadPercent, 0)}%
-                  </span>
-                  <LoadBar load={item.loadPercent} />
-                </span>,
-                num(item.feeders),
-                num(transformerCount(item.id)),
-                energy(item.consumptionKwh),
-                <span
-                  key="loss"
-                  className={item.lossPercent > 12 ? "font-medium text-trend-up" : undefined}
-                >
-                  {dec(item.lossPercent)}%
-                </span>,
-              ],
-            }))}
+            <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto">
+              <RegistryTable
+                columns={columns}
+                emptyText={rows.length === 0 ? "Bu oyda podstansiya yo’q" : "So’rovga mos podstansiya topilmadi"}
+                rows={visible.map((item) => {
+                  const cells = rowCells(item);
+                  return { key: item.id, cells: columns.map((column) => cells[column.key]) };
+                })}
+              />
+            </div>
+          </>
+        ) : (
+          <EmptyState
+            variant="inline"
+            title="Podstansiyalar yuklanmagan"
+            description={`${periodLabel} uchun Podstansiyalar fayli yuklanmagan.`}
           />
-        </div>
+        )}
       </Card>
     </div>
   );

@@ -2,33 +2,37 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { FeederDetail } from "@/components/feeders/FeederDetail";
-import { FEEDERS, findFeeder } from "@/lib/data/feeders";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { getSelectedPeriod } from "@/lib/period";
+import { getFeeder } from "@/lib/queries/entities";
+import { getFeederDashboard } from "@/lib/queries/feeders-detail";
 
-// Marshrut: /feeders/[id]. Ro'yxatdagi har bir qator shu sahifaga olib keladi.
+// Marshrut: /feeders/[id]. Id - bazadagi fider yozuvi, oylar davomida o'zgarmaydi.
 
-/** Barcha fiderlar oldindan ma'lum - sahifalar qurilishda statik prerender qilinadi. */
-export function generateStaticParams() {
-  return FEEDERS.map((item) => ({ id: item.id }));
-}
-
-export async function generateMetadata(
-  props: PageProps<"/feeders/[id]">,
-): Promise<Metadata> {
+export async function generateMetadata(props: PageProps<"/feeders/[id]">): Promise<Metadata> {
   const { id } = await props.params;
-  const feeder = findFeeder(id);
-  return { title: feeder ? feeder.name : "Fider topilmadi" };
+  const period = await getSelectedPeriod();
+  // Davr yo'q bo'lsa ham fider nomi kerak - holatsiz so'rov (bo'sh periodId).
+  const feeder = await getFeeder(id, period?.id ?? "");
+  return { title: feeder ? `${feeder.name} fideri` : "Fider topilmadi" };
 }
 
 /**
- * Fider detal sahifasi - maket (Figma `4029:930`) 1ga 1, kartalardagi
- * ko'rsatkichlar hozircha maketdagi qiymatlar. Noma'lum `id` 404 beradi.
+ * Fider detal sahifasi. Noma'lum `id` - 404; fider bor, lekin tanlangan oyda
+ * holati yo'q - sarlavha va "ma'lumot yo'q" holati.
  *
  * `PageProps` - Next.js generatsiya qiladigan **global** tip, import
  * qilinmaydi. Parametrlar Next 16 da promise: `await props.params`.
  */
 export default async function FeederPage(props: PageProps<"/feeders/[id]">) {
   const { id } = await props.params;
-  if (!findFeeder(id)) notFound();
+  const period = await getSelectedPeriod();
+  if (!period) return <EmptyState />;
 
-  return <FeederDetail />;
+  const feeder = await getFeeder(id, period.id);
+  if (!feeder) notFound();
+
+  const dashboard = feeder.snapshot ? await getFeederDashboard(feeder, period) : null;
+
+  return <FeederDetail data={{ feeder, period, dashboard }} />;
 }
