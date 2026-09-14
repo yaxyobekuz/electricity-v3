@@ -1,3 +1,4 @@
+import { FEEDERS } from "./feeders";
 import { SUBSCRIBERS } from "./subscribers";
 import { SUBSTATIONS } from "./substations";
 import { TRANSFORMERS } from "./transformers";
@@ -24,6 +25,8 @@ function countBy<T>(items: readonly T[], key: (item: T) => string): Map<string, 
 
 const SUBSCRIBERS_BY_TRANSFORMER = countBy(SUBSCRIBERS, (item) => item.transformerId);
 const TRANSFORMERS_BY_SUBSTATION = countBy(TRANSFORMERS, (item) => item.substationId);
+// Fider kodi faqat podstansiya ichida noyob ("F-01" har birida bor).
+const TRANSFORMERS_BY_FEEDER = countBy(TRANSFORMERS, (item) => `${item.substationId}/${item.feeder}`);
 
 const SUBSCRIBERS_BY_SUBSTATION = (() => {
   const map = new Map<string, number>();
@@ -44,6 +47,11 @@ export function transformerCount(substationId: string): number {
   return TRANSFORMERS_BY_SUBSTATION.get(substationId) ?? 0;
 }
 
+/** Fiderga ulangan transformatorlar soni. */
+export function feederTransformerCount(substationId: string, feederCode: string): number {
+  return TRANSFORMERS_BY_FEEDER.get(`${substationId}/${feederCode}`) ?? 0;
+}
+
 /** Podstansiya orqali ta'minlanadigan iste'molchilar soni. */
 export function substationSubscriberCount(substationId: string): number {
   return SUBSCRIBERS_BY_SUBSTATION.get(substationId) ?? 0;
@@ -55,6 +63,6 @@ export function districtTotals() {
     substations: SUBSTATIONS.length,
     transformers: TRANSFORMERS.length,
     subscribers: SUBSCRIBERS.length,
-    feeders: SUBSTATIONS.reduce((sum, item) => sum + item.feeders, 0),
+    feeders: FEEDERS.length,
   };
 }

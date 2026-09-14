@@ -129,7 +129,8 @@ export const TRANSFORMERS: readonly Transformer[] = CODES.map((code, index) => {
     substationId: substation.id,
     substationName: substation.name,
     area: substation.area,
-    feeder: `F-${String((index % 9) + 1).padStart(2, "0")}`,
+    // Podstansiyada bor fiderlardan biri (`feeders.ts` dagi kod bilan bir xil).
+    feeder: `F-${String((index % substation.feeders) + 1).padStart(2, "0")}`,
     status,
     powerKva,
     loadPercent,
