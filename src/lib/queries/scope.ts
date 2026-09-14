@@ -199,8 +199,11 @@ export interface ScopeSummary {
    */
   counts: { substations: number | null; feeders: number | null; transformers: number | null };
   /**
-   * Σ TP holatlaridagi "Aloqadagi" / "Aloqadan chiqqan" abonentlar.
-   * Transformatorlar shabloni shu oyga yuklanmagan bo'lsa - null.
+   * Abonentlar soni: Transformatorlar shu oyga yuklangan bo'lsa - Σ TP
+   * holatlaridagi "Aloqadagi" / "Aloqadan chiqqan" (4.5 qoida ular abonentlar
+   * ro'yxatiga tengligini kafolatlaydi); yuklanmagan, lekin Abonentlar
+   * yuklangan bo'lsa - abonentlar ro'yxatidan (aloqada = "Aloqada", qolganlari -
+   * aloqadan chiqqan). Ikkalasi ham yo'q - null.
    */
   subscribers: { total: number; online: number; offline: number } | null;
   /** Abonentlar ro'yxatidan (`SubscriberSnapshot`). */
@@ -424,11 +427,18 @@ async function computeScopeSummary(periodId: string, scope: Scope, db: Db): Prom
     appeals.byStatus[group.status] += group._count._all;
   }
 
+  const listOnline = subscriberList.byStatus.ONLINE;
+  const subscribers = uploads.TRANSFORMERS
+    ? { total: online + offline, online, offline }
+    : uploads.SUBSCRIBERS
+      ? { total: subscriberList.total, online: listOnline, offline: subscriberList.total - listOnline }
+      : null;
+
   return {
     uploads,
     energy,
     counts,
-    subscribers: uploads.TRANSFORMERS ? { total: online + offline, online, offline } : null,
+    subscribers,
     subscriberList,
     violations,
     appeals,
@@ -466,8 +476,9 @@ export interface ScopeSeriesPoint {
   lossKwh: number | null;
   lossPercent: number | null;
   /**
-   * Σ TP holatlaridagi aloqadagi + aloqadan chiqqan abonentlar.
-   * Transformatorlar shu oyga yuklanmagan bo'lsa - null.
+   * Abonentlar soni - `ScopeSummary.subscribers.total` bilan bir xil qoida:
+   * Transformatorlar yuklangan bo'lsa Σ TP holatlari, aks holda abonentlar
+   * ro'yxati; ikkalasi ham yo'q - null.
    */
   subscribers: number | null;
   /** Abonentlar ro'yxati shu oyga yuklanmagan bo'lsa - null. */
@@ -545,6 +556,7 @@ export async function getScopeSeries(
     db.subscriberSnapshot.groupBy({
       by: ["periodId"],
       where: scoped,
+      _count: { _all: true },
       _sum: { debtUzs: true },
     }),
     db.violation.groupBy({
@@ -579,7 +591,9 @@ export async function getScopeSeries(
       lossPercent: point?.lossPercent ?? null,
       subscribers: uploaded.TRANSFORMERS
         ? (subscribers?._sum.onlineSubscribers ?? 0) + (subscribers?._sum.offlineSubscribers ?? 0)
-        : null,
+        : uploaded.SUBSCRIBERS
+          ? (debt?._count._all ?? 0)
+          : null,
       debtUzs: uploaded.SUBSCRIBERS ? amount(debt?._sum.debtUzs) : null,
       violations: uploaded.VIOLATIONS ? (violation?._count._all ?? 0) : null,
       damageUzs: uploaded.VIOLATIONS ? amount(violation?._sum.damageUzs) : null,

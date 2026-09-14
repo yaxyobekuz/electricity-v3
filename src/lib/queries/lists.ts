@@ -87,12 +87,46 @@ async function transformerAggregates(
   return new Map(rows.map((row) => [row.id, row]));
 }
 
-/** Transformatorlar shu oyga yuklanmagan bo'lsa - null (0 emas). */
-function subscriberCounts(aggregate: ChildAggregate | undefined, uploaded: boolean): SubscriberCounts | null {
-  if (!uploaded) return null;
-  const online = aggregate?.online ?? 0;
-  const offline = aggregate?.offline ?? 0;
-  return { total: online + offline, online, offline };
+/** Kalit (podstansiya yoki fider id) bo'yicha shu oy abonentlar ro'yxatidan sonlar. */
+async function subscriberListAggregates(
+  periodId: string,
+  groupColumn: "substationId" | "feederId",
+  db: Db,
+): Promise<Map<string, SubscriberCounts>> {
+  const column = raw(groupColumn === "substationId" ? `t."substationId"` : `t."feederId"`);
+  const rows = await queryRows<{ id: string; total: number; online: number }>(
+    db,
+    sql`
+    SELECT ${column} AS id,
+           COUNT(*)::int AS total,
+           (COUNT(*) FILTER (WHERE s."meterStatus" = 'ONLINE'))::int AS online
+    FROM subscriber_snapshots s
+    JOIN transformers t ON t.id = s."transformerId"
+    WHERE s."periodId" = ${periodId}
+    GROUP BY 1`,
+  );
+  return new Map(rows.map((row) => [row.id, { total: row.total, online: row.online, offline: row.total - row.online }]));
+}
+
+/**
+ * Abonent sonlari - `ScopeSummary.subscribers` qoidasi: Transformatorlar
+ * yuklangan bo'lsa Σ TP holatlari, aks holda (Abonentlar yuklangan bo'lsa)
+ * abonentlar ro'yxati, ikkalasi ham yo'q - null (0 emas).
+ */
+function subscriberCounts(
+  id: string,
+  tpAggregates: Map<string, ChildAggregate>,
+  listAggregates: Map<string, SubscriberCounts> | null,
+  uploads: { TRANSFORMERS: boolean; SUBSCRIBERS: boolean },
+): SubscriberCounts | null {
+  if (uploads.TRANSFORMERS) {
+    const aggregate = tpAggregates.get(id);
+    const online = aggregate?.online ?? 0;
+    const offline = aggregate?.offline ?? 0;
+    return { total: online + offline, online, offline };
+  }
+  if (uploads.SUBSCRIBERS && listAggregates) return listAggregates.get(id) ?? { total: 0, online: 0, offline: 0 };
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -115,7 +149,7 @@ export interface SubstationRow {
   feederCount: number | null;
   /** Shu oyda holati bor TP lar; Transformatorlar yuklanmagan bo'lsa - null. */
   transformerCount: number | null;
-  /** Σ TP holatlari; Transformatorlar yuklanmagan bo'lsa - null. */
+  /** Abonentlar: Σ TP holatlari yoki (Transformatorlar yuklanmagan bo'lsa) abonentlar ro'yxati; ikkalasi ham yo'q - null. */
   subscribers: SubscriberCounts | null;
 }
 
@@ -135,6 +169,7 @@ export async function listSubstations(periodId: string, db: Db = prisma): Promis
     transformerAggregates(periodId, "substationId", db),
     periodUploads(periodId, db),
   ]);
+  const listAggregates = uploads.TRANSFORMERS ? null : await subscriberListAggregates(periodId, "substationId", db);
   const feeders = new Map(feederCounts.map((row) => [row.id, row.feeders]));
   return snapshots.map((snap) => ({
     id: snap.substationId,
@@ -147,7 +182,7 @@ export async function listSubstations(periodId: string, db: Db = prisma): Promis
     staff: snap.staff,
     feederCount: uploads.FEEDERS ? (feeders.get(snap.substationId) ?? 0) : null,
     transformerCount: uploads.TRANSFORMERS ? (transformers.get(snap.substationId)?.transformers ?? 0) : null,
-    subscribers: subscriberCounts(transformers.get(snap.substationId), uploads.TRANSFORMERS),
+    subscribers: subscriberCounts(snap.substationId, transformers, listAggregates, uploads),
   }));
 }
 
@@ -168,7 +203,7 @@ export interface FeederRow {
   staff: EntityRef | null;
   /** Shu oyda holati bor TP lar; Transformatorlar yuklanmagan bo'lsa - null. */
   transformerCount: number | null;
-  /** Σ TP holatlari; Transformatorlar yuklanmagan bo'lsa - null. */
+  /** Abonentlar: Σ TP holatlari yoki (Transformatorlar yuklanmagan bo'lsa) abonentlar ro'yxati; ikkalasi ham yo'q - null. */
   subscribers: SubscriberCounts | null;
 }
 
@@ -189,6 +224,7 @@ export async function listFeeders(
     transformerAggregates(periodId, "feederId", db),
     periodUploads(periodId, db),
   ]);
+  const listAggregates = uploads.TRANSFORMERS ? null : await subscriberListAggregates(periodId, "feederId", db);
   return snapshots.map((snap) => ({
     id: snap.feederId,
     name: snap.feeder.name,
@@ -198,7 +234,7 @@ export async function listFeeders(
     capacityKva: toNumber(snap.capacityKva),
     staff: snap.staff,
     transformerCount: uploads.TRANSFORMERS ? (transformers.get(snap.feederId)?.transformers ?? 0) : null,
-    subscribers: subscriberCounts(transformers.get(snap.feederId), uploads.TRANSFORMERS),
+    subscribers: subscriberCounts(snap.feederId, transformers, listAggregates, uploads),
   }));
 }
 
