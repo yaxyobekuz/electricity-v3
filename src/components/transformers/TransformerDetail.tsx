@@ -1,116 +1,61 @@
-"use client";
-
-// @nivo grafiklari faqat brauzerda ishlaydi, shuning uchun butun detal
-// ko'rinishi mijoz komponenti. Sahifaning o'zi (`page.tsx`) server bo'lib
-// qoladi - ma'lumot va metadata o'sha yerda tanlanadi.
-
-import { ResponsiveBar } from "@nivo/bar";
-import { ResponsiveLine } from "@nivo/line";
-import { Activity, Gauge, MapPin, Thermometer, Zap } from "lucide-react";
-import { useMemo } from "react";
-
-import { Card, CardBody, CardFooterLink, CardHeader } from "@/components/ui/Card";
-import { Badge, type BadgeTone, DataTable, type TableColumn } from "@/components/ui/DataTable";
-import { InfoGrid, type InfoItem, ProgressBar } from "@/components/ui/InfoGrid";
-import { HeaderButton, PageHeader } from "@/components/ui/PageHeader";
-import { StatCard, StatRow } from "@/components/ui/StatCard";
-import { subscriberCount } from "@/lib/data/relations";
-import { between, dec, energy, money, num } from "@/lib/data/seed";
 import {
-  type Subscriber,
-  SUBSCRIBER_KIND_LABEL,
+  ArrowBigDownDash,
+  ArrowDown,
+  ArrowUp,
+  ClockArrowUp,
+  Gauge,
+  HandCoins,
+  PlugZap,
+  SquareCheckBig,
+  Thermometer,
+  UserCheck,
+  UserMinus,
+  Users,
+  Zap,
+  ZapOff,
+} from "lucide-react";
+
+import { CompletedWorksCard } from "@/components/cards/CompletedWorksCard";
+import { ConsumptionDynamicsCard } from "@/components/cards/ConsumptionDynamicsCard";
+import { DownloadReportsCard } from "@/components/cards/DownloadReportsCard";
+import { InteractiveMapCard, type MapTooltip } from "@/components/cards/InteractiveMapCard";
+import { type KpiItem, KpiRow } from "@/components/cards/KpiRow";
+import { type LossKind, LossDamageCard } from "@/components/cards/LossDamageCard";
+import { type PlannedWork, PlannedWorksCard } from "@/components/cards/PlannedWorksCard";
+import { type QuickMetric, QuickMetricsCard } from "@/components/cards/QuickMetricsCard";
+import { ResponsibleStaffCard } from "@/components/cards/ResponsibleStaffCard";
+import { RingStatsCard, type StatRing } from "@/components/cards/RingStatsCard";
+import { type TopRow, TopTransformersCard } from "@/components/cards/TopTransformersCard";
+import { ViolationsCard } from "@/components/cards/ViolationsCard";
+import { Badge, type BadgeTone, type TableColumn } from "@/components/ui/DataTable";
+import { dec, money, num } from "@/lib/data/seed";
+import {
   SUBSCRIBER_STATUS_LABEL,
   type SubscriberStatus,
 } from "@/lib/data/subscribers";
-import {
-  type Transformer,
-  TRANSFORMER_STATUS_LABEL,
-  type TransformerStatus,
-} from "@/lib/data/transformers";
-import { cn } from "@/lib/ui/cn";
+import { transformerScope } from "@/lib/data/transformer-scope";
+import type { Transformer, TransformerStatus } from "@/lib/data/transformers";
 
-/**
- * Holat nishonining ranglari. Umumiy `Badge` da neytral (kulrang) ohang yo'q,
- * "O'chirilgan" esa aynan shunday ko'rinishi kerak - shuning uchun mahalliy
- * nishon (xuddi ro'yxat sahifasidagidek).
+/*
+ * Maket - fider detal sahifasi (Figma `4029:930`), kartalar ham o'sha. Farqi
+ * faqat ma'lumotda: har bir karta shu TP qamrovidagi sonlarni ko'rsatadi
+ * (`@/lib/data/transformer-scope`). Bu fayl sonlarni kartalar kutgan matnga
+ * aylantiradi va ikonka/rang tanlaydi.
  */
-const STATUS_PILL: Record<TransformerStatus, string> = {
-  ok: "bg-tint-green text-accent-green",
-  warning: "bg-tint-amber text-accent-amber",
-  critical: "bg-tint-red text-accent-red",
-  offline: "bg-canvas text-ink-soft",
+
+/** Maket "bugun"i avgustda - halqali diagrammalardagi oy nomi. */
+const MONTH = "Avgust";
+
+const MAP_ZOOM = 15;
+/** Zoom 15 da 1° uzunlik ~23 300px, ya'ni 0,004° ~ 90px. */
+const MAP_CENTER_SHIFT = 0.004;
+
+const STATUS_DOT: Record<TransformerStatus, string> = {
+  ok: "bg-accent-green",
+  warning: "bg-accent-amber",
+  critical: "bg-accent-red",
+  offline: "bg-ink-soft",
 };
-
-function StatusPill({ status }: { status: TransformerStatus }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex shrink-0 rounded-full px-2.5 py-1 text-[11px] leading-[13px] font-semibold whitespace-nowrap",
-        STATUS_PILL[status],
-      )}
-    >
-      {TRANSFORMER_STATUS_LABEL[status]}
-    </span>
-  );
-}
-
-/** Yuklama chizig'ining rangi: 100% dan yuqori - qizil, 85% dan - sariq. */
-function loadTone(load: number): string {
-  if (load > 100) return "bg-accent-red";
-  if (load > 85) return "bg-accent-amber";
-  return "bg-accent-green";
-}
-
-/**
- * Oxirgi 30 kunning yorliqlari. Maketdagi "bugun" - 10-avgust, ya'ni oraliq
- * 12-iyuldan boshlanadi (iyulda 20 kun + avgustda 10 kun). Sana `new Date()`
- * bilan hisoblanmaydi: server va mijoz bir xil markup chizishi shart.
- */
-const DAY_LABELS: readonly string[] = Array.from({ length: 30 }, (_, index) =>
-  index < 20 ? `${12 + index}-iyul` : `${index - 19}-avgust`,
-);
-
-/** O'qda joy tor - oy nomi qisqartiriladi, to'liq sana maslahatda qoladi. */
-const SHORT_MONTH: Record<string, string> = { iyul: "iyl", avgust: "avg" };
-
-/** O’q yorliqlari: har 5-kun va oxirgi kun (qalashib ketmasligi uchun). */
-const DAILY_TICKS: readonly string[] = DAY_LABELS.filter(
-  (_, index) => index % 5 === 0 || index === DAY_LABELS.length - 1,
-);
-
-function formatDayLabel(label: string): string {
-  const [day, month] = label.split("-");
-  return `${day}-${SHORT_MONTH[month] ?? month}`;
-}
-
-/** "3,2K" yoki "840" - o'qda to'liq son sig'maydi. */
-function formatAxisKwh(value: number): string {
-  if (value === 0) return "0";
-  return value >= 1000 ? `${dec(value / 1000)}K` : num(value);
-}
-
-/** Maslahatdagi to'liq qiymat. */
-function formatTooltipKwh(value: number): string {
-  return energy(value);
-}
-
-const CHART_THEME = {
-  text: { fontFamily: "inherit", fontSize: 10, fill: "#767676" },
-  axis: {
-    ticks: { text: { fontFamily: "inherit", fontSize: 10, fill: "#767676" } },
-    domain: { line: { stroke: "transparent" } },
-  },
-  grid: { line: { stroke: "#f0f0f0", strokeDasharray: "2 2" } },
-} as const;
-
-/**
- * Sutkalik yuklama shakli (0..23 soat): tunda pasayish, ertalabki va kechki
- * pik. Nisbiy koeffitsiyent - TP ning joriy yuklamasiga ko'paytiriladi.
- */
-const HOUR_SHAPE: readonly number[] = [
-  0.42, 0.38, 0.35, 0.34, 0.36, 0.44, 0.58, 0.72, 0.8, 0.78, 0.74, 0.72, 0.7, 0.68,
-  0.7, 0.74, 0.82, 0.92, 1, 0.98, 0.9, 0.78, 0.62, 0.5,
-];
 
 const SUBSCRIBER_TONE: Record<SubscriberStatus, BadgeTone> = {
   active: "green",
@@ -119,382 +64,341 @@ const SUBSCRIBER_TONE: Record<SubscriberStatus, BadgeTone> = {
 };
 
 const SUBSCRIBER_COLUMNS: TableColumn[] = [
-  { key: "code", label: "Shartnoma", grow: 14, align: "left" },
+  { key: "code", label: "Shartnoma", grow: 18 },
   { key: "name", label: "Nomi", grow: 26, align: "left" },
-  { key: "kind", label: "Turi", grow: 12 },
-  { key: "status", label: "Holat", grow: 14 },
-  { key: "usage", label: "Oylik kWh", grow: 16, align: "right" },
-  { key: "balance", label: "Balans", grow: 18, align: "right" },
+  { key: "status", label: "Holat", grow: 15 },
+  { key: "usage", label: "Iste’mol", grow: 15 },
+  // Manfiy balans ("-1,2 mln so'm") eng uzun katak - kesilmasligi uchun kengroq.
+  { key: "balance", label: "Balans", grow: 26 },
 ];
 
-export function TransformerDetail({
-  transformer,
-  subscribers,
-}: {
-  transformer: Transformer;
-  subscribers: readonly Subscriber[];
-}) {
-  // 30 kunlik qator TP ma'lumotidan keladi, yorliqlar esa qat'iy - shuning
-  // uchun ular faqat TP o'zgarganda qayta yig'iladi.
-  const dailyData = useMemo(
-    () => [
-      {
-        id: "Kunlik iste\u2019mol",
-        data: transformer.daily.map((value, index) => ({
-          x: DAY_LABELS[index],
-          y: value,
-        })),
-      },
-    ],
-    [transformer.daily],
-  );
+/** "12,4" - ming kWh da, KPI kartalaridagi maket formati. */
+function thousands(kwh: number): string {
+  return dec(kwh / 1000);
+}
 
-  // Sutkalik profil: shakl + determinlashgan kichik tebranish. Kod raqami
-  // seed sifatida ishlatiladi, shunda har bir TP o'z profiliga ega bo'ladi.
-  const profile = useMemo(() => {
-    const seed = Number(transformer.code.slice(3)) + 7;
-    const values = HOUR_SHAPE.map((factor, hour) =>
-      // O'chirilgan TP umuman yuklama bermaydi - tebranish ham qo'shilmaydi.
-      transformer.loadPercent === 0
-        ? 0
-        : Math.max(
-            0,
-            Math.round(
-              transformer.loadPercent * factor + between(seed * 3.1 + hour * 7.13, -4, 4),
-            ),
-          ),
-    );
-    const peakValue = Math.max(...values);
-    const peakHour = peakValue > 0 ? values.indexOf(peakValue) : -1;
+/**
+ * Oyma-oy farq qatori. Energiya va qarzdorlik kontekstida o'sish yomon
+ * (maketdagi kabi: "ko'p" - qizil, "kam" - yashil).
+ */
+function delta(current: number, previous: number, format: (value: number) => string) {
+  const up = current > previous;
+  return {
+    deltaIcon: up ? ArrowUp : ArrowDown,
+    deltaText: `${format(Math.abs(current - previous))} ga ${up ? "ko’p" : "kam"}`,
+    deltaTone: up ? ("bad" as const) : ("good" as const),
+  };
+}
 
-    return {
-      peakHour,
-      peakValue,
-      // Pik ustun alohida kalitga yoziladi: nivo `colors` massivini kalitlar
-      // tartibida qo'llaydi, shu bilan funksiyasiz ikki rang olinadi.
-      bars: values.map((value, hour) => ({
-        hour: String(hour),
-        load: hour === peakHour ? 0 : value,
-        peak: hour === peakHour ? value : 0,
-      })),
-    };
-  }, [transformer.code, transformer.loadPercent]);
+/** Summa va birlik: million so'mdan boshlab "mln", undan kichigi "ming". */
+function moneyParts(sum: number): { value: string; unit: string; divisor: number } {
+  return sum >= 1_000_000
+    ? { value: dec(sum / 1_000_000), unit: "mln so’m", divisor: 1_000_000 }
+    : { value: dec(sum / 1000), unit: "ming so’m", divisor: 1000 };
+}
 
-  const hourTicks = useMemo(
-    () => profile.bars.filter((_, hour) => hour % 3 === 0).map((bar) => bar.hour),
-    [profile.bars],
-  );
+/** 1-2-5 qatoridagi eng kichik qadam: `value` dan katta yoki teng. */
+function niceStep(value: number): number {
+  if (value <= 0) return 1;
+  const base = 10 ** Math.floor(Math.log10(value));
+  const step = [1, 2, 2.5, 5, 10].find((factor) => factor * base >= value) ?? 10;
+  return Number((step * base).toPrecision(6));
+}
 
-  // Joriy yuklamaning kVA dagi qiymati - foizning o'zi kam narsa aytadi.
-  const loadKva = Math.round((transformer.powerKva * transformer.loadPercent) / 100);
+function tick(value: number): string {
+  return String(Number(value.toFixed(2))).replace(".", ",");
+}
 
-  const info: readonly InfoItem[] = [
-    { key: "code", label: "Kod", value: transformer.code },
-    { key: "substation", label: "Podstansiya", value: transformer.substationName },
-    { key: "feeder", label: "Fider", value: transformer.feeder },
-    { key: "voltage", label: "Kuchlanish", value: transformer.voltage },
+export function TransformerDetail({ transformer }: { transformer: Transformer }) {
+  const scope = transformerScope(transformer);
+  const { energy } = scope;
+
+  /* --- 1-qator: KPI --------------------------------------------------- */
+
+  const debtNow = moneyParts(scope.debt);
+  const kpis: KpiItem[] = [
     {
-      key: "status",
-      label: "Holat",
-      value: TRANSFORMER_STATUS_LABEL[transformer.status],
+      id: "billed",
+      title: "Hisoblangan",
+      value: thousands(energy.billed),
+      unit: "ming kWh",
+      icon: Zap,
+      ...delta(energy.billed, energy.billedPrev, (value) => `${thousands(value)} ming kWh`),
+      previous: `O’tgan oy: ${thousands(energy.billedPrev)} ming kWh`,
+      bars: scope.bars.billed,
+      barsLabel: "30 kun",
+      tint: "bg-tint-blue",
+      accent: "bg-accent-blue",
     },
     {
-      key: "power",
-      label: "Nominal quvvat",
-      value: `${num(transformer.powerKva)} kVA`,
+      id: "consumed",
+      title: "Iste’mol",
+      value: thousands(energy.consumed),
+      unit: "ming kWh",
+      icon: PlugZap,
+      ...delta(energy.consumed, energy.consumedPrev, (value) => `${thousands(value)} ming kWh`),
+      previous: `O’tgan oy: ${thousands(energy.consumedPrev)} ming kWh`,
+      bars: scope.bars.consumed,
+      barsLabel: "30 kun",
+      tint: "bg-tint-green",
+      accent: "bg-accent-green",
     },
     {
-      key: "commissioned",
-      label: "Ishga tushirilgan",
-      value: `${transformer.commissioned}-yil`,
+      id: "loss",
+      title: "Yo’qotish",
+      value: thousands(energy.loss),
+      unit: "ming kWh",
+      icon: ZapOff,
+      ...delta(energy.loss, energy.lossPrev, (value) => `${thousands(value)} ming kWh`),
+      previous: `O’tgan oy: ${thousands(energy.lossPrev)} ming kWh`,
+      bars: scope.bars.loss,
+      barsLabel: "30 kun",
+      tint: "bg-tint-red",
+      accent: "bg-accent-red",
     },
-    { key: "check", label: "So\u2019nggi tekshiruv", value: transformer.lastCheck },
     {
-      key: "subscribers",
-      label: "Abonentlar soni",
-      value: `${num(subscriberCount(transformer.id))} ta`,
+      id: "subscribers",
+      title: "Abonentlar",
+      value: num(scope.subscribers.length),
+      unit: "ta umumiy",
+      icon: Users,
+      deltaIcon: scope.offlineMeters > 0 ? UserMinus : UserCheck,
+      deltaText:
+        scope.offlineMeters > 0 ? `${scope.offlineMeters} ta aloqada emas` : "Hammasi aloqada",
+      deltaTone: scope.offlineMeters > 0 ? "bad" : "good",
+      previous: `Qarzdor: ${scope.debtors} ta`,
+      bars: scope.bars.usage,
+      barsLabel: "12 oy",
+      tint: "bg-tint-purple",
+      accent: "bg-accent-purple",
     },
     {
-      key: "offline-meters",
-      label: "Aloqada emas (hisoblagich)",
-      value: (
-        <span
-          className={transformer.offlineMeters > 0 ? "text-accent-red" : "text-ink"}
-        >
-          {num(transformer.offlineMeters)} ta
-        </span>
-      ),
+      id: "load",
+      title: "Yuklama",
+      value: dec(transformer.loadPercent, 0),
+      unit: `% · ${num(transformer.powerKva)} kVA`,
+      icon: Gauge,
+      deltaIcon: Thermometer,
+      deltaText: `Harorat: ${num(transformer.temperature)}°C`,
+      deltaTone: transformer.temperature > 75 ? "bad" : "good",
+      previous: transformer.loadPercent > 100 ? "Nominaldan oshgan" : `Kuchlanish: ${transformer.voltage}`,
+      bars: scope.bars.hourly,
+      barsLabel: "24 soat",
+      tint: "bg-tint-indigo",
+      accent: "bg-accent-indigo",
     },
-    { key: "responsible", label: "Mas\u2019ul xodim", value: transformer.responsible },
     {
-      key: "loss",
-      label: "Yo\u2019qotish",
-      value: `${dec(transformer.lossPercent)}%`,
-    },
-    { key: "address", label: "Manzil", value: transformer.address, wide: true },
-    {
-      key: "coords",
-      label: "Koordinatalar",
-      // Koordinata - o'lchov emas, balki texnik identifikator: `dec` dagi
-      // vergul bu yerda noto'g'ri bo'lardi, shuning uchun nuqta saqlanadi.
-      value: `${transformer.lat.toFixed(5)}, ${transformer.lng.toFixed(5)}`,
-      wide: true,
+      id: "debt",
+      title: "Qarzdorlik",
+      value: debtNow.value,
+      unit: debtNow.unit,
+      icon: HandCoins,
+      ...delta(scope.debt, scope.debtPrev, money),
+      previous: `O’tgan oy: ${money(scope.debtPrev)}`,
+      bars: scope.bars.debt,
+      barsLabel: "12 oy",
+      tint: "bg-tint-brown",
+      accent: "bg-accent-brown",
     },
   ];
 
+  /* --- 2-qator: abonentlar jadvali ------------------------------------ */
+
+  const subscriberRows: TopRow[] = scope.subscribers.map((item) => ({
+    id: item.id,
+    label: item.code,
+    value: item.monthlyKwh,
+    cells: [
+      <span key="code" className="font-medium">
+        {item.code}
+      </span>,
+      <span key="name" className="block truncate">
+        {item.name}
+      </span>,
+      <Badge key="status" tone={SUBSCRIBER_TONE[item.status]}>
+        {SUBSCRIBER_STATUS_LABEL[item.status]}
+      </Badge>,
+      `${num(item.monthlyKwh)} kWh`,
+      <span key="balance" className={item.balance < 0 ? "font-medium text-accent-red" : undefined}>
+        {money(item.balance)}
+      </span>,
+    ],
+  }));
+
+  /* --- 3-qator: qarzdorlik, zarar, xarita, tezkor ko'rsatkichlar ------ */
+
+  const debtUnit = moneyParts(scope.debt);
+  const debtStep = niceStep((scope.debt / debtUnit.divisor) * 1.1 / 5);
+  const debtRings: StatRing[] = [
+    { id: "total", label: "Umumiy", amount: money(scope.debtByKind.total), color: "#3cc3df" },
+    { id: "household", label: "Aholi", amount: money(scope.debtByKind.household), color: "#ff928a" },
+    { id: "other", label: "Yuridik va budjet", amount: money(scope.debtByKind.other), color: "#8979ff" },
+  ].map((ring) => ({
+    ...ring,
+    arc: scope.debtByKind[ring.id as keyof typeof scope.debtByKind] / debtUnit.divisor,
+  }));
+
+  const damageUnit = moneyParts(Math.max(...Object.values(scope.damageByKind)));
+  const damageValues = {
+    natural: scope.damageByKind.natural / damageUnit.divisor,
+    technological: scope.damageByKind.technological / damageUnit.divisor,
+    theft: scope.damageByKind.theft / damageUnit.divisor,
+  };
+  const lossKinds: LossKind[] = [
+    { id: "Tabiiy", value: damageValues.natural, amount: dec(damageValues.natural), color: "#55c4ae" },
+    {
+      id: "Texnologik",
+      value: damageValues.technological,
+      amount: dec(damageValues.technological),
+      color: "#f4cf3b",
+    },
+    { id: "O’g’irlik", value: damageValues.theft, amount: dec(damageValues.theft), color: "#ff928a" },
+  ];
+  // Shkala 8 ta teng bo'linmaga bo'linadi - eng kattasi 85% atrofida to'lsin.
+  const damageMax = niceStep((Math.max(...lossKinds.map((kind) => kind.value)) * 1.15) / 8) * 8;
+
+  const billedDiff = energy.billed - energy.billedPrev;
+  const tooltip: MapTooltip = {
+    title: "Transformator holati",
+    label: transformer.code,
+    dot: STATUS_DOT[transformer.status],
+    value: thousands(energy.billed),
+    unit: "ming kWh",
+    note:
+      transformer.status === "offline" ? (
+        "Transformator o’chirilgan - abonentlar energiya olmayapti."
+      ) : transformer.loadPercent > 100 ? (
+        <>
+          Yuklama <span className="font-bold">{dec(transformer.loadPercent, 0)}%</span> - nominal
+          quvvatdan oshgan, ta’mirlash rejalashtirilgan.
+        </>
+      ) : transformer.temperature > 75 ? (
+        <>
+          Chulg&rsquo;am harorati{" "}
+          <span className="font-bold">{num(transformer.temperature)}&deg;C</span> - tekshiruv kerak.
+        </>
+      ) : (
+        <>
+          Ushbu transformator o&rsquo;tgan oyga nisbatan{" "}
+          <span className="font-bold">{thousands(Math.abs(billedDiff))}</span> ming kWh ga{" "}
+          {billedDiff > 0 ? "ko’p" : "kam"} energiya iste&rsquo;mol qilmoqda.
+        </>
+      ),
+  };
+
+  const peak = scope.peakHour;
+  const quickMetrics: QuickMetric[] = [
+    {
+      id: "avg-usage",
+      icon: Zap,
+      tile: "bg-accent-blue",
+      caption: "Kunlik o’rtacha iste’mol",
+      value: `${num(energy.billed / 30)} kWh`,
+    },
+    {
+      id: "avg-loss",
+      icon: ArrowBigDownDash,
+      tile: "bg-[#ff928a]",
+      caption: "Kunlik o’rtacha yo’qotish",
+      value: `${num(energy.loss / 30)} kWh`,
+    },
+    {
+      id: "temperature",
+      icon: Thermometer,
+      tile: "bg-[#ffae4c]",
+      caption: "Chulg’am harorati",
+      value: `${num(transformer.temperature)}°C`,
+    },
+    {
+      id: "peak-hours",
+      icon: ClockArrowUp,
+      tile: "bg-[#8979ff]",
+      caption: "Pik yuklama vaqti",
+      value: peak >= 0 ? `${peak}:00 - ${peak + 1}:00` : "—",
+    },
+    {
+      id: "last-check",
+      icon: SquareCheckBig,
+      tile: "bg-[#2bb7dc]",
+      caption: "So’nggi ko’rik",
+      value: transformer.lastCheck,
+    },
+  ];
+
+  /* --- 4-qator: ish jurnali ------------------------------------------- */
+
+  const completedWorks = scope.completedWorks.map((item) => ({ ...item, tp: transformer.code }));
+  const plannedWorks: PlannedWork[] = scope.plannedWorks.map((item) => ({
+    id: item.id,
+    tp: transformer.code,
+    work: item.work,
+    status: item.status ?? "planned",
+    date: item.date,
+  }));
+
   return (
-    <div className="flex h-full min-h-0 flex-col gap-2 overflow-y-auto scrollbar-none">
-      <PageHeader
-        title={transformer.code}
-        subtitle={`${transformer.substationName} \u00b7 ${transformer.feeder} \u00b7 ${transformer.area}`}
-        backHref="/transformers"
-        backLabel={"Ro\u2019yxatga qaytish"}
-      >
-        <StatusPill status={transformer.status} />
-        <HeaderButton icon={MapPin} href="/map">
-          Xaritada
-        </HeaderButton>
-      </PageHeader>
+    <div className="grid h-full min-h-0 grid-cols-[repeat(18,minmax(0,1fr))] grid-rows-[minmax(196px,196fr)_minmax(298px,298fr)_minmax(336px,336fr)_minmax(209px,209fr)] gap-2 overflow-y-auto scrollbar-none">
+      {/* 1-qator - KPI kartalari (6 x span-3) */}
+      <KpiRow kpis={kpis} />
 
-      <StatRow>
-        <StatCard
-          label="Joriy yuklama"
-          value={dec(transformer.loadPercent)}
-          unit="%"
-          icon={Gauge}
-          accent="bg-accent-blue"
-          tint="bg-tint-blue"
-          hintTone={transformer.loadPercent > 100 ? "bad" : "flat"}
-          hint={
-            // `StatCard` izohni <p> ichida chizadi, u yerga <div> qo'yib
-            // bo'lmaydi (brauzer <p> ni yopib yuboradi va gidratatsiya
-            // buziladi) - shuning uchun chiziq span'lardan yasalgan.
-            <span className="flex items-center gap-2">
-              <span className="h-1 flex-1 overflow-hidden rounded-full bg-black/10">
-                <span
-                  className={cn("block h-full rounded-full", loadTone(transformer.loadPercent))}
-                  style={{ width: `${Math.min(100, transformer.loadPercent)}%` }}
-                />
-              </span>
-              <span className="shrink-0">{num(loadKva)} kVA</span>
-            </span>
-          }
-        />
-        <StatCard
-          label="Nominal quvvat"
-          value={num(transformer.powerKva)}
-          unit="kVA"
-          icon={Zap}
-          accent="bg-accent-indigo"
-          tint="bg-tint-indigo"
-          hint={transformer.voltage}
-        />
-        <StatCard
-          label="Harorat"
-          value={num(transformer.temperature)}
-          unit={"\u00b0C"}
-          icon={Thermometer}
-          accent={transformer.temperature > 75 ? "bg-accent-red" : "bg-accent-amber"}
-          tint={transformer.temperature > 75 ? "bg-tint-red" : "bg-tint-amber"}
-          hintTone={transformer.temperature > 75 ? "bad" : "flat"}
-          hint={
-            transformer.temperature > 75
-              ? "Chulg\u2019am qizib ketgan - tekshiruv kerak"
-              : "Chulg\u2019am harorati me\u2019yorda"
-          }
-        />
-        <StatCard
-          label={"Oylik iste\u2019mol"}
-          value={energy(transformer.consumptionKwh)}
-          icon={Activity}
-          accent="bg-accent-teal"
-          tint="bg-tint-teal"
-          hint={`Yo\u2019qotish: ${dec(transformer.lossPercent)}%`}
-        />
-      </StatRow>
-
-      {/* Qatorlar `minmax(Npx, Nfr)`: 1064px ish maydonida ular mutanosib
-          cho'ziladi (sahifa pastida bo'sh kulrang yo'lak qolmaydi), pastroq
-          ekranda esa eng kichik balandlikda qolib, sahifa skroll bo'ladi.
-          `min-h-0` berilmaydi - shunda grid o'z mazmunidan pastga siqilmaydi. */}
-      <div className="grid flex-1 grid-cols-12 grid-rows-[minmax(416px,416fr)_minmax(300px,300fr)] gap-2">
-        <Card className="col-span-5">
-          <CardHeader title={"Umumiy ma\u2019lumotlar"} />
-          <CardBody className="overflow-y-auto scrollbar-none">
-            <InfoGrid items={info} columns={3} />
-          </CardBody>
-        </Card>
-
-        <Card className="col-span-7">
-          <CardHeader title={"30 kunlik iste\u2019mol"}>
-            <span className="text-[11px] text-ink-soft">
-              Jami: {energy(transformer.consumptionKwh)}
-            </span>
-          </CardHeader>
-          <CardBody>
-            <div className="min-h-0 flex-1">
-              <ResponsiveLine
-                data={dailyData}
-                margin={{ top: 8, right: 16, bottom: 24, left: 46 }}
-                xScale={{ type: "point" }}
-                yScale={{ type: "linear", min: 0, max: "auto" }}
-                curve="monotoneX"
-                colors={["#007cd2"]}
-                lineWidth={2}
-                theme={CHART_THEME}
-                axisTop={null}
-                axisRight={null}
-                axisBottom={{
-                  tickSize: 0,
-                  tickPadding: 8,
-                  tickValues: DAILY_TICKS,
-                  format: formatDayLabel,
-                }}
-                axisLeft={{ tickSize: 0, tickPadding: 8, format: formatAxisKwh }}
-                enableGridX={false}
-                // Maydon to'ldirish: yuqorida quyuqroq, pastda shaffof.
-                enableArea
-                areaOpacity={1}
-                defs={[
-                  {
-                    id: "dailyFill",
-                    type: "linearGradient",
-                    colors: [
-                      { offset: 0, color: "#007cd2", opacity: 0.3 },
-                      { offset: 100, color: "#007cd2", opacity: 0 },
-                    ],
-                  },
-                ]}
-                fill={[{ match: "*", id: "dailyFill" }]}
-                pointSize={4}
-                pointColor="#ffffff"
-                pointBorderWidth={1.5}
-                pointBorderColor={{ from: "seriesColor" }}
-                enableCrosshair
-                useMesh
-                animate={false}
-                yFormat={formatTooltipKwh}
-                tooltip={({ point }) => (
-                  <div className="rounded-md bg-surface px-2 py-1 whitespace-nowrap shadow-md">
-                    <div className="text-[10px] text-ink-soft">{point.data.xFormatted}</div>
-                    <div className="mt-0.5 text-[11px] font-semibold text-ink">
-                      {point.data.yFormatted}
-                    </div>
-                  </div>
-                )}
-              />
-            </div>
-          </CardBody>
-        </Card>
-
-        <Card className="col-span-7">
-          <CardHeader title={"Ulangan iste\u2019molchilar"}>
-            <span className="text-[11px] text-ink-soft">{subscribers.length} ta</span>
-          </CardHeader>
-          <CardBody>
-            <div className="min-h-0 flex-1 overflow-y-auto scrollbar-none">
-              {subscribers.length === 0 ? (
-                <p className="py-8 text-center text-xs text-ink-soft">
-                  Bu transformatorga iste&rsquo;molchi biriktirilmagan
-                </p>
-              ) : (
-                <DataTable
-                  columns={SUBSCRIBER_COLUMNS}
-                  rowHeight={30}
-                  lastRowHeight={34}
-                  rows={subscribers.map((item) => ({
-                    key: item.id,
-                    cells: [
-                      <span key="code" className="truncate font-medium">
-                        {item.code}
-                      </span>,
-                      <span key="name" className="truncate">
-                        {item.name}
-                      </span>,
-                      SUBSCRIBER_KIND_LABEL[item.kind],
-                      <Badge key="status" tone={SUBSCRIBER_TONE[item.status]}>
-                        {SUBSCRIBER_STATUS_LABEL[item.status]}
-                      </Badge>,
-                      num(item.monthlyKwh),
-                      <span
-                        key="balance"
-                        className={item.balance < 0 ? "font-semibold text-accent-red" : "text-ink"}
-                      >
-                        {money(item.balance)}
-                      </span>,
-                    ],
-                  }))}
-                />
-              )}
-            </div>
-          </CardBody>
-          <CardFooterLink href="/subscribers">Barcha iste&rsquo;molchilar</CardFooterLink>
-        </Card>
-
-        <Card className="col-span-5">
-          <CardHeader title="Yuklama profili">
-            <span className="text-[11px] text-ink-soft">Sutkalik, %</span>
-          </CardHeader>
-          <CardBody>
-            <div className="min-h-0 flex-1">
-              {/* Karta "overflow-hidden" - kichik grafikda nivo maslahati
-                  kesilib qolardi, shuning uchun u o'chirilgan. Pik soat
-                  ostidagi qatorda matn bilan ko'rsatiladi. */}
-              <ResponsiveBar
-                data={profile.bars}
-                keys={["load", "peak"]}
-                indexBy="hour"
-                margin={{ top: 6, right: 6, bottom: 22, left: 30 }}
-                padding={0.28}
-                // O'q barqaror qolsin: o'chirilgan TP da ham (hamma qiymat 0)
-                // shkala buzilmaydi, haddan tashqari yuklangani esa sig'adi.
-                // @nivo/bar da `maxValue` propi yo'q - chegara `valueScale`
-                // orqali beriladi (`maxValue` faqat `ResponsiveRadialBar` da).
-                valueScale={{
-                  type: "linear",
-                  min: 0,
-                  max: Math.max(110, profile.peakValue + 10),
-                }}
-                colors={["#007cd2", "#f59e0b"]}
-                borderRadius={2}
-                enableLabel={false}
-                enableGridX={false}
-                theme={CHART_THEME}
-                axisTop={null}
-                axisRight={null}
-                axisBottom={{
-                  tickSize: 0,
-                  tickPadding: 6,
-                  tickValues: hourTicks,
-                  format: (value: string) => `${value}:00`,
-                }}
-                axisLeft={{ tickSize: 0, tickPadding: 6, tickValues: 4 }}
-                isInteractive={false}
-                animate={false}
-              />
-            </div>
-
-            <div className="mt-2 flex shrink-0 items-center gap-2">
-              <span className="shrink-0 text-[10px] text-ink-soft">Joriy</span>
-              <ProgressBar
-                value={transformer.loadPercent}
-                tone={loadTone(transformer.loadPercent)}
-                className="flex-1"
-              />
-              <span className="shrink-0 text-[10px] font-semibold text-ink">
-                {dec(transformer.loadPercent)}%
-              </span>
-            </div>
-            <p className="mt-1.5 shrink-0 text-[10px] text-ink-soft">
-              Pik soat:{" "}
-              <span className="font-semibold text-accent-amber">
-                {profile.peakHour >= 0 ? `${profile.peakHour}:00` : "\u2014"}
-              </span>{" "}
-              {profile.peakHour >= 0 ? `\u00b7 ${num(profile.peakValue)}% yuklama` : ""}
-            </p>
-          </CardBody>
-        </Card>
+      {/* 2-qator */}
+      <ConsumptionDynamicsCard className="col-span-6" days={scope.days} />
+      <div className="col-span-6 grid min-h-0 grid-rows-[minmax(0,148fr)_minmax(0,142fr)] gap-2">
+        <ViolationsCard counts={scope.violationCounts} />
+        <ResponsibleStaffCard staff={scope.staff} footerHref="/staff" />
       </div>
+      <TopTransformersCard
+        className="col-span-6"
+        title="Eng ko’p sarfga ega abonentlar"
+        columns={SUBSCRIBER_COLUMNS}
+        rows={subscriberRows}
+        valueSuffix="kWh"
+        valueDigits={0}
+        axisWidth={72}
+        footerHref="/subscribers"
+      />
+
+      {/* 3-qator */}
+      <RingStatsCard
+        className="col-span-4"
+        title="Qarzdorlik"
+        rings={debtRings}
+        max={debtStep * 5}
+        tickLabels={Array.from({ length: 6 }, (_, index) => tick(debtStep * index))}
+        month={MONTH}
+        columns={["Turi", "Summa"]}
+      />
+      <LossDamageCard
+        className="col-span-4"
+        kinds={lossKinds}
+        max={damageMax}
+        unit={damageUnit.unit}
+        total={dec(sumValues(damageValues))}
+        month={MONTH}
+      />
+      <InteractiveMapCard
+        className="col-span-6"
+        markers={[
+          { id: transformer.id, lat: transformer.lat, lng: transformer.lng, label: transformer.code },
+        ]}
+        // Tultip xaritaning o'ng yarmini egallaydi - marker chap tomonda
+        // ko'rinishi uchun markaz sharqqa surilgan (zoom 15 da ~90px).
+        center={{ lat: transformer.lat, lng: transformer.lng + MAP_CENTER_SHIFT }}
+        zoom={MAP_ZOOM}
+        selectedId={transformer.id}
+        fitDistrict={false}
+        tooltip={tooltip}
+      />
+      <QuickMetricsCard className="col-span-4" metrics={quickMetrics} />
+
+      {/* 4-qator */}
+      <CompletedWorksCard className="col-span-6" works={completedWorks} />
+      <PlannedWorksCard className="col-span-8" works={plannedWorks} />
+      <DownloadReportsCard className="col-span-4" />
     </div>
   );
+}
+
+function sumValues(values: Record<string, number>): number {
+  return Object.values(values).reduce((total, value) => total + value, 0);
 }

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { TransformerDetail } from "@/components/transformers/TransformerDetail";
-import { subscribersOfTransformer } from "@/lib/data/subscribers";
 import { findTransformer, TRANSFORMERS } from "@/lib/data/transformers";
 
 /**
@@ -24,18 +23,13 @@ export async function generateMetadata(
 }
 
 /**
- * Detal sahifasi server komponenti bo'lib qoladi: ma'lumot shu yerda
- * tanlanadi, grafiklar va holat esa `TransformerDetail` (mijoz) ichida.
+ * TP detal sahifasi - fider sahifasi bilan bir xil maket, ma'lumot esa shu
+ * TP qamrovida (`TransformerDetail` -> `@/lib/data/transformer-scope`).
  */
 export default async function Page(props: PageProps<"/transformers/[id]">) {
   const { id } = await props.params;
   const transformer = findTransformer(id);
   if (!transformer) notFound();
 
-  return (
-    <TransformerDetail
-      transformer={transformer}
-      subscribers={subscribersOfTransformer(transformer.id)}
-    />
-  );
+  return <TransformerDetail transformer={transformer} />;
 }
