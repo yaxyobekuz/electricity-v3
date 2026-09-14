@@ -3,13 +3,14 @@ import {
   RingStatsCard,
   type StatRing,
 } from "@/components/cards/RingStatsCard";
+import type { HomeRingData } from "@/lib/queries/home-data";
 
 /*
  * Ikkala karta ham "Qarzdorlik" shablonidan (`RingStatsCard`) ko'chirilgan:
  * 180x169 diagramma, 0-100 shkala (qadam 20), 2x2 legenda.
  *
- * Yoy uzunligi - umumiy sonning ulushi (%), shuning uchun shkala 100 da
- * tugaydi. Maketda yoylar alohida chizilmagan (faqat `Series` guruhi bor).
+ * Yoy uzunligi - shu kartaning o'z jami sonidagi ulush (%), shuning uchun
+ * shkala 100 da tugaydi. Sonlar legendada va jadvalda.
  */
 
 const PERCENT_TICKS = ["0", "20", "40", "60", "80", "100"] as const;
@@ -33,53 +34,36 @@ const HOME_GEOMETRY: RingGeometry = {
   month: { x: -35.58, y: -49.58 },
 };
 
-/** Maketdagi umumiy son - ikkala kartada ham 2,253. */
-const TOTAL = 2253;
+/** Maketdagi ranglar, halqa kaliti bo'yicha (hisoblagich holati / murojaat holati). */
+const RING_COLOR: Record<string, string> = {
+  total: "#3cc3df",
+  ONLINE: "#55c4ae",
+  NOT_RESPONDING: "#ff928a",
+  SCHEME_CHANGED: "#ffae4c",
+  RESOLVED: "#55c4ae",
+  REJECTED: "#ff928a",
+  IN_PROGRESS: "#8979ff",
+  OVERDUE: "#ffae4c",
+};
 
-const share = (count: number) => (count / TOTAL) * 100;
+function toRings(data: HomeRingData): StatRing[] {
+  return data.rings.map((ring) => ({ ...ring, color: RING_COLOR[ring.id] ?? "#3cc3df" }));
+}
 
-const METER_RINGS: readonly StatRing[] = [
-  { id: "total", label: "Umumiy", amount: "2,253 ta", arc: 100, color: "#3cc3df" },
-  { id: "online", label: "Aloqada", amount: "1900 ta", arc: share(1900), color: "#55c4ae" },
-  {
-    id: "offline",
-    label: "Aloqaga chiqmayotgan",
-    amount: "153 ta",
-    arc: share(153),
-    color: "#ff928a",
-  },
-  {
-    id: "rewired",
-    label: "Sxemasi o’zgartirilgan",
-    amount: "100 ta",
-    arc: share(100),
-    color: "#ffae4c",
-  },
-];
-
-const APPEAL_RINGS: readonly StatRing[] = [
-  {
-    id: "resolved",
-    label: "Ijobiy hal etilgan",
-    amount: "1900 ta",
-    arc: share(1900),
-    color: "#55c4ae",
-  },
-  { id: "rejected", label: "Rad etilgan", amount: "55 ta", arc: share(55), color: "#ff928a" },
-  { id: "pending", label: "Jarayonda", amount: "153 ta", arc: share(153), color: "#8979ff" },
-  { id: "overdue", label: "Muddati buzilgan", amount: "45 ta", arc: share(45), color: "#ffae4c" },
-];
-
-/** "Hisoblagichlar holati" (Figma `4126:680`, 321.78x336). */
-export function MetersCard({ className }: { className?: string }) {
+/** "Hisoblagichlar holati" (Figma `4126:680`, 321.78x336) - abonentlar ro'yxatidagi holatlar. */
+export function MetersCard({ data, className }: { data: HomeRingData; className?: string }) {
   return (
     <RingStatsCard
       className={className}
       title="Hisoblagichlar holati"
-      rings={METER_RINGS}
+      rings={toRings(data)}
       max={100}
       tickLabels={PERCENT_TICKS}
+      month={data.month}
+      scaleUnit="%"
       columns={["Holat", "Soni"]}
+      summary={data.summary}
+      empty={data.empty}
       geometry={HOME_GEOMETRY}
     />
   );
@@ -89,17 +73,20 @@ export function MetersCard({ className }: { className?: string }) {
  * "Murojaatlar" (Figma `4301:2515`, 321.78x336). Umumiy son legendada emas,
  * diagramma maydonining chap yuqori burchagida nuqtasiz yorliq sifatida.
  */
-export function AppealsCard({ className }: { className?: string }) {
+export function AppealsCard({ data, className }: { data: HomeRingData; className?: string }) {
   return (
     <RingStatsCard
       className={className}
       title="Murojaatlar"
-      rings={APPEAL_RINGS}
+      rings={toRings(data)}
       max={100}
       tickLabels={PERCENT_TICKS}
+      month={data.month}
+      scaleUnit="%"
       columns={["Holat", "Soni"]}
+      summary={data.summary}
+      empty={data.empty}
       geometry={HOME_GEOMETRY}
-      summary={{ label: "Umumiy murojaatlar", value: "2,253 ta" }}
     />
   );
 }

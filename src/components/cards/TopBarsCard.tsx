@@ -1,12 +1,13 @@
 "use client";
 
 import { type BarCustomLayerProps, ResponsiveBar } from "@nivo/bar";
-import { ChartNoAxesColumn, FileDown, Table } from "lucide-react";
+import { ChartNoAxesColumn, Table } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { compactNumber, finite, niceStep, plainNumber } from "@/components/cards/chart-scale";
 import { Card, CardFooterLink, CardHeader } from "@/components/ui/Card";
 import { DataTable, type TableColumn } from "@/components/ui/DataTable";
-import { IconPill } from "@/components/ui/IconPill";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { SegmentedIcons } from "@/components/ui/Toggle";
 import { cn } from "@/lib/ui/cn";
 
@@ -14,7 +15,7 @@ export interface TopBarItem {
   id: string;
   /** Chap ustundagi nom: "Chinobod", "Xaqulobod". */
   label: string;
-  /** Shkaladagi qiymat (mln kWh). */
+  /** Shkaladagi qiymat (`unit` birligida, manfiy bo'lishi mumkin). */
   value: number;
 }
 
@@ -47,6 +48,11 @@ const BAR_SHARE = 0.4037;
  * O'q va tik chiziqlar maydonga bog'liq bo'lgani uchun `ScaleLayer` chizadi.
  */
 const BAR_PADDING = 1 - BAR_SHARE;
+
+/** Avtomatik shkalada bo'linmalar soni (maketda 5..8). */
+const AUTO_STEPS = 5;
+/** Noto'g'ri `tickStep` da cheksiz yorliq chizilmasin. */
+const MAX_TICKS = 20;
 
 /**
  * Maketda o'q va yorliq matni 12px (qutisi 15px: "100" - 21px, "Chinobod" -
@@ -85,7 +91,7 @@ function scaleLayer(tickValues: readonly number[], inset: number) {
                 dominantBaseline="central"
                 style={AXIS_TEXT}
               >
-                {value}
+                {compactNumber(value)}
               </text>
             </g>
           );
@@ -93,6 +99,30 @@ function scaleLayer(tickValues: readonly number[], inset: number) {
       </g>
     );
   };
+}
+
+/**
+ * Shkala: berilgan `max` / `tickStep` yoki qiymatlardan yaxlit chegara.
+ * Nol doim ichida; manfiy qiymat bo'lsa shkala chapga cho'ziladi.
+ */
+function buildScale(values: readonly number[], max?: number, tickStep?: number) {
+  const lo = Math.min(0, ...values);
+  const hi = Math.max(0, ...values);
+  const step =
+    tickStep && tickStep > 0 && Number.isFinite(tickStep)
+      ? tickStep
+      : niceStep((Math.max(hi, max ?? 0) - lo) / AUTO_STEPS);
+  const bottom = lo < 0 ? Math.floor(lo / step) * step : 0;
+  const top = Math.max(
+    max && Number.isFinite(max) ? max : 0,
+    Math.ceil(hi / step) * step,
+    bottom + step,
+  );
+  const count = Math.min(MAX_TICKS, Math.floor((top - bottom) / step + 1e-9));
+  const ticks = Array.from({ length: count + 1 }, (_, index) =>
+    Number((bottom + index * step).toPrecision(12)),
+  );
+  return { min: bottom, max: top, ticks };
 }
 
 type View = "chart" | "table";
@@ -108,6 +138,7 @@ const VIEWS = [
  * Bosh sahifada uch marta ishlatiladi (podstansiyalar, fiderlar,
  * transformatorlar), maketda ular faqat ma'lumot, shkala chegarasi va yorliq
  * ustunining kengligi bilan farq qiladi, shuning uchun komponent bitta.
+ * `max` / `tickStep` berilmasa - qiymatlardan hisoblanadi.
  */
 export function TopBarsCard({
   title,
@@ -116,67 +147,79 @@ export function TopBarsCard({
   tickStep,
   unit,
   labelWidth = 59,
+  valueColumn,
   footerLabel,
   footerHref,
+  emptyText = "Ma’lumot yo’q",
   className,
 }: {
   title: string;
   items: readonly TopBarItem[];
   /** Maketdagi `xAxis` kengligi - eng uzun nomga qarab 46 / 59 / 66px. */
   labelWidth?: number;
-  /** Shkalaning yuqori chegarasi (maketda 100 yoki 200). */
-  max: number;
-  /** O'q bo'linmasi orasidagi qadam (20 yoki 25). */
-  tickStep: number;
+  /** Shkalaning yuqori chegarasi; berilmasa avtomatik. */
+  max?: number;
+  /** O'q bo'linmasi orasidagi qadam; berilmasa avtomatik. */
+  tickStep?: number;
   /** Qiymat yonidagi birlik: "mln kWh". */
   unit: string;
-  footerLabel: string;
-  footerHref: string;
+  /** Jadvaldagi qiymat ustuni nomi; standart - `Sarf, <unit>`. */
+  valueColumn?: string;
+  footerLabel?: string;
+  /** Berilmasa footer havolasi chizilmaydi. */
+  footerHref?: string;
+  emptyText?: string;
   className?: string;
 }) {
   const [view, setView] = useState<View>("chart");
 
   // Nivo gorizontal ustunlarni pastdan yuqoriga chizadi - maketdagi tartib
   // saqlanishi uchun ro'yxat teskari uzatiladi.
-  const chartData = [...items].reverse().map((item): BarRow => ({
-    id: item.id,
-    label: item.label,
-    value: item.value,
-  }));
+  const chartData = useMemo(
+    () =>
+      [...items].reverse().map(
+        (item): BarRow => ({ id: item.id, label: item.label, value: finite(item.value) }),
+      ),
+    [items],
+  );
 
-  const nameById: Record<string, string> = Object.fromEntries(
-    items.map((item) => [item.id, item.label]),
+  const nameById = useMemo<Record<string, string>>(
+    () => Object.fromEntries(items.map((item) => [item.id, item.label])),
+    [items],
+  );
+
+  const scale = useMemo(
+    () => buildScale(chartData.map((row) => row.value), max, tickStep),
+    [chartData, max, tickStep],
   );
 
   const columns: TableColumn[] = [
     { key: "name", label: "Nomi", grow: 3, align: "left" },
-    { key: "value", label: `Sarf, ${unit}`, grow: 2 },
+    { key: "value", label: valueColumn ?? `Sarf, ${unit}`, grow: 2 },
   ];
 
   // Maketdagi qator qadami va shundan nivo maydoni qancha cho'zilishi.
   const inset = (BAR_PADDING * (PLOT_HEIGHT / Math.max(items.length, 1))) / 2;
-  const layers = useMemo(() => {
-    const tickValues = Array.from(
-      { length: Math.floor(max / tickStep) + 1 },
-      (_, index) => index * tickStep,
-    );
-    return [scaleLayer(tickValues, inset), "bars" as const, "axes" as const];
-  }, [max, tickStep, inset]);
+  const layers = useMemo(
+    () => [scaleLayer(scale.ticks, inset), "bars" as const, "axes" as const],
+    [scale.ticks, inset],
+  );
+
+  const empty = items.length === 0;
 
   return (
     <Card padded={false} className={cn("px-4 pt-4 pb-2", className)}>
       <CardHeader title={title}>
-        <SegmentedIcons items={VIEWS} value={view} onChange={setView} />
-        <IconPill icon={FileDown} label="Yuklab olish" />
+        {empty ? null : <SegmentedIcons items={VIEWS} value={view} onChange={setView} />}
       </CardHeader>
 
       {/* Maketda diagramma bloki sarlavha tagida (y=48), ichki qismi esa 8px
           pastda. O'ng chetdagi "100" / "200" yorlig'i tik ustida markazlashadi
-          va 4px lik chekkadan chiqadi - kesilmasligi uchun overflow ochiq.
-          Maketda yuqori o'q yorliqlari tiklardan 9px gacha siljigan (bir
-          tekis taqsimlangan) - bu yerda ular o'z tiki ustida turadi. */}
+          va 4px lik chekkadan chiqadi - kesilmasligi uchun overflow ochiq. */}
       <div className="min-h-0 flex-1 pt-2 [&_svg]:overflow-visible">
-        {view === "chart" ? (
+        {empty ? (
+          <EmptyState variant="inline" action={false} title={emptyText} />
+        ) : view === "chart" ? (
           <ResponsiveBar
             data={chartData}
             keys={["value"]}
@@ -191,7 +234,7 @@ export function TopBarsCard({
             padding={BAR_PADDING}
             colors={["#007cd2"]}
             borderRadius={2}
-            valueScale={{ type: "linear", min: 0, max }}
+            valueScale={{ type: "linear", min: scale.min, max: scale.max }}
             layers={layers}
             axisTop={null}
             axisBottom={null}
@@ -212,7 +255,7 @@ export function TopBarsCard({
                 />
                 <span className="text-ink-soft">{String(data.label)}</span>
                 <span className="font-semibold">
-                  {String(data.value).replace(".", ",")} {unit}
+                  {plainNumber(Number(data.value))} {unit}
                 </span>
               </div>
             )}
@@ -228,7 +271,7 @@ export function TopBarsCard({
                   <span key="name" className="font-medium">
                     {item.label}
                   </span>,
-                  String(item.value).replace(".", ","),
+                  plainNumber(item.value),
                 ],
               }))}
             />
@@ -236,7 +279,9 @@ export function TopBarsCard({
         )}
       </div>
 
-      <CardFooterLink href={footerHref}>{footerLabel}</CardFooterLink>
+      {footerHref && footerLabel ? (
+        <CardFooterLink href={footerHref}>{footerLabel}</CardFooterLink>
+      ) : null}
     </Card>
   );
 }

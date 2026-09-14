@@ -4,9 +4,10 @@ import { cn } from "@/lib/ui/cn";
 
 /**
  * Delta qatorining ohangi. Yo'qotish kontekstida "o'sish" yomon,
- * shuning uchun rang nomi trend emas, baho bo'yicha.
+ * shuning uchun rang nomi trend emas, baho bo'yicha. `neutral` - o'zgarish
+ * yo'q yoki bahosi aniq emas.
  */
-export type KpiTone = "bad" | "good";
+export type KpiTone = "bad" | "good" | "neutral";
 
 /**
  * Maketdagi yashil - `trend-down` tokeni (#31ae5f).
@@ -14,25 +15,28 @@ export type KpiTone = "bad" | "good";
 const TONE_TEXT: Record<KpiTone, string> = {
   bad: "text-trend-up",
   good: "text-trend-down",
+  neutral: "text-ink-muted",
 };
 
 export type KpiCardProps = {
   title: string;
-  /** Asosiy son, maketdagi formatda: "220,1", "2,253". */
+  /** Asosiy son, `format.ts` orqali: "220,1", "2 253". */
   value: string;
-  /** Sondan keyingi o'lchov birligi: "ming kWh", "ta faol". */
+  /** Sondan keyingi o'lchov birligi: "ming kWh", "ta umumiy". */
   unit: string;
   /** Sarlavhadagi nishon ikonkasi. */
   icon: GlyphIcon;
-  deltaIcon: GlyphIcon;
-  deltaText: string;
-  deltaTone: KpiTone;
-  /** "O'tgan oy: ..." qatori. */
-  previous: string;
-  /** Ustunlar balandligi 0..1 ulushda (39px trek = 1). */
+  /** Delta qatori ikonkasi; berilmasa faqat matn. */
+  deltaIcon?: GlyphIcon;
+  /** Delta matni; berilmasa (o'tgan oy bazada yo'q) qator chizilmaydi. */
+  deltaText?: string;
+  deltaTone?: KpiTone;
+  /** "O’tgan oy: ..." qatori; `null` - qator chizilmaydi. */
+  previous?: string | null;
+  /** Ustunlar balandligi 0..1 ulushda (istalgan soni, 0..12). Bo'sh - diagramma yo'q. */
   bars: readonly number[];
-  /** Ustunlar o'ngidagi yorliq: "30 kun" yoki "12 oy". */
-  barsLabel: string;
+  /** Ustunlar o'ngidagi yorliq: "12 oy". */
+  barsLabel?: string;
   /** Karta foni, masalan `bg-tint-blue`. */
   tint: string;
   /** Nishon va ustunlar rangi, masalan `bg-accent-blue`. */
@@ -40,10 +44,15 @@ export type KpiCardProps = {
   className?: string;
 };
 
+/** 0..1 oralig'iga siqadi; NaN - 0. */
+function toFraction(value: number): number {
+  return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0;
+}
+
 /**
- * KPI kartasidagi mayda ustunli diagramma. Ustunlar soni har xil (30 kun /
- * 12 oy), shuning uchun ustunlar grid orqali teng bo'linadi va balandlik
- * foizda beriladi - trek balandligi ota katakdan keladi.
+ * KPI kartasidagi mayda ustunli diagramma. Ustunlar soni har xil (1..12 oy),
+ * shuning uchun ustunlar grid orqali teng bo'linadi va balandlik foizda
+ * beriladi - trek balandligi ota katakdan keladi.
  */
 export function MiniBars({
   values,
@@ -54,6 +63,8 @@ export function MiniBars({
   barClassName: string;
   className?: string;
 }) {
+  if (values.length === 0) return null;
+
   return (
     <div
       className={cn("grid h-full min-w-0 flex-1 items-end gap-x-[2px]", className)}
@@ -63,7 +74,7 @@ export function MiniBars({
         <div
           key={index}
           className={cn("w-full self-end rounded-[1px]", barClassName)}
-          style={{ height: `${fraction * 100}%` }}
+          style={{ height: `${toFraction(fraction) * 100}%` }}
         />
       ))}
     </div>
@@ -78,6 +89,9 @@ export function MiniBars({
  * Shuning uchun matnlarga Figma'dagi qator qutisi (`leading-[18px]` /
  * `leading-[31px]`) qo'lda beriladi - Tailwind standarti 20/32 bo'lib,
  * diagramma trekini 3px yeb qo'yadi.
+ *
+ * O'tgan oy bazada bo'lmasa delta va "O’tgan oy" qatorlari chizilmaydi -
+ * boshqa oy bilan almashtirilmaydi (`malumotlar.md`, 2-bo'lim).
  */
 export function KpiCard({
   title,
@@ -86,8 +100,8 @@ export function KpiCard({
   icon,
   deltaIcon,
   deltaText,
-  deltaTone,
-  previous,
+  deltaTone = "neutral",
+  previous = null,
   bars,
   barsLabel,
   tint,
@@ -116,24 +130,30 @@ export function KpiCard({
 
       <div className="flex shrink-0 items-center gap-1 pt-1 pb-1.5">
         <span className="text-2xl leading-[31px] font-bold text-ink">{value}</span>
-        <span className="text-sm leading-[18px] font-medium text-ink-muted">{unit}</span>
+        <span className="truncate text-sm leading-[18px] font-medium text-ink-muted">{unit}</span>
       </div>
 
-      <div className={cn("flex shrink-0 items-center gap-1 pb-1.5", TONE_TEXT[deltaTone])}>
-        <Icon icon={deltaIcon} size={20} />
-        <span className="truncate text-sm leading-[18px] font-medium">{deltaText}</span>
-      </div>
+      {deltaText ? (
+        <div className={cn("flex shrink-0 items-center gap-1 pb-1.5", TONE_TEXT[deltaTone])}>
+          {deltaIcon ? <Icon icon={deltaIcon} size={20} /> : null}
+          <span className="truncate text-sm leading-[18px] font-medium">{deltaText}</span>
+        </div>
+      ) : null}
 
-      <p className="shrink-0 truncate pb-2 text-sm leading-[18px] text-ink-muted">
-        {previous}
-      </p>
+      {previous ? (
+        <p className="shrink-0 truncate pb-2 text-sm leading-[18px] text-ink-muted">{previous}</p>
+      ) : null}
 
-      <div className="flex min-h-0 flex-1 items-end gap-2">
-        <MiniBars values={bars} barClassName={accent} />
-        <span className="shrink-0 self-end text-sm leading-[18px] text-ink-muted">
-          {barsLabel}
-        </span>
-      </div>
+      {bars.length > 0 ? (
+        <div className="flex min-h-0 flex-1 items-end gap-2">
+          <MiniBars values={bars} barClassName={accent} />
+          {barsLabel ? (
+            <span className="shrink-0 self-end text-sm leading-[18px] text-ink-muted">
+              {barsLabel}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   );
 }

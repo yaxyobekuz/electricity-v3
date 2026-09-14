@@ -1,93 +1,34 @@
 import { ExternalLink } from "lucide-react";
 
+import { buildWorkRows, type RepairWork } from "@/components/cards/CompletedWorksCard";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
-import {
-  Badge,
-  DataTable,
-  type TableColumn,
-  type TableRow,
-} from "@/components/ui/DataTable";
+import { DataTable, type TableColumn } from "@/components/ui/DataTable";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { IconPill } from "@/components/ui/IconPill";
 
-export type WorkStatus = "new" | "inProgress" | "planned";
-
-export interface PlannedWork {
-  /** Qator kaliti - bir transformatorda bir nechta ish bo'lishi mumkin. */
-  id: string;
-  tp: string;
-  work: string;
-  status: WorkStatus;
-  date: string;
-}
-
-const WORKS: readonly PlannedWork[] = [
-  {
-    id: "a303-check",
-    tp: "TP-A303",
-    work: "Transformatorni tekshirish",
-    status: "new",
-    date: "7-sentabr, 2026",
-  },
-  {
-    id: "33-repair",
-    tp: "TP-33",
-    work: "Toka transformatorni ta\u2019mirlash",
-    status: "inProgress",
-    date: "23-avgust, 2026",
-  },
-  {
-    id: "08-chip",
-    tp: "TP-08",
-    work: "Hisoblagich chipini almashtirish. Hamda, qayta texnik ko\u2019rikdan o\u2019tkazish",
-    status: "planned",
-    date: "Bugun",
-  },
-];
+export type PlannedWork = RepairWork;
 
 /**
- * Maketdagi ustun kengliklari: 96 / 319.56 / 96 / 96 (619.56px qatordan
- * 6px ichki bo'shliqlar ayirilgach). "Ish" ustuni chapga tekislangan,
- * qolganlari markazda.
+ * Maketdagi ustun kengliklari: 96 / 319.56 / 96 (holat ustuni olib
+ * tashlangach uning 96px i "Ish" ustuniga qo'shildi). "Ish" ustuni chapga
+ * tekislangan, qolganlari markazda.
  */
 const COLUMNS: TableColumn[] = [
-  { key: "tp", label: "Transformtator", grow: 96 },
-  { key: "work", label: "Ish", grow: 319.56, align: "left" },
-  { key: "status", label: "Holat", grow: 96 },
+  { key: "tp", label: "Transformator", grow: 96 },
+  { key: "work", label: "Ish", grow: 415.56, align: "left" },
   { key: "date", label: "Sana", grow: 96 },
 ];
 
-function StatusCell({ status }: { status: WorkStatus }) {
-  if (status === "inProgress") return <Badge tone="green">Bajarilmoqda</Badge>;
-  if (status === "planned") return <Badge tone="amber">Rejada</Badge>;
-  return <Badge tone="blue">Yangi</Badge>;
-}
-
-function buildRows(works: readonly PlannedWork[]): TableRow[] {
-  return works.map((item) => ({
-    key: item.id,
-    cells: [
-      // Maketda 1-ustun qolganlaridan qalinroq (medium).
-      <span key="tp" className="font-medium">
-        {item.tp}
-      </span>,
-      item.work,
-      <StatusCell key="status" status={item.status} />,
-      item.date,
-    ],
-  }));
-}
-
 /**
- * Fider sahifasining 4-qatoridagi "Rejalashtirilgan ishlar" kartasi (span-8, 209px).
- *
- * Bosh sahifada (Figma `4126:1005`) karta 298px va jadvalda 6 ta qator -
- * ro'yxat `works` orqali uzatiladi, qator balandliklari o'zgarmaydi.
+ * "Rejalashtirilgan ishlar" kartasi (span-8, 209px; bosh sahifada 298px):
+ * ta'mir sanasi hisobot sanasidan keyin bo'lgan ishlar. Shablonda ish holati
+ * yo'q - faqat sana.
  */
 export function PlannedWorksCard({
-  works = WORKS,
+  works,
   className,
 }: {
-  works?: readonly PlannedWork[];
+  works: readonly RepairWork[];
   className?: string;
 }) {
   return (
@@ -96,8 +37,23 @@ export function PlannedWorksCard({
         <IconPill icon={ExternalLink} label="Barcha ishlarni ochish" href="/works" />
       </CardHeader>
       <CardBody>
-        {/* Maketda bu jadval qatorlari 30px, oxirgisi 34px (XML: 4082:577). */}
-        <DataTable columns={COLUMNS} rows={buildRows(works)} rowHeight={30} lastRowHeight={34} />
+        {works.length === 0 ? (
+          <EmptyState
+            variant="inline"
+            action={false}
+            title="Rejalashtirilgan ta’mir ishlari yo’q"
+          />
+        ) : (
+          <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto">
+            {/* Maketda bu jadval qatorlari 30px, oxirgisi 34px (XML: 4082:577). */}
+            <DataTable
+              columns={COLUMNS}
+              rows={buildWorkRows(works)}
+              rowHeight={30}
+              lastRowHeight={34}
+            />
+          </div>
+        )}
       </CardBody>
     </Card>
   );

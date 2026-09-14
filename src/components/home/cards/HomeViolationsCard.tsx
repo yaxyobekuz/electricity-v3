@@ -1,53 +1,40 @@
 import { FileExclamationPoint, Gavel, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 
 import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { type GlyphIcon, Icon } from "@/components/ui/Icon";
+import type { ViolatorType } from "@/generated/prisma";
+import type { HomeViolations } from "@/lib/queries/home-data";
 import { cn } from "@/lib/ui/cn";
 
 interface ViolationStat {
-  id: string;
   label: string;
   value: string;
+  href: string;
   icon: GlyphIcon;
   /** Ikonka va son bir xil tusda (`currentColor`). */
   tone: string;
 }
 
-const TOTAL: ViolationStat = {
-  id: "total",
-  label: "Umumiy aniqlangan holatlar",
-  value: "911 ta",
-  icon: ShieldCheck,
-  tone: "text-brand",
+/** Shablondagi "Turi" ustuni: Yuridik / Jismoniy / Aybisiz. */
+const TYPE_STYLE: Record<ViolatorType, { icon: GlyphIcon; tone: string }> = {
+  LEGAL: { icon: FileExclamationPoint, tone: "text-accent-amber" },
+  INDIVIDUAL: { icon: Gavel, tone: "text-accent-red" },
+  INNOCENT: { icon: ShieldCheck, tone: "text-[#31ae5f]" },
 };
 
-const STATS: readonly ViolationStat[] = [
-  {
-    id: "administrative",
-    label: "Ma’muriy",
-    value: "45 ta",
-    icon: FileExclamationPoint,
-    tone: "text-accent-amber",
-  },
-  { id: "criminal", label: "Jinoiy", value: "3 ta", icon: Gavel, tone: "text-accent-red" },
-  // Maketdagi imlo ("aybisiz") ataylab saqlangan.
-  {
-    id: "innocent",
-    label: "Istemolchi aybisiz",
-    value: "13 ta",
-    icon: ShieldCheck,
-    tone: "text-[#31ae5f]",
-  },
-];
-
-/** 18px izoh, 10px pastda 45px quti: 20px ikonka + 8px + 16px bold son, markazda. */
+/**
+ * 18px izoh, 10px pastda 45px quti: 20px ikonka + 8px + 16px bold son,
+ * markazda. Quti qoidabuzarliklar ro'yxatiga (shu tur bilan) olib boradi.
+ */
 function Stat({ stat, className }: { stat: ViolationStat; className?: string }) {
   return (
-    <div className={cn("flex min-w-0 flex-col", className)}>
+    <Link href={stat.href} className={cn("group flex min-w-0 flex-col", className)}>
       <span className="truncate text-sm leading-[18px] text-[#999999]">{stat.label}</span>
-      <div
+      <span
         className={cn(
-          "mt-2.5 flex h-[45px] items-center justify-center gap-2 rounded-lg bg-canvas",
+          "mt-2.5 flex h-[45px] items-center justify-center gap-2 rounded-lg bg-canvas transition-colors group-hover:bg-hairline",
           stat.tone,
         )}
       >
@@ -58,30 +45,49 @@ function Stat({ stat, className }: { stat: ViolationStat; className?: string }) 
           className={cn("shrink-0", stat.icon === ShieldCheck && "[stroke-width:2]")}
         />
         <span className="text-base leading-[21px] font-bold">{stat.value}</span>
-      </div>
-    </div>
+      </span>
+    </Link>
   );
 }
 
 /**
- * Bosh sahifadagi "Qoidabuzarliklar" (Figma `4126:498`, 486.67x220).
- *
- * Fider sahifasidagi `ViolationsCard` dan farqi: sarlavhada amal yo'q (18px),
- * tepada butun kenglikdagi "Umumiy" qatori, qutilar 45px va tarkibi markazda.
+ * Bosh sahifadagi "Qoidabuzarliklar" (Figma `4126:498`, 486.67x220): tanlangan
+ * oydagi qoidabuzarliklar soni va shablondagi tur bo'yicha taqsimot.
  * 16 + 18 + 12 + 73 + 12 + 73 + 16 = 220.
  */
-export function HomeViolationsCard({ className }: { className?: string }) {
+export function HomeViolationsCard({
+  data,
+  className,
+}: {
+  data: HomeViolations;
+  className?: string;
+}) {
   return (
     <Card className={className}>
       <h2 className="shrink-0 truncate text-sm leading-[18px] font-bold text-ink">
         Qoidabuzarliklar
       </h2>
-      <Stat stat={TOTAL} className="mt-3 shrink-0" />
-      <div className="mt-3 grid shrink-0 grid-cols-3 gap-2">
-        {STATS.map((stat) => (
-          <Stat key={stat.id} stat={stat} />
-        ))}
-      </div>
+      {data.uploaded ? (
+        <>
+          <Stat
+            stat={{
+              label: "Umumiy aniqlangan holatlar",
+              value: data.total.value,
+              href: data.total.href,
+              icon: ShieldCheck,
+              tone: "text-brand",
+            }}
+            className="mt-3 shrink-0"
+          />
+          <div className="mt-3 grid shrink-0 grid-cols-3 gap-2">
+            {data.types.map((type) => (
+              <Stat key={type.id} stat={{ ...type, ...TYPE_STYLE[type.id] }} />
+            ))}
+          </div>
+        </>
+      ) : (
+        <EmptyState variant="inline" action={false} title="Qoidabuzarliklar yuklanmagan" />
+      )}
     </Card>
   );
 }

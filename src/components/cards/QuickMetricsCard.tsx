@@ -1,117 +1,95 @@
-import {
-  ArrowBigDownDash,
-  ClockArrowUp,
-  FileDown,
-  SquareCheckBig,
-  WrenchOff,
-  Zap,
-} from "lucide-react";
-
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { type GlyphIcon, Icon } from "@/components/ui/Icon";
-import { IconPill } from "@/components/ui/IconPill";
 import { cn } from "@/lib/ui/cn";
 
 export interface QuickMetric {
   id: string;
   icon: GlyphIcon;
   /**
-   * 44px plitka foni. Faqat birinchisi (`#3b82f6`) tokenlarda bor, qolgan
-   * to'rttasi maketdan piksel bo'yicha olingan va tokenlarga kirmagan.
+   * 44px plitka foni. Faqat birinchisi (`#3b82f6`) tokenlarda bor, qolganlari
+   * maketdan piksel bo'yicha olingan: `bg-[#ff928a]`, `bg-[#ffae4c]`,
+   * `bg-[#8979ff]`, `bg-[#2bb7dc]`.
    */
   tile: string;
   caption: string;
+  /** Tayyor matn (`format.ts`). */
   value: string;
 }
 
-const METRICS: readonly QuickMetric[] = [
-  {
-    id: "avg-usage",
-    icon: Zap,
-    tile: "bg-accent-blue",
-    caption: "Kunlik o\u2019rtacha iste\u2019mol",
-    value: "15,2 ming kWh",
-  },
-  {
-    id: "avg-loss",
-    icon: ArrowBigDownDash,
-    tile: "bg-[#ff928a]",
-    caption: "Kunlik o\u2019rtacha yo\u2019qotish",
-    value: "3,3 ming kWh",
-  },
-  {
-    id: "faulty-tp",
-    // Maketdagi imlo ("Nofal") ataylab saqlangan.
-    icon: WrenchOff,
-    tile: "bg-[#ffae4c]",
-    caption: "Nofal transformatorlar",
-    value: "1 ta",
-  },
-  {
-    id: "peak-hours",
-    icon: ClockArrowUp,
-    tile: "bg-[#8979ff]",
-    // Maketda aynan shu qatorda to'g'ri apostrof (U+0027) ishlatilgan.
-    caption: "Pik iste'mol vaqti",
-    value: "19:30 - 21:00",
-  },
-  {
-    id: "plan",
-    icon: SquareCheckBig,
-    tile: "bg-[#2bb7dc]",
-    caption: "Reja bajarilishi",
-    value: "89,1%",
-  },
-];
+/** Maketdagi geometriya 5 qatorga mo'ljallangan; undan ko'pida qatorlar zichlashadi. */
+const DESIGN_ROWS = 5;
 
 /**
- * Fider sahifasi, 3-qator (Figma `4060:1304`, 322x336).
+ * "Tezkor ko'rsatkichlar" (Figma `4060:1304`, 322x336).
  *
  * Kontent 264px: 5 ta 44px qator, oralig'i 10px (jami 260px) - maketdagidek
- * yuqoriga tekislangan, pastda 4px bo'shliq qoladi.
+ * yuqoriga tekislangan. 6 ta ko'rsatkichda qatorlar 36px ga tushadi
+ * (6 x 36 + 5 x 8 = 256), aks holda oxirgisi kesiladi.
  *
  * Matn uslubi bu kartada tokenlardan chetga chiqadi (maketdan piksel bo'yicha
- * o'lchangan): izoh 14px Medium `#999999` (`ink-soft` #767676 emas), qiymat
- * 16px Bold `#000000` (`ink` #333333 emas).
+ * o'lchangan): izoh 14px Medium `#999999`, qiymat 16px Bold `#000000`.
  *
- * Bosh sahifada (Figma `4126:936`) geometriya aynan shu, faqat izoh va
- * qiymatlar boshqa - ular `metrics` orqali uzatiladi.
+ * Ko'rsatkichlar sahifadan keladi - faqat shablondan hisoblangan qiymatlar.
  */
 export function QuickMetricsCard({
-  metrics = METRICS,
+  metrics,
+  title = "Tezkor ko’rsatgichlar",
+  emptyText = "Ko’rsatkichlar yo’q",
   className,
 }: {
-  metrics?: readonly QuickMetric[];
+  /** 1..6 ta ko'rsatkich. */
+  metrics: readonly QuickMetric[];
+  title?: string;
+  emptyText?: string;
   className?: string;
 }) {
+  const dense = metrics.length > DESIGN_ROWS;
+
   return (
     <Card className={className}>
-      <CardHeader title="Tezkor ko&rsquo;rsatgichlar" titleClassName="text-black">
-        <IconPill icon={FileDown} label="Yuklab olish" />
-      </CardHeader>
+      <CardHeader title={title} titleClassName="text-black" />
 
-      <CardBody className="gap-[10px]">
-        {metrics.map((metric) => (
-          <div key={metric.id} className="flex h-11 shrink-0 items-center gap-2">
-            <span
-              className={cn(
-                "flex size-11 shrink-0 items-center justify-center rounded-md text-white",
-                metric.tile,
-              )}
+      <CardBody className={dense ? "gap-2" : "gap-[10px]"}>
+        {metrics.length === 0 ? (
+          <EmptyState variant="inline" action={false} title={emptyText} />
+        ) : (
+          metrics.map((metric) => (
+            <div
+              key={metric.id}
+              className={cn("flex shrink-0 items-center gap-2", dense ? "h-9" : "h-11")}
             >
-              <Icon icon={metric.icon} size={24} />
-            </span>
-            {/* Matn bloki 43px: 18 + 4 + 21, plitka ichida markazlashadi. */}
-            <div className="flex min-w-0 flex-col gap-1">
-              <span className="truncate text-sm leading-[18px] font-medium text-[#999999]">
-                {metric.caption}
+              <span
+                className={cn(
+                  "flex shrink-0 items-center justify-center rounded-md text-white",
+                  dense ? "size-9" : "size-11",
+                  metric.tile,
+                )}
+              >
+                <Icon icon={metric.icon} size={dense ? 20 : 24} />
               </span>
-              <span className="truncate text-base leading-[21px] font-bold text-black">
-                {metric.value}
-              </span>
+              {/* Matn bloki 43px: 18 + 4 + 21 (zich variantda 16 + 2 + 18). */}
+              <div className={cn("flex min-w-0 flex-col", dense ? "gap-0.5" : "gap-1")}>
+                <span
+                  className={cn(
+                    "truncate font-medium text-[#999999]",
+                    dense ? "text-xs leading-4" : "text-sm leading-[18px]",
+                  )}
+                >
+                  {metric.caption}
+                </span>
+                <span
+                  className={cn(
+                    "truncate font-bold text-black",
+                    dense ? "text-sm leading-[18px]" : "text-base leading-[21px]",
+                  )}
+                >
+                  {metric.value}
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </CardBody>
     </Card>
   );

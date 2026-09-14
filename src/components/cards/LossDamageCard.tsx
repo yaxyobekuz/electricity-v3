@@ -5,32 +5,25 @@ import {
   type RadialBarCustomLayerProps,
   ResponsiveRadialBar,
 } from "@nivo/radial-bar";
-import { ChartNoAxesColumn, FileDown, Table } from "lucide-react";
+import { ChartNoAxesColumn, Table } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { finite, fixedScale, moneyUnit, plainNumber } from "@/components/cards/chart-scale";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { DataTable, type TableColumn } from "@/components/ui/DataTable";
-import { IconPill } from "@/components/ui/IconPill";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { SegmentedIcons } from "@/components/ui/Toggle";
+import { money } from "@/lib/format";
 
-// Maketdagi o'zbekcha apostrof - U+2019: JSX matnida `&rsquo;`, `string`
-// qiymatlarda `’`.
-
-export interface LossKind {
+/** Zarar bo'lagi - qoidabuzar turi bo'yicha Σ "Keltirilgan zarar miqdori (UZS)". */
+export interface DamageKind {
   id: string;
-  /** Nivo uchun son qiymat (`unit` birligida). */
+  /** "Yuridik", "Jismoniy", "Aybisiz" (`VIOLATOR_TYPE_LABEL`). */
+  label: string;
+  /** So'm. */
   value: number;
-  /** Maketdagi vergulli yozuv. */
-  amount: string;
   color: string;
 }
-
-/** Halqalar ichkaridan tashqariga shu tartibda chiziladi. */
-const LOSS_KINDS: readonly LossKind[] = [
-  { id: "Tabiiy", value: 161.7, amount: "161,7", color: "#55c4ae" },
-  { id: "Texnologik", value: 61.6, amount: "61,6", color: "#f4cf3b" },
-  { id: "O’g’irlik", value: 50.1, amount: "50,1", color: "#ff928a" },
-];
 
 /** Halqa 0 dan `max` gacha 270 gradusni supuradi (nivo standarti). */
 const END_ANGLE = 270;
@@ -61,24 +54,21 @@ const LABEL_CENTER_SIN = 0.2;
 /** Oy nomi markazdan chapga-yuqoriga, halqalarning bo'sh choragida. */
 const MONTH_X_RATIO = -0.434;
 const MONTH_Y_RATIO = -0.694;
+/** Birlik yozuvi oy nomidan pastda (tashqi radiusga nisbatan). */
+const UNIT_Y_OFFSET_RATIO = 0.19;
 
 const pointAt = (angle: number, radius: number): [number, number] => [
   Math.sin(angle) * radius,
   -Math.cos(angle) * radius,
 ];
 
-/** O'q yorlig'i: butun son o'zicha, kasr - vergul bilan ("0,5"). */
-function tickLabel(value: number): string {
-  return String(Number(value.toFixed(2))).replace(".", ",");
-}
-
 /**
  * Maketdagi qutb o'qi: to'liq aylana + har 1/8 bo'linmada nur va yorliq.
  * Nivo'ning o'z `grid` qatlami faqat standart 20 lik bo'linmalarni beradi va
- * treklar ostida qoladi, shuning uchun qo'lda chiziladi. Shkala (`max`) va oy
- * propdan keladi, shuning uchun qatlam fabrika orqali yasaladi.
+ * treklar ostida qoladi, shuning uchun qo'lda chiziladi. Shkala (`max`), oy va
+ * birlik propdan keladi, shuning uchun qatlam fabrika orqali yasaladi.
  */
-function polarAxisLayer(max: number, month: string) {
+function polarAxisLayer(max: number, month: string, unit: string) {
   const ticks = Array.from({ length: TICK_STEPS + 1 }, (_, index) => (max / TICK_STEPS) * index);
   /** Qiymat -> burchak (radian), 12 soatdan soat mili bo'yicha. */
   const angleOf = (value: number) => ((value / max) * END_ANGLE * Math.PI) / 180;
@@ -93,7 +83,7 @@ function polarAxisLayer(max: number, month: string) {
         <circle r={outerRadius * AXIS_CIRCLE_RATIO} fill="none" stroke={GRID_CIRCLE_COLOR} />
         {/* Maketda nurlar boshlanadigan joyda ham to'liq aylana bor. */}
         <circle r={gridStart} fill="none" stroke={GRID_CIRCLE_COLOR} />
-        {ticks.map((value) => {
+        {ticks.map((value, index) => {
           const angle = angleOf(value);
           const [x1, y1] = pointAt(angle, gridStart);
           const [x2, y2] = pointAt(angle, tickEnd);
@@ -102,7 +92,7 @@ function polarAxisLayer(max: number, month: string) {
             sin > LABEL_CENTER_SIN ? "start" : sin < -LABEL_CENTER_SIN ? "end" : "middle";
 
           return (
-            <g key={value}>
+            <g key={index}>
               <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={GRID_COLOR} />
               {/* Yorliq: gorizontal tayanch quticha cheti, vertikal - nur uchi. */}
               <text
@@ -112,12 +102,12 @@ function polarAxisLayer(max: number, month: string) {
                 fontSize={11}
                 fill={AXIS_TEXT_COLOR}
               >
-                {tickLabel(value)}
+                {plainNumber(value)}
               </text>
             </g>
           );
         })}
-        {/* Oy nomi bo'sh chorakda (halqalar 270 gradusda tugaydi). */}
+        {/* Oy nomi va shkala birligi bo'sh chorakda (halqalar 270 gradusda tugaydi). */}
         <text
           x={MONTH_X_RATIO * outerRadius}
           y={MONTH_Y_RATIO * outerRadius}
@@ -126,6 +116,15 @@ function polarAxisLayer(max: number, month: string) {
           fill={AXIS_TEXT_COLOR}
         >
           {month}
+        </text>
+        <text
+          x={MONTH_X_RATIO * outerRadius}
+          y={(MONTH_Y_RATIO + UNIT_Y_OFFSET_RATIO) * outerRadius}
+          textAnchor="middle"
+          fontSize={9}
+          fill={AXIS_TEXT_COLOR}
+        >
+          {unit}
         </text>
       </g>
     );
@@ -140,34 +139,45 @@ const VIEWS = [
 ] as const satisfies ReadonlyArray<{ value: View; Icon: typeof Table; label: string }>;
 
 /**
- * "Yo'qotish zarari" (Figma `4055:1007`, 322x336) - "Qarzdorlik" kartasining
- * egizagi. Grafik maydoni 169px, ostida ajratgich va 3 ta yorliq.
+ * Keltirilgan zarar - qoidabuzar turi bo'yicha (Figma `4055:1007`, 322x336),
+ * "Qarzdorlik" kartasining egizagi. Grafik maydoni 169px, ostida ajratgich
+ * va yorliqlar.
  *
- * Standart qiymatlar - maketdagi (0..200 mln so'm). Transformator sahifasida
- * zarar o'sha TP yo'qotishidan hisoblanadi: `kinds`, `max` (8 ga bo'linadigan
- * shkala chegarasi), `unit` va `total` proplari.
+ * Summalar Qoidabuzarliklar shablonidan (so'm). Shkala eng katta bo'lakdan
+ * yaxlitlanadi (8 bo'linma), birligi oy nomi ostida. `uploaded={false}` -
+ * shu oyga fayl yuklanmagan.
  */
 export function LossDamageCard({
-  kinds = LOSS_KINDS,
-  max = 200,
-  unit = "mln so’m",
-  // 161,7 + 61,6 + 50,1 - maketdagi uchta qiymat yig'indisi.
-  total = "273,4",
-  month = "Sentabr",
+  title,
+  kinds,
+  total,
+  month,
+  uploaded,
   className,
 }: {
-  kinds?: readonly LossKind[];
-  max?: number;
-  unit?: string;
-  total?: string;
-  month?: string;
+  title: string;
+  /** Halqalar ichkaridan tashqariga shu tartibda chiziladi. */
+  kinds: readonly DamageKind[];
+  /** Jami zarar, so'm (jadvalning oxirgi qatori). */
+  total: number;
+  /** Diagrammadagi oy nomi: "Sentabr". */
+  month: string;
+  uploaded: boolean;
   className?: string;
 }) {
   const [view, setView] = useState<View>("chart");
 
+  const { divisor, unit } = moneyUnit(Math.max(0, ...kinds.map((kind) => finite(kind.value))));
+  const peak = Math.max(0, ...kinds.map((kind) => finite(kind.value))) / divisor;
+  const { max } = fixedScale(peak, TICK_STEPS);
+
   const chartData = useMemo(
-    () => kinds.map((kind) => ({ id: kind.id, data: [{ x: month, y: kind.value }] })),
-    [kinds, month],
+    () =>
+      kinds.map((kind) => ({
+        id: kind.id,
+        data: [{ x: month, y: Math.min(max, Math.max(0, finite(kind.value) / divisor)) }],
+      })),
+    [kinds, month, max, divisor],
   );
 
   /** Nivo rangni `category` bo'yicha beradi, bizga esa qator (halqa) kerak. */
@@ -178,22 +188,29 @@ export function LossDamageCard({
     return (bar: Omit<ComputedBar, "color">) => byId[bar.groupId] ?? GRID_COLOR;
   }, [kinds]);
 
-  const axisLayer = useMemo(() => polarAxisLayer(max, month), [max, month]);
+  const axisLayer = useMemo(() => polarAxisLayer(max, month, unit), [max, month, unit]);
 
   const columns: TableColumn[] = [
-    { key: "kind", label: "Yo’qotish turi", grow: 1.4 },
-    { key: "amount", label: `Zarar, ${unit}` },
+    { key: "kind", label: "Qoidabuzar turi", grow: 1.4 },
+    { key: "amount", label: "Zarar" },
   ];
+
+  const emptyText = !uploaded
+    ? "Qoidabuzarliklar yuklanmagan"
+    : kinds.length === 0
+      ? "Ma’lumot yo’q"
+      : null;
 
   return (
     <Card className={className}>
-      <CardHeader title="Yo&rsquo;qotish zarari">
-        <SegmentedIcons items={VIEWS} value={view} onChange={setView} />
-        <IconPill icon={FileDown} label="Yuklab olish" />
+      <CardHeader title={title}>
+        {emptyText ? null : <SegmentedIcons items={VIEWS} value={view} onChange={setView} />}
       </CardHeader>
 
       <CardBody>
-        {view === "chart" ? (
+        {emptyText ? (
+          <EmptyState variant="inline" action={false} title={emptyText} />
+        ) : view === "chart" ? (
           <>
             <div className="relative min-h-0 flex-1">
               {/* Maketda diagramma 180px kenglikda va markazda. Katta shkalada
@@ -230,10 +247,10 @@ export function LossDamageCard({
                   <span className="flex min-w-0 flex-col gap-1.5">
                     {/* Maketdagi izoh rangi tokenlardan ko'ra ochiqroq. */}
                     <span className="truncate text-[10px] leading-[13px] text-[#999999]">
-                      {kind.id}
+                      {kind.label}
                     </span>
                     <span className="truncate text-xs leading-4 font-bold text-ink">
-                      {kind.amount} {unit}
+                      {money(kind.value)}
                     </span>
                   </span>
                 </div>
@@ -251,9 +268,9 @@ export function LossDamageCard({
                   key: kind.id,
                   cells: [
                     <span key="kind" className="font-medium">
-                      {kind.id}
+                      {kind.label}
                     </span>,
-                    kind.amount,
+                    money(kind.value),
                   ],
                 })),
                 {
@@ -262,7 +279,7 @@ export function LossDamageCard({
                     <span key="kind" className="font-medium">
                       Jami
                     </span>,
-                    total,
+                    money(total),
                   ],
                 },
               ]}

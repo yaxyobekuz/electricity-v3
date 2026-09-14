@@ -1,123 +1,30 @@
 "use client";
 
 import { ResponsiveBar } from "@nivo/bar";
-import { ChartNoAxesColumn, FileDown, Table } from "lucide-react";
+import { ChartNoAxesColumn, Table } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 
+import { finite } from "@/components/cards/chart-scale";
 import { Card, CardBody, CardFooterLink, CardHeader } from "@/components/ui/Card";
-import { Badge, type BadgeTone, DataTable, type TableColumn } from "@/components/ui/DataTable";
-import { IconPill } from "@/components/ui/IconPill";
+import { DataTable, type TableColumn } from "@/components/ui/DataTable";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { SegmentedIcons } from "@/components/ui/Toggle";
+import { dec } from "@/lib/format";
 import { cn } from "@/lib/ui/cn";
-
-// Maketdagi o'zbekcha apostrof - U+2019: JSX matnida `&rsquo;`, `string`
-// proplarda (sarlavha, ustun nomi) \u2019 escape sifatida yoziladi.
-
-interface TransformerRow {
-  id: string;
-  name: string;
-  status: { label: string; tone: BadgeTone };
-  /** Hisoblangan */
-  billed: string;
-  /** Iste'mol */
-  usage: string;
-  /** Yo'qotish */
-  loss: string;
-  /** Grafik uchun Iste'mol qiymati (ming kVt/s). */
-  usageValue: number;
-}
-
-const TRANSFORMERS: readonly TransformerRow[] = [
-  {
-    id: "tp-001",
-    name: "TP-001",
-    status: { label: "Faol", tone: "green" },
-    billed: "51,5 ming",
-    usage: "41,4 ming",
-    loss: "10,1 ming",
-    usageValue: 41.4,
-  },
-  {
-    id: "tp-002",
-    name: "TP-002",
-    status: { label: "Faol", tone: "green" },
-    billed: "51,0 ming",
-    usage: "41,0 ming",
-    loss: "10,0 ming",
-    usageValue: 41,
-  },
-  {
-    id: "tp-003",
-    name: "TP-003",
-    status: { label: "Nofaol", tone: "red" },
-    billed: "40,6 ming",
-    usage: "30,0 ming",
-    loss: "10,6 ming",
-    usageValue: 30,
-  },
-  {
-    id: "tp-004-a",
-    name: "TP-004",
-    status: { label: "Faol", tone: "green" },
-    billed: "31,3 ming",
-    usage: "21,3 ming",
-    loss: "10,0 ming",
-    usageValue: 21.3,
-  },
-  {
-    id: "tp-004-b",
-    name: "TP-004",
-    status: { label: "Faol", tone: "green" },
-    billed: "31,3 ming",
-    usage: "21,3 ming",
-    loss: "10,0 ming",
-    usageValue: 21.3,
-  },
-  {
-    id: "tp-005",
-    name: "TP-005",
-    status: { label: "Ta'mirda", tone: "amber" },
-    billed: "15,1 ming",
-    usage: "8,1 ming",
-    loss: "7,0 ming",
-    usageValue: 8.1,
-  },
-];
-
-const COLUMNS: TableColumn[] = [
-  { key: "name", label: "Nomi" },
-  { key: "status", label: "Holat" },
-  { key: "billed", label: "Hisoblangan" },
-  { key: "usage", label: "Iste\u2019mol" },
-  { key: "loss", label: "Yo\u2019qotish" },
-];
 
 /** Karta qatori: jadval kataklari va grafikdagi ustun (yorliq + qiymat). */
 export interface TopRow {
   /** Noyob kalit - nivo indeksi ham shu (nomlar takrorlanishi mumkin). */
   id: string;
+  /** Jadval kataklari - `columns` tartibida. */
   cells: ReactNode[];
   /** Grafik o'qidagi yorliq. */
   label: string;
+  /** Grafikdagi ustun qiymati (manfiy bo'lishi mumkin). */
   value: number;
+  /** Ustun ichidagi yozuv; berilmasa `value` + `valueSuffix`. */
+  valueText?: string;
 }
-
-const ROWS: readonly TopRow[] = TRANSFORMERS.map((row) => ({
-  id: row.id,
-  label: row.name,
-  value: row.usageValue,
-  cells: [
-    <span key="name" className="font-medium">
-      {row.name}
-    </span>,
-    <Badge key="status" tone={row.status.tone}>
-      {row.status.label}
-    </Badge>,
-    row.billed,
-    row.usage,
-    row.loss,
-  ],
-}));
 
 const CHART_THEME = {
   axis: { ticks: { text: { fontSize: 11, fill: "#767676", fontWeight: 500 } } },
@@ -132,33 +39,38 @@ const VIEWS = [
 ] as const satisfies ReadonlyArray<{ value: View; Icon: typeof Table; label: string }>;
 
 /**
- * "Eng ko'p sarfga ega transformatorlar" (Figma `4051:89`, 487x298).
+ * "Eng ko'p ..." jadval/grafik kartasi (Figma `4051:89`, 487x298).
  *
  * Jadval maketda 208px joy egallaydi, umumiy karta esa 298px - shuning uchun
  * pastki bo'shliq 8px (maketdagidek), aks holda oxirgi qator sig'maydi.
  *
- * Transformator sahifasida xuddi shu karta o'sha TP ning eng ko'p iste'mol
- * qiluvchi abonentlarini ko'rsatadi - `title` / `columns` / `rows` proplari.
- * Grafik yorlig'i: `value` + `valueSuffix` (standart - "ming", 1 xona).
+ * Fider sahifasida - transformatorlar, transformator sahifasida - abonentlar:
+ * sarlavha, ustunlar va qatorlar sahifadan keladi. Footer havolasi faqat
+ * `footerHref` berilganda chiziladi.
  */
 export function TopTransformersCard({
-  title = "Eng ko’p sarfga ega transformatorlar",
-  columns = COLUMNS,
-  rows = ROWS,
-  valueSuffix = "ming",
-  valueDigits = 1,
+  title,
+  columns,
+  rows,
+  valueSuffix = "",
+  valueDigits = 0,
   axisWidth = 48,
+  footerLabel = "Ba’tafsil",
   footerHref,
+  emptyText = "Ma’lumot yo’q",
   className,
 }: {
-  title?: string;
-  columns?: TableColumn[];
-  rows?: readonly TopRow[];
+  title: string;
+  columns: TableColumn[];
+  rows: readonly TopRow[];
+  /** Ustun yozuvidagi birlik: "kWh". */
   valueSuffix?: string;
   valueDigits?: number;
   /** Grafikdagi yorliq ustunining eni, px. */
   axisWidth?: number;
+  footerLabel?: string;
   footerHref?: string;
+  emptyText?: string;
   className?: string;
 }) {
   const [view, setView] = useState<View>("table");
@@ -168,22 +80,51 @@ export function TopTransformersCard({
     [rows],
   );
 
+  const textById = useMemo<Record<string, string>>(
+    () =>
+      Object.fromEntries(
+        rows.map((row) => [
+          row.id,
+          row.valueText ?? `${dec(row.value, valueDigits)} ${valueSuffix}`.trim(),
+        ]),
+      ),
+    [rows, valueDigits, valueSuffix],
+  );
+
   /** Gorizontal ustunlar pastdan yuqoriga chiziladi, shuning uchun teskari. */
   const chartData = useMemo(
-    () => rows.map((row) => ({ id: row.id, value: row.value })).reverse(),
+    () => rows.map((row) => ({ id: row.id, value: finite(row.value) })).reverse(),
     [rows],
   );
+
+  /** Nol doim shkalada; hammasi nol bo'lsa ham oraliq bo'sh emas. */
+  const valueScale = useMemo(() => {
+    const values = chartData.map((row) => row.value);
+    const min = Math.min(0, ...values);
+    const max = Math.max(0, ...values);
+    return { type: "linear" as const, min, max: max > min ? max : min + 1 };
+  }, [chartData]);
+
+  const empty = rows.length === 0;
 
   return (
     <Card padded={false} className={cn("px-4 pt-4 pb-2", className)}>
       <CardHeader title={title}>
-        <SegmentedIcons items={VIEWS} value={view} onChange={setView} />
-        <IconPill icon={FileDown} label="Yuklab olish" />
+        {empty ? null : <SegmentedIcons items={VIEWS} value={view} onChange={setView} />}
       </CardHeader>
 
       <CardBody>
-        <div className="min-h-0 flex-1">
-          {view === "table" ? (
+        {/* Jadval ko'rinishida 298px kartaga 6 qator sig'adi; qatorlar soni
+            cheklanmagan, shuning uchun qolganlari aylantirib ko'riladi. */}
+        <div
+          className={cn(
+            "min-h-0 flex-1",
+            !empty && view === "table" && "scrollbar-none overflow-y-auto",
+          )}
+        >
+          {empty ? (
+            <EmptyState variant="inline" action={false} title={emptyText} />
+          ) : view === "table" ? (
             <DataTable
               /* 11px sarlavha katagida o'z leading'i yo'q - maketdagi 14px qator
                  balandligi ota elementdan meros olinadi. */
@@ -201,6 +142,7 @@ export function TopTransformersCard({
               padding={0.35}
               colors={["#007cd2"]}
               borderRadius={4}
+              valueScale={valueScale}
               enableGridX={false}
               enableGridY={false}
               axisTop={null}
@@ -211,9 +153,7 @@ export function TopTransformersCard({
                 tickPadding: 8,
                 format: (value: string) => labelById[value] ?? value,
               }}
-              valueFormat={(value) =>
-                `${value.toFixed(valueDigits).replace(".", ",")} ${valueSuffix}`
-              }
+              label={(bar) => textById[String(bar.indexValue)] ?? ""}
               labelSkipWidth={56}
               labelTextColor="#ffffff"
               theme={CHART_THEME}
@@ -224,7 +164,7 @@ export function TopTransformersCard({
         </div>
       </CardBody>
 
-      <CardFooterLink href={footerHref}>Ba&apos;tafsil</CardFooterLink>
+      {footerHref ? <CardFooterLink href={footerHref}>{footerLabel}</CardFooterLink> : null}
     </Card>
   );
 }

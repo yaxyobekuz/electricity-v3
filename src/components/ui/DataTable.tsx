@@ -32,6 +32,8 @@ export function DataTable({
   compact = false,
   rowHeight,
   lastRowHeight,
+  emptyText,
+  lastRowFooter = true,
 }: {
   columns: TableColumn[];
   rows: TableRow[];
@@ -49,9 +51,16 @@ export function DataTable({
    */
   rowHeight?: number;
   lastRowHeight?: number;
+  /** Qator yo'q bo'lsa sarlavha ostida ko'rsatiladigan matn. Berilmasa - faqat sarlavha. */
+  emptyText?: string;
+  /**
+   * `false` - oxirgi qator ham oddiy qator kabi chiziladi (kulrang fon va
+   * baland "yakun" qatori yo'q). Uzun ro'yxatlarda oxirgi yozuv jami emas.
+   */
+  lastRowFooter?: boolean;
 }) {
   const bodyHeight = rowHeight ?? (compact ? 24 : 29);
-  const footHeight = lastRowHeight ?? (compact ? 28 : 35);
+  const footHeight = lastRowFooter ? (lastRowHeight ?? (compact ? 28 : 35)) : bodyHeight;
   return (
     <div className={cn("flex min-h-0 w-full flex-col overflow-hidden", className)}>
       {/* Qator balandliklari maketdan aynan o'lchangan: sarlavha 30, oddiy
@@ -78,16 +87,29 @@ export function DataTable({
         ))}
       </div>
 
+      {rows.length === 0 && emptyText ? (
+        <div
+          style={{ height: footHeight }}
+          className={cn(
+            "flex w-full shrink-0 items-center justify-center rounded-b-md bg-canvas px-1.5 text-ink-muted",
+            compact ? "text-[11px]" : "text-xs",
+          )}
+        >
+          <span className="min-w-0 truncate">{emptyText}</span>
+        </div>
+      ) : null}
+
       {rows.map((row, index) => {
         const last = index === rows.length - 1;
+        const footer = last && lastRowFooter;
         return (
           <div
             key={row.key}
             style={{ height: last ? footHeight : bodyHeight }}
             className={cn(
               "flex w-full shrink-0 items-center px-1.5",
-              last && "rounded-b-md bg-canvas",
-              !last && "border-b border-solid border-[#f0f0f0]",
+              footer && "rounded-b-md bg-canvas",
+              !footer && "border-b border-solid border-[#f0f0f0]",
             )}
           >
             {row.cells.map((cell, cellIndex) => {

@@ -5,21 +5,22 @@ import {
   type RadialBarSerie,
   ResponsiveRadialBar,
 } from "@nivo/radial-bar";
-import { ChartNoAxesColumn, FileDown, Table } from "lucide-react";
+import { ChartNoAxesColumn, Table } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { finite, plainNumber } from "@/components/cards/chart-scale";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
-import { DataTable, type TableColumn } from "@/components/ui/DataTable";
-import { IconPill } from "@/components/ui/IconPill";
+import { DataTable, type TableColumn, type TableRow } from "@/components/ui/DataTable";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { SegmentedIcons } from "@/components/ui/Toggle";
 
 export interface StatRing {
   id: string;
   /** Legendadagi izoh. */
   label: string;
-  /** Legendadagi va jadvaldagi qiymat: "361,7 mln so'm", "1900 ta". */
+  /** Legendadagi va jadvaldagi qiymat (`format.ts`): "361,7 mln so’m", "1 900 ta". */
   amount: string;
-  /** Yoy uzunligi `0..max` shkalada. */
+  /** Yoy uzunligi `0..max` shkalada; chegaradan tashqarisi qirqiladi. */
   arc: number;
   /** Yoy va legenda nuqtasining rangi. */
   color: string;
@@ -58,10 +59,17 @@ const DEFAULT_GEOMETRY: RingGeometry = {
 
 /** Bo'linma chiziqlari (gradus, yuqoridan soat yo'nalishi bo'yicha). */
 const SPOKES = [0, 54, 108, 162, 216, 270] as const;
+/** Shkala 5 ta teng bo'linmaga ajratilgan - yorliqlar 6 ta. */
+const DIVISIONS = SPOKES.length - 1;
+
+/** `max` nol yoki noto'g'ri bo'lsa ishlatiladigan shkala (0..5). */
+const FALLBACK_MAX = DIVISIONS;
 
 /** Maketdagi radiuslar 69px tashqi radiusga nisbatan. */
 const RING_OUTER = 72 / 69;
 const RING_INNER = 20 / 69;
+/** Birlik yozuvi oy nomidan shuncha pastda (69px radiusda). */
+const UNIT_OFFSET = 13;
 
 /**
  * Setka nivo'ning o'z qatlamlari bilan chizilmaydi: d3 tik generatori
@@ -69,7 +77,12 @@ const RING_INNER = 20 / 69;
  * shuning uchun aylanalar, radiuslar va raqamlar maketdagi o'lchamlar
  * bo'yicha qo'lda chiziladi.
  */
-function polarDecoration(tickLabels: readonly string[], month: string, geometry: RingGeometry) {
+function polarDecoration(
+  tickLabels: readonly string[],
+  month: string,
+  scaleUnit: string | undefined,
+  geometry: RingGeometry,
+) {
   return function PolarDecoration({ center, outerRadius }: RadialBarCustomLayerProps) {
     const scale = outerRadius / 69;
     const inner = RING_INNER * outerRadius;
@@ -105,6 +118,15 @@ function polarDecoration(tickLabels: readonly string[], month: string, geometry:
           <text x={geometry.month.x * scale} y={geometry.month.y * scale}>
             {month}
           </text>
+          {scaleUnit ? (
+            <text
+              x={geometry.month.x * scale}
+              y={(geometry.month.y + UNIT_OFFSET) * scale}
+              fontSize={9}
+            >
+              {scaleUnit}
+            </text>
+          ) : null}
         </g>
       </g>
     );
@@ -119,21 +141,25 @@ const VIEWS = [
 ] as const satisfies ReadonlyArray<{ value: View; Icon: typeof Table; label: string }>;
 
 /**
- * Halqali diagramma kartasi (322x336): sarlavhada grafik/jadval almashtirgichi
- * va yuklab olish, 169px diagramma, ostida 8px oraliq va 87px legenda
- * (yuqorisida ajratgich, 2 ustun x 35px qator).
+ * Halqali diagramma kartasi (322x336): sarlavhada grafik/jadval almashtirgichi,
+ * 169px diagramma, ostida 8px oraliq va 87px legenda (yuqorisida ajratgich,
+ * 2 ustun x 35px qator).
  *
  * Yoylar 270 gradusni supuradi; markaz va radiuslar maketdan: tashqi radius
- * 69px, ichki nisbat 0.335.
+ * 69px, ichki nisbat 0.335. Shkala 5 bo'linmali: `tickLabels` berilmasa
+ * `0..max` dan hisoblanadi. `max` nol bo'lsa (hamma qiymat nol) diagramma
+ * bo'sh yoylar bilan chiziladi - NaN yoy yo'q.
  */
 export function RingStatsCard({
   title,
   rings,
   max,
   tickLabels,
-  month = "Sentabr",
+  month,
+  scaleUnit,
   columns,
   summary,
+  empty = null,
   geometry = DEFAULT_GEOMETRY,
   className,
 }: {
@@ -142,22 +168,35 @@ export function RingStatsCard({
   rings: readonly StatRing[];
   /** Shkalaning yuqori chegarasi (270 gradusga to'g'ri keladi). */
   max: number;
-  /** 6 ta bo'linma yorlig'i: 0 dan `max` gacha. */
-  tickLabels: readonly string[];
-  month?: string;
+  /** 6 ta bo'linma yorlig'i: 0 dan `max` gacha. Berilmasa - avtomatik. */
+  tickLabels?: readonly string[] | null;
+  /** Diagrammadagi oy nomi: "Sentabr". */
+  month: string;
+  /** Shkala birligi (oy nomi ostida): "mln so’m", "%". */
+  scaleUnit?: string;
   /** Jadval ustunlari nomi: [turi, qiymati]. */
   columns: readonly [string, string];
-  /** Diagramma maydonining chap yuqori burchagidagi jamlanma (nuqtasiz yorliq). */
-  summary?: { label: string; value: string };
+  /** Diagramma maydonining chap yuqori burchagidagi jamlanma; jadvalda oxirgi qator. */
+  summary: { label: string; value: string } | null;
+  /** Matn berilsa - diagramma o'rniga bo'sh holat (masalan, fayl yuklanmagan). */
+  empty?: string | null;
   geometry?: RingGeometry;
   className?: string;
 }) {
   const [view, setView] = useState<View>("chart");
 
+  const safeMax = Number.isFinite(max) && max > 0 ? max : FALLBACK_MAX;
+
   const chartData = useMemo<RadialBarSerie[]>(
     // Nivo birinchi seriyani eng ichki halqa qilib chizadi - shuning uchun teskari.
-    () => rings.map((ring) => ({ id: ring.id, data: [{ x: "qiymat", y: ring.arc }] })).reverse(),
-    [rings],
+    () =>
+      rings
+        .map((ring) => ({
+          id: ring.id,
+          data: [{ x: "qiymat", y: Math.min(safeMax, Math.max(0, finite(ring.arc))) }],
+        }))
+        .reverse(),
+    [rings, safeMax],
   );
 
   const ringColor = useMemo<Record<string, string>>(
@@ -165,9 +204,18 @@ export function RingStatsCard({
     [rings],
   );
 
+  const labels = useMemo(
+    () =>
+      tickLabels ??
+      Array.from({ length: DIVISIONS + 1 }, (_, index) =>
+        plainNumber((safeMax / DIVISIONS) * index),
+      ),
+    [tickLabels, safeMax],
+  );
+
   const decoration = useMemo(
-    () => polarDecoration(tickLabels, month, geometry),
-    [tickLabels, month, geometry],
+    () => polarDecoration(labels, month, scaleUnit, geometry),
+    [labels, month, scaleUnit, geometry],
   );
 
   const tableColumns: TableColumn[] = [
@@ -175,34 +223,47 @@ export function RingStatsCard({
     { key: "amount", label: columns[1] },
   ];
 
+  const tableRows: TableRow[] = rings.map((ring) => ({
+    key: ring.id,
+    cells: [
+      <span key="type" className="font-medium">
+        {ring.label}
+      </span>,
+      ring.amount,
+    ],
+  }));
+  if (summary) {
+    tableRows.push({
+      key: "summary",
+      cells: [
+        <span key="type" className="font-medium">
+          {summary.label}
+        </span>,
+        summary.value,
+      ],
+    });
+  }
+
+  const emptyText = empty ?? (rings.length === 0 ? "Ma’lumot yo’q" : null);
+
   return (
     <Card className={className}>
       <CardHeader title={title}>
-        <SegmentedIcons items={VIEWS} value={view} onChange={setView} />
-        <IconPill icon={FileDown} label="Yuklab olish" />
+        {emptyText ? null : <SegmentedIcons items={VIEWS} value={view} onChange={setView} />}
       </CardHeader>
 
       <CardBody>
-        {view === "table" ? (
-          <DataTable
-            columns={tableColumns}
-            rows={rings.map((ring) => ({
-              key: ring.id,
-              cells: [
-                <span key="type" className="font-medium">
-                  {ring.label}
-                </span>,
-                ring.amount,
-              ],
-            }))}
-          />
+        {emptyText ? (
+          <EmptyState variant="inline" action={false} title={emptyText} />
+        ) : view === "table" ? (
+          <DataTable columns={tableColumns} rows={tableRows} />
         ) : (
           <>
             {/* O'q yorliqlari SVG chetidan chiqadi - kesilmasligi uchun overflow ochiq. */}
             <div className="relative min-h-0 flex-1 [&_svg]:overflow-visible">
               <ResponsiveRadialBar
                 data={chartData}
-                maxValue={max}
+                maxValue={safeMax}
                 startAngle={0}
                 endAngle={270}
                 innerRadius={0.335}

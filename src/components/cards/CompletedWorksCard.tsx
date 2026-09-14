@@ -2,38 +2,38 @@ import { ExternalLink } from "lucide-react";
 
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { DataTable, type TableColumn, type TableRow } from "@/components/ui/DataTable";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { IconPill } from "@/components/ui/IconPill";
 
-export interface CompletedWork {
-  /** Qator kaliti - bir transformatorda bir nechta ish bo'lishi mumkin. */
+/**
+ * Ta'mir ishi - TP ning "Joriy ta’mir sanasi" / "To’la ta’mir sanasi"
+ * ustunlaridan. Holat (bajarilgan / rejalashtirilgan) sanani hisobot sanasi
+ * bilan taqqoslab sahifada aniqlanadi.
+ */
+export interface RepairWork {
+  /** Qator kaliti - bir transformatorda ikki xil ta'mir bo'lishi mumkin. */
   id: string;
+  /** TP nomi. */
   tp: string;
+  /** "Joriy ta’mir" / "To’la ta’mir". */
   work: string;
+  /** Tayyor sana matni (`formatDate`). */
   date: string;
 }
 
-const WORKS: readonly CompletedWork[] = [
-  { id: "01-xatlov", tp: "TP-01", work: "Xatlov o’tkazish", date: "21-avgust, 2026" },
-  {
-    id: "004-repair",
-    tp: "TP-004",
-    work: "Toka transformatorni ta’mirlash",
-    date: "1-avgust, 2026",
-  },
-  { id: "005-meter", tp: "TP-005", work: "Hisoblagich o’rnatish", date: "18-avgust, 2026" },
-];
+export type CompletedWork = RepairWork;
 
 /**
  * Ustun nisbatlari maketdagi 96 / 250.67 / 96 px dan olingan
  * (454.67px qatordan 6px ichki bo'shliqlar ayirilgach) -> 18 : 47 : 18.
  */
 const COLUMNS: TableColumn[] = [
-  { key: "tp", label: "Transformtator", grow: 18 },
-  { key: "work", label: "Bajarilgan Ish", grow: 47, align: "left" },
+  { key: "tp", label: "Transformator", grow: 18 },
+  { key: "work", label: "Bajarilgan ish", grow: 47, align: "left" },
   { key: "date", label: "Sana", grow: 18 },
 ];
 
-function buildRows(works: readonly CompletedWork[]): TableRow[] {
+export function buildWorkRows(works: readonly RepairWork[]): TableRow[] {
   return works.map((item) => ({
     key: item.id,
     cells: [
@@ -48,14 +48,14 @@ function buildRows(works: readonly CompletedWork[]): TableRow[] {
 }
 
 /**
- * Fider sahifasining 4-qatoridagi "Bajarilgan ishlar" kartasi (span-6, 209px).
- * Transformator sahifasida ro'yxat o'sha TP ishlaridan - `works`.
+ * "Bajarilgan ishlar" kartasi (span-6, 209px): ta'mir sanasi hisobot
+ * sanasidan oldin yoki unga teng bo'lgan ishlar.
  */
 export function CompletedWorksCard({
-  works = WORKS,
+  works,
   className,
 }: {
-  works?: readonly CompletedWork[];
+  works: readonly RepairWork[];
   className?: string;
 }) {
   return (
@@ -64,8 +64,19 @@ export function CompletedWorksCard({
         <IconPill icon={ExternalLink} label="Barcha ishlarni ochish" href="/works" />
       </CardHeader>
       <CardBody>
-        {/* Maketda bu jadval qatorlari 28px, oxirgisi 32px (XML: 4080:479). */}
-        <DataTable columns={COLUMNS} rows={buildRows(works)} rowHeight={28} lastRowHeight={32} />
+        {works.length === 0 ? (
+          <EmptyState variant="inline" action={false} title="Bajarilgan ta’mir ishlari yo’q" />
+        ) : (
+          <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto">
+            {/* Maketda bu jadval qatorlari 28px, oxirgisi 32px (XML: 4080:479). */}
+            <DataTable
+              columns={COLUMNS}
+              rows={buildWorkRows(works)}
+              rowHeight={28}
+              lastRowHeight={32}
+            />
+          </div>
+        )}
       </CardBody>
     </Card>
   );

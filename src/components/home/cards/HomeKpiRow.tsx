@@ -1,43 +1,31 @@
-import { ArrowUp, HandCoins, Percent, PlugZap, Store, Users, Zap, ZapOff } from "lucide-react";
+import { ArrowDown, ArrowUp, HandCoins, Minus, Percent, PlugZap, Store, Users, Zap, ZapOff } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { MiniBars } from "@/components/cards/KpiCard";
 import { type GlyphIcon, Icon } from "@/components/ui/Icon";
 import { UserGroup } from "@/components/ui/icons/UserGroup";
+import type {
+  HomeCountKpi,
+  HomeFlowKpi,
+  HomeKpiLine,
+  HomeKpis,
+  HomeTone,
+  HomeTrend,
+} from "@/lib/queries/home-data";
 import { cn } from "@/lib/ui/cn";
 
 /*
  * Bosh sahifaning 1-qatori (Figma `4126:133`, 6 x 239.33x196).
  *
- * Fider sahifasidagi `KpiCard` dan tuzilmasi farq qiladi: delta qatori pastga
- * tushgan, "Bu oy" qatori qo'shilgan, diagramma treki 39px dan 13px ga
- * qisqargan, to'rtinchi karta esa umuman diagrammasiz. Shuning uchun qobiq va
- * qatorlar alohida bo'laklarga ajratilgan, fider kartasi o'zgarishsiz qoladi.
+ * Fider sahifasidagi `KpiCard` dan tuzilmasi farq qiladi: delta qatori pastda,
+ * to'rtinchi karta esa diagrammasiz. Shuning uchun qobiq va qatorlar alohida
+ * bo'laklarga ajratilgan, fider kartasi o'zgarishsiz qoladi.
  *
  * Qator balandliklari maketdan: sarlavha 32, qiymat 41, matn qatorlari 26,
- * diagramma 13 (yoki 39). 16 + 32 + 41 + 26*3 + 13 + 16 = 196.
+ * diagramma 39. 16 + 32 + 41 + 26*2 + 39 + 16 = 196.
+ *
+ * Barcha qiymatlar `loadHomeData` dan tayyor matn sifatida keladi.
  */
-
-/**
- * 30 kunlik ustunlar (Figma `4126:150`). Maketda ustunlar 39px lik trekdan
- * ko'chirilgan va balandligi o'zgarmay qolgan, trek esa 13px ga qisqargan -
- * ortiqcha qism kesiladi. Shuning uchun ko'rinadigan ulush `min(h, 13) / 13`:
- * faqat 9px va 11px lik ikkita ustun trekdan past.
- */
-const DAILY_FLOW = [
-  1, 1, 1, 1, 1, 1, 1, 1, 0.692, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  0.846, 1, 1, 1,
-] as const;
-
-/** 12 oylik ustunlar, 39px trek (Figma `4126:294`). */
-const MONTHLY_SUBSCRIBERS = [
-  1, 1, 1, 0.744, 0.667, 1, 0.821, 0.744, 0.282, 0.667, 1, 1,
-] as const;
-
-/** 12 oylik ustunlar, 39px trek (Figma `4126:354`). */
-const MONTHLY_DEBT = [
-  0.282, 0.282, 0.41, 0.41, 0.179, 0.41, 1, 0.744, 0.41, 0.667, 0.41, 0.282,
-] as const;
 
 interface KpiLine {
   id: string;
@@ -46,6 +34,19 @@ interface KpiLine {
   /** Rangli (delta) qator: matn rangi va `font-medium`. */
   tone?: string;
 }
+
+/** `KpiCard` dagi bilan bir xil: yo'qotish o'sishi - qizil, kamayishi - yashil. */
+const TONE_TEXT: Record<HomeTone, string> = {
+  bad: "text-trend-up",
+  good: "text-trend-down",
+  neutral: "text-ink-muted",
+};
+
+const TREND_ICON: Record<HomeTrend["direction"], GlyphIcon> = {
+  up: ArrowUp,
+  down: ArrowDown,
+  flat: Minus,
+};
 
 function KpiShell({
   title,
@@ -101,16 +102,18 @@ function KpiFigure({
   className?: string;
 }) {
   return (
-    <div className={cn("flex h-[41px] shrink-0 items-center gap-1 pt-1 pb-1.5", className)}>
-      <span className={cn("font-bold text-ink", valueClassName)}>{value}</span>
-      <span className="text-sm leading-[18px] font-medium text-ink-muted">{unit}</span>
+    <div className={cn("flex h-[41px] min-w-0 shrink-0 items-center gap-1 pt-1 pb-1.5", className)}>
+      <span className={cn("shrink-0 font-bold text-ink", valueClassName)}>{value}</span>
+      <span className="min-w-0 truncate text-sm leading-[18px] font-medium text-ink-muted">
+        {unit}
+      </span>
     </div>
   );
 }
 
 /**
  * 26px lik matn qatorlari. Ikonkali qatorda 20px ikonka tepada, 18px matn
- * uning markazida (maketda matn 1px pastroq); ikonkasiz qatorda matn tepada.
+ * uning markazida; ikonkasiz qatorda matn tepada.
  */
 function KpiLines({ lines }: { lines: readonly KpiLine[] }) {
   return (
@@ -119,7 +122,7 @@ function KpiLines({ lines }: { lines: readonly KpiLine[] }) {
         <p
           key={line.id}
           className={cn(
-            "flex h-[26px] shrink-0 items-start text-sm leading-[18px]",
+            "flex h-[26px] min-w-0 shrink-0 items-start text-sm leading-[18px]",
             line.tone ? cn("font-medium", line.tone) : "text-ink-muted",
           )}
         >
@@ -137,91 +140,94 @@ function KpiLines({ lines }: { lines: readonly KpiLine[] }) {
   );
 }
 
-function KpiBars({
-  values,
-  accent,
-  label,
-  className,
-}: {
-  values: readonly number[];
-  accent: string;
-  /** Ustunlar o'ngidagi yorliq; 13px trekdan 5px yuqoriga chiqib turadi. */
-  label?: string;
-  className?: string;
-}) {
+/** Oylik ustunlar (39px trek) va o'ngda "<n> oy" yorlig'i - kartaning pastida. */
+function KpiBars({ values, accent, label }: { values: readonly number[]; accent: string; label: string }) {
   return (
-    <div className={cn("flex shrink-0 items-end gap-2", className)}>
+    <div className="mt-auto flex h-[39px] shrink-0 items-end gap-2">
       <MiniBars values={values} barClassName={accent} />
-      {label ? (
-        <span className="shrink-0 text-sm leading-[18px] text-ink-muted">{label}</span>
-      ) : null}
+      <span className="shrink-0 text-sm leading-[18px] text-ink-muted">{label}</span>
     </div>
   );
 }
 
-const FLOW_LINES: readonly KpiLine[] = [
-  { id: "month", text: "Bu oy: 19,1 ming kWh" },
-  { id: "previous", text: "O’tgan oy: 198,1 ming kWh" },
-  { id: "delta", text: "Bu oy: 2.1% ga oshdi", icon: ArrowUp, tone: "text-trend-up" },
-];
+const FLOW_STYLE: Record<HomeFlowKpi["id"], { icon: GlyphIcon; tint: string; accent: string }> = {
+  total: { icon: Zap, tint: "bg-tint-blue", accent: "bg-accent-blue" },
+  useful: { icon: PlugZap, tint: "bg-tint-green", accent: "bg-accent-green" },
+  loss: { icon: ZapOff, tint: "bg-tint-red", accent: "bg-accent-red" },
+};
 
-/** Uch oqim kartasi maketda bir-birining nusxasi - farqi sarlavha va sonda. */
-const FLOWS = [
-  {
-    id: "total",
-    title: "Umumiy oqim",
-    value: "220,1",
-    icon: Zap,
-    tint: "bg-tint-blue",
-    accent: "bg-accent-blue",
-  },
-  {
-    id: "useful",
-    title: "Foydali oqim",
-    value: "200,1",
-    icon: PlugZap,
-    tint: "bg-tint-green",
-    accent: "bg-accent-green",
-  },
-  {
-    id: "loss",
-    title: "Yo’qotish",
-    value: "20,1",
-    icon: ZapOff,
-    tint: "bg-tint-red",
-    accent: "bg-accent-red",
-  },
-] as const;
+function flowLines(flow: HomeFlowKpi): KpiLine[] {
+  const lines: KpiLine[] = [];
+  if (flow.note) lines.push({ id: "note", text: flow.note });
+  if (flow.previous) lines.push({ id: "previous", text: flow.previous });
+  if (flow.trend) {
+    lines.push({
+      id: "trend",
+      text: flow.trend.text,
+      icon: TREND_ICON[flow.trend.direction],
+      tone: TONE_TEXT[flow.trend.tone],
+    });
+  }
+  return lines;
+}
 
-/** "Yo'qotish darajasi" (Figma `4257:169`): markazlashgan uch qator, 4px oraliq. */
-const LOSS_RATES = [
-  { id: "yearly", value: "20,1%", unit: "Yillik", large: true },
-  { id: "monthly", value: "18,2%", unit: "Oylik", large: false },
-  { id: "daily", value: "25%", unit: "Kunlik", large: false },
-] as const;
+/** Abonent turi bo'yicha qatorlar: aholi - odamlar guruhi, yuridik - do'kon. */
+function kindLines(lines: readonly HomeKpiLine[]): KpiLine[] {
+  return lines.map((line) => ({
+    id: line.id,
+    text: line.text,
+    icon: line.kind === "HOUSEHOLD" ? UserGroup : line.kind === "LEGAL" ? Store : undefined,
+  }));
+}
+
+function CountCard({
+  title,
+  icon,
+  tint,
+  accent,
+  kpi,
+}: {
+  title: string;
+  icon: GlyphIcon;
+  tint: string;
+  accent: string;
+  kpi: HomeCountKpi;
+}) {
+  return (
+    <KpiShell className="col-span-3" title={title} icon={icon} tint={tint} accent={accent}>
+      <KpiFigure value={kpi.value} unit={kpi.unit} />
+      <KpiLines lines={kindLines(kpi.lines)} />
+      <KpiBars values={kpi.bars} accent={accent} label={kpi.barsLabel} />
+    </KpiShell>
+  );
+}
 
 /**
  * Oltita KPI kartasi. Fragment qaytaradi - kartalar 18 ustunli gridning
  * bevosita farzandlari.
  */
-export function HomeKpiRow() {
+export function HomeKpiRow({ kpis }: { kpis: HomeKpis }) {
   return (
     <>
-      {FLOWS.map((flow) => (
-        <KpiShell
-          key={flow.id}
-          className="col-span-3"
-          title={flow.title}
-          icon={flow.icon}
-          tint={flow.tint}
-          accent={flow.accent}
-        >
-          <KpiFigure value={flow.value} unit="ming kWh yillik" />
-          <KpiLines lines={FLOW_LINES} />
-          <KpiBars values={DAILY_FLOW} accent={flow.accent} label="30 kun" className="h-[13px]" />
-        </KpiShell>
-      ))}
+      {kpis.flows.map((flow) => {
+        const style = FLOW_STYLE[flow.id];
+        return (
+          <KpiShell
+            key={flow.id}
+            className="col-span-3"
+            title={flow.title}
+            icon={style.icon}
+            tint={style.tint}
+            accent={style.accent}
+          >
+            <KpiFigure value={flow.value} unit={flow.unit} />
+            <KpiLines lines={flowLines(flow)} />
+            <KpiBars values={flow.bars} accent={style.accent} label={flow.barsLabel} />
+          </KpiShell>
+        );
+      })}
 
+      {/* "Yo'qotish darajasi" (Figma `4257:169`): markazlashgan qatorlar, 4px oraliq. */}
       <KpiShell
         className="col-span-3"
         title="Yo’qotish darajasi"
@@ -230,54 +236,34 @@ export function HomeKpiRow() {
         accent="bg-accent-indigo"
       >
         <div className="flex shrink-0 flex-col gap-1 pt-1">
-          {LOSS_RATES.map((rate) => (
+          {kpis.lossRates.map((rate) => (
             <KpiFigure
               key={rate.id}
               value={rate.value}
               unit={rate.unit}
-              // Birinchi qator 24px, qolgan ikkitasi 16px (21px qator qutisi).
-              valueClassName={
-                rate.large ? "text-2xl leading-[31px]" : "text-base leading-[21px]"
-              }
+              // Birinchi qator 24px, qolganlari 16px (21px qator qutisi).
+              valueClassName={rate.large ? "text-2xl leading-[31px]" : "text-base leading-[21px]"}
               className="justify-center gap-2"
             />
           ))}
         </div>
       </KpiShell>
 
-      <KpiShell
-        className="col-span-3"
+      <CountCard
         title="Abonentlar"
         icon={Users}
         tint="bg-tint-purple"
         accent="bg-accent-purple"
-      >
-        <KpiFigure value="2,253" unit="ta umumiy" />
-        <KpiLines
-          lines={[
-            { id: "residents", text: "1420 ta aholi", icon: UserGroup },
-            { id: "legal", text: "737 ta yuridik", icon: Store },
-          ]}
-        />
-        <KpiBars values={MONTHLY_SUBSCRIBERS} accent="bg-accent-purple" className="h-[39px]" />
-      </KpiShell>
+        kpi={kpis.subscribers}
+      />
 
-      <KpiShell
-        className="col-span-3"
+      <CountCard
         title="Debitor qarzdorlik"
         icon={HandCoins}
         tint="bg-tint-brown"
         accent="bg-accent-brown"
-      >
-        <KpiFigure value="5,6" unit="mlrd so’m" />
-        <KpiLines
-          lines={[
-            { id: "residents", text: "4,5 mlrd aholi", icon: UserGroup },
-            { id: "legal", text: "1,1 mlrd yuridik", icon: Store },
-          ]}
-        />
-        <KpiBars values={MONTHLY_DEBT} accent="bg-accent-brown" className="h-[39px]" />
-      </KpiShell>
+        kpi={kpis.debt}
+      />
     </>
   );
 }

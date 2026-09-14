@@ -1,33 +1,21 @@
 "use client";
 
-import { Expand, Info } from "lucide-react";
+import { Expand, Info, MapPinOff } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { MapCanvas, type MapMarker, type MarkerRenderer } from "@/components/map/MapCanvas";
 import { Card, CardBody, CardFooterLink, CardHeader } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { IconPill } from "@/components/ui/IconPill";
+import { BALIQCHI_DISTRICT } from "@/lib/geo/boundaries";
 import { cn } from "@/lib/ui/cn";
 
-/** Maketdagi xarita markazi - Xaqulobod fideri hududi. */
-const CENTER = { lat: 40.8789, lng: 71.9792 };
-const ZOOM = 14;
-
-/** Yorliq ko'rsatiladigan (tanlangan) transformator. */
-const SELECTED_ID = "tp-a303";
-
-/**
- * Koordinatalar maketdagi piksel joylashuvidan hisoblangan: zoom 14 da
- * 1px ~ 0,00008583° uzunlik va ~0,00006490° kenglik (cos 40,88°).
- */
-const MARKERS: MapMarker[] = [
-  { id: "tp-a301", lat: 40.88481, lng: 71.96315, label: "TP A301" },
-  { id: "tp-a302", lat: 40.8826, lng: 71.97723, label: "TP A302" },
-  { id: SELECTED_ID, lat: 40.87734, lng: 71.96435, label: "TP A303" },
-  { id: "tp-a304", lat: 40.88442, lng: 71.99199, label: "TP A304" },
-  { id: "tp-a305", lat: 40.87183, lng: 71.9677, label: "TP A305" },
-  { id: "tp-a306", lat: 40.87098, lng: 71.9792, label: "TP A306" },
-];
+/** Tuman chegarasi (bbox) markazi - koordinata berilmaganda xarita shu yerda. */
+const DISTRICT_CENTER = {
+  lat: (BALIQCHI_DISTRICT.bbox[1] + BALIQCHI_DISTRICT.bbox[3]) / 2,
+  lng: (BALIQCHI_DISTRICT.bbox[0] + BALIQCHI_DISTRICT.bbox[2]) / 2,
+};
+const DISTRICT_ZOOM = 11;
 
 /** `lucide-react/factory` ning path'lari - renderer JSX emas, HTML matn qaytaradi. */
 const FACTORY_PATHS = [
@@ -87,117 +75,117 @@ const chipMarker: MarkerRenderer = (marker, selected) => {
   );
 };
 
-/** Xarita ustidagi tultip mazmuni. */
+/** Xarita ustidagi tultip mazmuni - hammasi sahifadan (shablon qiymatlari). */
 export interface MapTooltip {
   title: string;
   /** Obyekt nomi (rangli nuqta yonida). */
   label: string;
   /** Nuqta rangi, masalan `bg-accent-red`. */
   dot: string;
+  /** Qiymat oldidagi izoh: "Bu oygi Foydali oqim". */
+  caption: string;
   value: string;
-  unit: string;
+  unit?: string;
   /** Pastdagi ogohlantirish matni; berilmasa blok chizilmaydi. */
   note?: ReactNode;
 }
-
-const DEFAULT_TOOLTIP: MapTooltip = {
-  title: "Yuqori sarfga ega transformator",
-  label: "TP A303",
-  dot: "bg-accent-red",
-  value: "51,5",
-  unit: "ming kWh",
-  note: (
-    <>
-      Ushbu transformator o&rsquo;tgan oyga nisbatan <span className="font-bold">20,1</span> ming
-      kWh ga ko&rsquo;p energiya iste&rsquo;mol qilmoqda.
-    </>
-  ),
-};
 
 /**
  * "Interaktiv ko'rinish" kartasi (Figma `4060:1285`, 487x336).
  *
  * Xarita ustidagi tultip maketda statik: o'ngdan 12px, pastdan 14px,
- * eni 215px, ichki bo'shliq 10px.
+ * eni 215px, ichki bo'shliq 10px. Tultip berilmasa chizilmaydi.
  *
  * Pastki ichki bo'shliq maketda 8px (yuqorisi 16): 16 + 32 + 8 + 248 + 8 + 16
- * + 8 = 336. Sarlavha rangi bu kartada `#000000` - `ink` (#333333) emas
- * (o'lchangan; qo'shni "Qarzdorlik"/"Yo'qotish" kartalarida esa #333333).
+ * + 8 = 336. Sarlavha rangi bu kartada `#000000` - `ink` (#333333) emas.
  *
- * Bosh sahifada (Figma `4126:753`, 816x402) tultipdagi ko'rsatkich nomi
- * boshqa ("Bu oygi Foydali oqim") va tultip pastdan 12px da turadi -
- * `monthlyLabel` / `tooltipBottom` proplari.
- *
- * Transformator sahifasida xarita o'sha TP ga markazlanadi (`fitDistrict`
- * o'chiriladi) va tultip uning holatini ko'rsatadi - `markers`, `center`,
- * `zoom`, `selectedId`, `tooltip` proplari.
+ * Markerlar - shablondagi "Lokatsiya (Lat/Long)" bor obyektlar. Birortasida
+ * ham koordinata bo'lmasa xarita butun tumanni ko'rsatadi va ustida
+ * "Koordinatalar yuklanmagan" yozuvi turadi.
  */
 export function InteractiveMapCard({
-  monthlyLabel = "Bu oygi iste’mol",
+  markers,
+  tooltip = null,
   tooltipBottom = 14,
-  markers = MARKERS,
-  center = CENTER,
-  zoom = ZOOM,
-  selectedId = SELECTED_ID,
+  selectedId = null,
   fitDistrict = true,
-  tooltip = DEFAULT_TOOLTIP,
+  center,
+  zoom,
+  footerHref = "/map",
+  footerLabel = "Asosiy xaritani ochish",
   className,
 }: {
-  monthlyLabel?: string;
+  /** Koordinatasi bor obyektlar; bo'sh bo'lishi mumkin. */
+  markers: MapMarker[];
+  tooltip?: MapTooltip | null;
   /** Tultipning xarita pastki chetidan masofasi, px. */
   tooltipBottom?: number;
-  markers?: MapMarker[];
+  selectedId?: string | null;
+  /** `true` - ko'rinish tuman chegarasiga moslanadi (`center`/`zoom` e'tiborsiz). */
+  fitDistrict?: boolean;
   center?: { lat: number; lng: number };
   zoom?: number;
-  selectedId?: string;
-  fitDistrict?: boolean;
-  tooltip?: MapTooltip;
+  footerHref?: string;
+  footerLabel?: string;
   className?: string;
 }) {
+  const hasCoordinates = markers.length > 0;
+
   return (
     <Card className={cn("pb-2", className)}>
       <CardHeader title="Interaktiv ko&rsquo;rinish" titleClassName="text-black">
-        <IconPill icon={Expand} label="Kengaytirish" href="/map" />
+        <IconPill icon={Expand} label="Kengaytirish" href={footerHref} />
       </CardHeader>
       <CardBody>
         <div className="relative min-h-0 flex-1">
           <MapCanvas
             markers={markers}
-            center={center}
-            zoom={zoom}
-            fitDistrict={fitDistrict}
+            center={center ?? DISTRICT_CENTER}
+            zoom={zoom ?? DISTRICT_ZOOM}
+            fitDistrict={fitDistrict || !hasCoordinates}
             selectedId={selectedId}
             compactFallback
             renderMarker={chipMarker}
             className="h-full w-full rounded-sm"
           />
-          <div
-            style={{ bottom: tooltipBottom }}
-            className="absolute right-3 w-[215px] rounded-lg bg-surface p-2.5 shadow-[0_2px_12px_rgba(0,0,0,0.12)]"
-          >
-            <p className="text-xs leading-4 font-semibold text-ink">{tooltip.title}</p>
-            <div className="mt-1 flex items-center gap-2">
-              <span className={cn("size-2 shrink-0 rounded-full", tooltip.dot)} />
-              <span className="text-[10px] leading-[13px] font-medium text-[#999999]">
-                {tooltip.label}
-              </span>
+
+          {hasCoordinates ? null : (
+            <div className="pointer-events-none absolute top-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-lg bg-surface/95 px-3 py-1.5 text-xs font-medium whitespace-nowrap text-ink-muted shadow-[0_2px_12px_rgba(0,0,0,0.12)]">
+              <Icon icon={MapPinOff} size={16} className="shrink-0 text-brand" />
+              Koordinatalar yuklanmagan
             </div>
-            {/* Maketda kulrang qism 10px, faqat qiymat 12px bold; qator qutisi 16px. */}
-            <p className="mt-2 text-[10px] leading-4 text-[#999999]">
-              {monthlyLabel}:{" "}
-              <span className="text-xs font-bold text-ink">{tooltip.value}</span> {tooltip.unit}
-            </p>
-            {/* Ogohlantirish bloki: maketda tokeni yo'q - aniq hex (#f59e0b / #fefaf2) */}
-            {tooltip.note ? (
-              <div className="mt-2 flex items-start gap-1 rounded-md bg-[#fefaf2] p-1 pb-[7px] text-[#f59e0b]">
-                <Icon icon={Info} size={12} className="shrink-0" />
-                <p className="w-[167px] text-[10px] leading-[13px]">{tooltip.note}</p>
+          )}
+
+          {tooltip ? (
+            <div
+              style={{ bottom: tooltipBottom }}
+              className="absolute right-3 w-[215px] rounded-lg bg-surface p-2.5 shadow-[0_2px_12px_rgba(0,0,0,0.12)]"
+            >
+              <p className="truncate text-xs leading-4 font-semibold text-ink">{tooltip.title}</p>
+              <div className="mt-1 flex items-center gap-2">
+                <span className={cn("size-2 shrink-0 rounded-full", tooltip.dot)} />
+                <span className="truncate text-[10px] leading-[13px] font-medium text-[#999999]">
+                  {tooltip.label}
+                </span>
               </div>
-            ) : null}
-          </div>
+              {/* Maketda kulrang qism 10px, faqat qiymat 12px bold; qator qutisi 16px. */}
+              <p className="mt-2 text-[10px] leading-4 text-[#999999]">
+                {tooltip.caption}:{" "}
+                <span className="text-xs font-bold text-ink">{tooltip.value}</span>
+                {tooltip.unit ? ` ${tooltip.unit}` : null}
+              </p>
+              {/* Ogohlantirish bloki: maketda tokeni yo'q - aniq hex (#f59e0b / #fefaf2) */}
+              {tooltip.note ? (
+                <div className="mt-2 flex items-start gap-1 rounded-md bg-[#fefaf2] p-1 pb-[7px] text-[#f59e0b]">
+                  <Icon icon={Info} size={12} className="shrink-0" />
+                  <p className="w-[167px] text-[10px] leading-[13px]">{tooltip.note}</p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </CardBody>
-      <CardFooterLink href="/map">Asosiy xaritani ochish</CardFooterLink>
+      <CardFooterLink href={footerHref}>{footerLabel}</CardFooterLink>
     </Card>
   );
 }

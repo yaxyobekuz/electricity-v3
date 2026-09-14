@@ -6,25 +6,26 @@ import { type ComponentType, type SVGProps, useState } from "react";
 import { Card, CardBody, CardFooterLink, CardHeader } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { ExcelMark, PdfMark } from "@/components/ui/icons/BrandMarks";
-import type { ReportFormat, ReportPeriod } from "@/lib/reports/types";
 import { cn } from "@/lib/ui/cn";
 
+/** Hisobot davri: ma'lumot oylik yuklanadi, shuning uchun faqat oy va yil. */
+export type DownloadPeriod = "monthly" | "yearly";
+export type DownloadFormat = "xlsx" | "pdf";
+
 interface PeriodOption {
-  id: ReportPeriod;
+  id: DownloadPeriod;
   label: string;
   /** Har bir davr o'z aksent rangida - maketdan olingan. */
   tone: string;
 }
 
 const PERIODS: readonly PeriodOption[] = [
-  { id: "daily", label: "Kunlik", tone: "text-brand" },
-  { id: "weekly", label: "Haftalik", tone: "text-accent-green" },
   { id: "monthly", label: "Oylik", tone: "text-accent-purple" },
   { id: "yearly", label: "Yillik", tone: "text-accent-indigo" },
 ];
 
 interface FormatOption {
-  id: ReportFormat;
+  id: DownloadFormat;
   label: string;
   Mark: ComponentType<SVGProps<SVGSVGElement>>;
   /**
@@ -39,28 +40,41 @@ const FORMATS: readonly FormatOption[] = [
   { id: "pdf", label: "PDF", Mark: PdfMark, tone: "bg-[#f9e6e6] text-[#c80a0a]" },
 ];
 
+/** "?scope=..." / "&scope=..." -> "scope=..." - havolada ikki marta `&` bo'lmasin. */
+function cleanQuery(query: string): string {
+  return query.trim().replace(/^[?&]+/, "");
+}
+
 /**
- * Fider sahifasining 4-qatoridagi "Hisobotlarni yuklab olish" kartasi
- * (span-4, 209px). Maketda karta pasti 8px (16px emas), chunki havola
- * o'zining ichki bo'shlig'iga ega - shuning uchun `pb-2`.
+ * "Hisobotlarni yuklab olish" kartasi (span-4, 209px). Maketda karta pasti
+ * 8px (16px emas), chunki havola o'zining ichki bo'shlig'iga ega - `pb-2`.
  *
  * Davr tanlanadi, format tugmasi esa `/api/reports` dan tayyor faylni
- * yuklab beradi (javobda `Content-Disposition: attachment`).
+ * yuklab beradi. Qamrov va oy sahifadan `query` orqali keladi:
+ * `"scope=feeder:ID&month=2026-09"`.
+ *
+ * Karta faqat havola quradi; fayl mazmuni to'liq `/api/reports` ga bog'liq.
+ * Marshrut `scope` va `month` ni o'qib, faqat shablon ma'lumotidan hisobot
+ * tuzmaguncha (namunaviy mazmun bilan) sahifalar bu kartani chizmasligi kerak.
  *
  * Bosh sahifada (Figma `4126:1040`) karta 298px, lekin plitkalar o'sha
  * 64.94px da qoladi va bo'sh joy ajratgich ustida to'planadi -
  * `stretchPeriods={false}`.
  */
 export function DownloadReportsCard({
+  query,
   stretchPeriods = true,
   className,
 }: {
-  /** `true` - davr plitkalari bo'sh balandlikni egallaydi (fider sahifasi). */
+  /** `/api/reports` ga qo'shiladigan qamrov/oy parametrlari. */
+  query: string;
+  /** `true` - davr plitkalari bo'sh balandlikni egallaydi (obyekt sahifalari). */
   stretchPeriods?: boolean;
   className?: string;
 }) {
-  const [period, setPeriod] = useState<ReportPeriod>("daily");
+  const [period, setPeriod] = useState<DownloadPeriod>("monthly");
   const periodLabel = PERIODS.find((item) => item.id === period)?.label ?? "";
+  const extra = cleanQuery(query);
 
   return (
     <Card className={cn("pb-2", className)}>
@@ -71,10 +85,10 @@ export function DownloadReportsCard({
         titleClassName="text-black"
       />
       <CardBody>
-        {/* 4 x 64.94px, 10px oraliq; qolgan balandlikni shu qator yutadi. */}
+        {/* 2 x plitka, 10px oraliq; qolgan balandlikni shu qator yutadi. */}
         <div
           className={cn(
-            "grid min-h-0 grid-cols-4 gap-2.5",
+            "grid min-h-0 grid-cols-2 gap-2.5",
             stretchPeriods ? "flex-1" : "h-[64.94px] shrink-0",
           )}
         >
@@ -106,7 +120,7 @@ export function DownloadReportsCard({
           {FORMATS.map((format) => (
             <a
               key={format.id}
-              href={`/api/reports?period=${period}&format=${format.id}`}
+              href={`/api/reports?period=${period}&format=${format.id}${extra ? `&${extra}` : ""}`}
               download
               aria-label={`${periodLabel} hisobotni ${format.label} sifatida yuklab olish`}
               className={cn(
@@ -124,7 +138,7 @@ export function DownloadReportsCard({
         {stretchPeriods ? null : <div className="min-h-0 flex-1" />}
         <div className="mt-2 h-px shrink-0 bg-[#dddddd]" />
       </CardBody>
-      <CardFooterLink>Ko&rsquo;proq</CardFooterLink>
+      <CardFooterLink href="/reports">Ko&rsquo;proq</CardFooterLink>
     </Card>
   );
 }

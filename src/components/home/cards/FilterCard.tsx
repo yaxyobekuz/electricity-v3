@@ -5,46 +5,30 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { Card } from "@/components/ui/Card";
-import { Icon } from "@/components/ui/Icon";
+import { type GlyphIcon, Icon } from "@/components/ui/Icon";
 import { SelectField, type SelectOption } from "@/components/ui/SelectField";
-import { FEEDERS, findFeeder } from "@/lib/data/feeders";
-import { SUBSTATIONS } from "@/lib/data/substations";
-import { TRANSFORMERS } from "@/lib/data/transformers";
+import type { HomeFilter, HomeFilterMetrics, HomeFilterOption } from "@/lib/queries/home-data";
 import { cn } from "@/lib/ui/cn";
 
-const SUBSTATION_OPTIONS: readonly SelectOption[] = SUBSTATIONS.map((item) => ({
-  value: item.id,
-  label: item.name,
-}));
+/** Tanlov bo'yicha oqimlar - ranglar 1-qatordagi KPI kartalari bilan bir xil. */
+const METRICS: readonly {
+  id: keyof HomeFilterMetrics;
+  label: string;
+  icon: GlyphIcon;
+  tile: string;
+}[] = [
+  { id: "total", label: "Umumiy oqim", icon: Zap, tile: "bg-accent-blue" },
+  { id: "useful", label: "Foydali oqim", icon: PlugZap, tile: "bg-accent-green" },
+  { id: "loss", label: "Yo’qotish", icon: ZapOff, tile: "bg-accent-red" },
+];
 
-/**
- * Tanlangan podstansiya va fiderga tegishli transformatorlar. Fider kodi
- * faqat podstansiya ichida noyob, shuning uchun ikkalasi birga solishtiriladi.
- */
-function transformersFor(substationId: string | null, feederId: string | null) {
-  const feeder = feederId ? findFeeder(feederId) : undefined;
-  return TRANSFORMERS.filter((item) => {
-    if (substationId && item.substationId !== substationId) return false;
-    if (feeder && (item.substationId !== feeder.substationId || item.feeder !== feeder.code)) {
-      return false;
-    }
-    return true;
-  });
+function toOptions(items: readonly HomeFilterOption[]): SelectOption[] {
+  return items.map((item) => ({ value: item.id, label: item.label }));
 }
 
-
-/** Tanlov bo'yicha oqimlar - ranglar 1-qatordagi KPI kartalari bilan bir xil. */
-const METRICS = [
-  { id: "total", label: "Umumiy oqim", value: "15,2 ming kWh", icon: Zap, tile: "bg-accent-blue" },
-  {
-    id: "useful",
-    label: "Foydali oqim",
-    value: "15,2 ming kWh",
-    icon: PlugZap,
-    tile: "bg-accent-green",
-  },
-  { id: "loss", label: "Yo’qotish", value: "15,2 ming kWh", icon: ZapOff, tile: "bg-accent-red" },
-] as const;
+function byId(items: readonly HomeFilterOption[]): Map<string, HomeFilterOption> {
+  return new Map(items.map((item) => [item.id, item]));
+}
 
 /**
  * "Filtratsiya" kartasi (Figma `4179:238`, 321.78x402).
@@ -54,67 +38,83 @@ const METRICS = [
  *   sarlavha 18 | tanlovlar 112 (3 x 32, oraliq 8) | ajratgich 1
  *   | oqimlar 130 (3 x 38, oraliq 8) | havola 25 (1px chiziq + 8 + 16)
  *
- * 16 + 18 + 23 + 112 + 23 + 1 + 23 + 130 + 23 + 25 + 8 = 402 (pastki
- * bo'shliq 8px).
+ * Variantlar - tanlangan oyda holati bor obyektlar. Tanlovlar zanjir:
+ * fiderlar podstansiyaga, transformatorlar podstansiya va fiderga qarab
+ * qisqaradi; pastki tanlov ota tanlovlarni o'zi o'rnatadi, mos kelmay qolgan
+ * pastki tanlov esa bekor qilinadi. Podstansiya sahifasida podstansiya
+ * tanlovi qulflangan.
  *
- * Maketda faqat yopiq holat chizilgan; ochiluvchi ro'yxat `SelectField` da.
- * Tanlovlar zanjir: fiderlar podstansiyaga, transformatorlar esa podstansiya
- * va fiderga qarab qisqaradi. Yuqoridagi tanlov almashtirilganda unga
- * tegishli bo'lmagan pastki tanlovlar bekor qilinadi.
+ * Oqimlar eng aniq tanlangan obyektning o'z holatidan; hech narsa
+ * tanlanmasa - sahifa qamrovining qiymatlari (1-qatordagi KPI bilan bir xil).
  */
-export function FilterCard({ className }: { className?: string }) {
-  const [substation, setSubstation] = useState<string | null>(null);
+export function FilterCard({ data, className }: { data: HomeFilter; className?: string }) {
+  const locked = data.lockedSubstationId;
+  const [substation, setSubstation] = useState<string | null>(locked);
   const [feeder, setFeeder] = useState<string | null>(null);
   const [transformer, setTransformer] = useState<string | null>(null);
 
-  const feederOptions = useMemo<readonly SelectOption[]>(() => {
-    const list = substation
-      ? FEEDERS.filter((item) => item.substationId === substation)
-      : FEEDERS;
-    return list.map((item) => ({ value: item.id, label: item.name }));
-  }, [substation]);
+  const substations = useMemo(() => byId(data.substations), [data.substations]);
+  const feeders = useMemo(() => byId(data.feeders), [data.feeders]);
+  const transformers = useMemo(() => byId(data.transformers), [data.transformers]);
 
-  const transformerOptions = useMemo<readonly SelectOption[]>(() => {
-    return transformersFor(substation, feeder).map((item) => ({
-      value: item.id,
-      label: item.code,
-    }));
-  }, [substation, feeder]);
+  const substationOptions = useMemo(() => toOptions(data.substations), [data.substations]);
 
-  /** Transformator tanlovi yangi shartlarga mos kelmasa - tozalanadi. */
-  function keepTransformer(nextSubstation: string | null, nextFeeder: string | null) {
-    if (
-      transformer &&
-      !transformersFor(nextSubstation, nextFeeder).some((item) => item.id === transformer)
-    ) {
+  const feederOptions = useMemo(
+    () =>
+      toOptions(
+        substation ? data.feeders.filter((item) => item.substationId === substation) : data.feeders,
+      ),
+    [data.feeders, substation],
+  );
+
+  const transformerOptions = useMemo(
+    () =>
+      toOptions(
+        data.transformers.filter(
+          (item) =>
+            (!substation || item.substationId === substation) &&
+            (!feeder || item.feederId === feeder),
+        ),
+      ),
+    [data.transformers, substation, feeder],
+  );
+
+  function pickSubstation(next: string | null) {
+    if (locked) return;
+    setSubstation(next);
+    // Tozalansa yoki boshqa podstansiya tanlansa - unga tegishli bo'lmagan pastki tanlovlar bekor.
+    if (feeder && (!next || feeders.get(feeder)?.substationId !== next)) setFeeder(null);
+    if (transformer && (!next || transformers.get(transformer)?.substationId !== next)) {
       setTransformer(null);
     }
   }
 
-  function pickSubstation(next: string | null) {
-    setSubstation(next);
-    // Fider boshqa podstansiyaniki bo'lsa - tozalanadi.
-    const nextFeeder = feeder && next && findFeeder(feeder)?.substationId !== next ? null : feeder;
-    setFeeder(nextFeeder);
-    keepTransformer(next, nextFeeder);
-  }
-
   function pickFeeder(next: string | null) {
     setFeeder(next);
-    // Fider tanlansa, podstansiya ham avtomatik o'shanga o'rnatiladi.
-    const nextSubstation = (next && findFeeder(next)?.substationId) || substation;
-    setSubstation(nextSubstation);
-    keepTransformer(nextSubstation, next);
+    const option = next ? feeders.get(next) : undefined;
+    if (option && !locked) setSubstation(option.substationId);
+    if (transformer && (!next || transformers.get(transformer)?.feederId !== next)) {
+      setTransformer(null);
+    }
   }
 
-  /** Havola eng aniq tanlovga olib boradi. */
-  const href = transformer
-    ? `/transformers/${transformer}`
-    : feeder
-      ? `/feeders/${feeder}`
-      : substation
-        ? `/substations/${substation}`
-        : "/feeders";
+  function pickTransformer(next: string | null) {
+    setTransformer(next);
+    const option = next ? transformers.get(next) : undefined;
+    if (option) {
+      setFeeder(option.feederId);
+      if (!locked) setSubstation(option.substationId);
+    }
+  }
+
+  /** Eng aniq tanlov; qulflangan podstansiya sahifaning o'zi - havola kerak emas. */
+  const selected =
+    (transformer ? transformers.get(transformer) : undefined) ??
+    (feeder ? feeders.get(feeder) : undefined) ??
+    (substation ? substations.get(substation) : undefined) ??
+    null;
+  const metrics = selected?.metrics ?? data.scopeMetrics;
+  const href = selected && selected.id !== locked ? selected.href : null;
 
   return (
     <Card className={cn("gap-[23px] pb-2", className)}>
@@ -123,9 +123,10 @@ export function FilterCard({ className }: { className?: string }) {
       <div className="flex shrink-0 flex-col gap-2">
         <SelectField
           value={substation}
-          options={SUBSTATION_OPTIONS}
+          options={substationOptions}
           placeholder="Podstansiyani tanlang"
           onChange={pickSubstation}
+          disabled={locked != null}
         />
         <SelectField
           value={feeder}
@@ -137,7 +138,7 @@ export function FilterCard({ className }: { className?: string }) {
           value={transformer}
           options={transformerOptions}
           placeholder="Transformatorni tanlang"
-          onChange={setTransformer}
+          onChange={pickTransformer}
         />
       </div>
 
@@ -157,7 +158,7 @@ export function FilterCard({ className }: { className?: string }) {
             <span className="flex min-w-0 flex-col gap-1">
               <span className="truncate text-xs leading-4 text-[#999999]">{metric.label}</span>
               <span className="truncate text-sm leading-[18px] font-bold text-ink">
-                {metric.value}
+                {metrics[metric.id]}
               </span>
             </span>
           </li>
@@ -165,12 +166,18 @@ export function FilterCard({ className }: { className?: string }) {
       </ul>
 
       <div className="mt-auto flex shrink-0 justify-center border-t border-[#dddddd] pt-2">
-        <Link
-          href={href}
-          className="text-xs leading-4 font-medium text-brand transition-opacity hover:opacity-70"
-        >
-          Sahifaga o&rsquo;tish
-        </Link>
+        {href ? (
+          <Link
+            href={href}
+            className="text-xs leading-4 font-medium text-brand transition-opacity hover:opacity-70"
+          >
+            Sahifaga o&rsquo;tish
+          </Link>
+        ) : (
+          <span aria-disabled className="text-xs leading-4 font-medium text-ink-muted">
+            Sahifaga o&rsquo;tish
+          </span>
+        )}
       </div>
     </Card>
   );
