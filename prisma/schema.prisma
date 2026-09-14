@@ -1,10 +1,17 @@
 // Elektr energiyasi analitik platformasi - ma'lumotlar bazasi sxemasi.
 //
-// Ierarxiya:
-//   ETK -> Podstansiya -> Transformator -> Fider (10 kV) -> TP -> Ko'rsatkichlar
+// Ierarxiya (Excel shablonlari bilan bir xil):
+//   Podstansiya -> Fider -> Transformator (TP) -> Abonent
+//   Qoidabuzarlik va Murojaat - TP ga (ixtiyoriy ravishda abonentga) bog'lanadi.
 //
-// Ma'lumotlar Excel shablonlari orqali yuklanadi, har bir yuklash ImportBatch
-// bilan qayd etiladi.
+// Ikki qatlam:
+//   1. **Obyektlar** (Substation, Feeder, Transformer, Subscriber, Staff) -
+//      oydan oyga o'zgarmaydigan identifikator. URL'dagi `id` shu.
+//   2. **Oylik holatlar** (*Snapshot, Violation, Appeal) - har bir hisobot oyi
+//      (`Period`) uchun Excel'dan kelgan qiymatlar. Bir oyga shablon qayta
+//      yuklansa, shu oyning shu shablondagi yozuvlari to'liq almashtiriladi.
+//
+// Batafsil qoidalar: `.claude/docs/malumotlar.md`.
 
 generator client {
   provider = "prisma-client-js"
@@ -16,294 +23,429 @@ datasource db {
 }
 
 // ---------------------------------------------------------------------------
-// Tarmoq ierarxiyasi
+// Hisobot davri
 // ---------------------------------------------------------------------------
 
-/// ETK - Elektr Ta'minoti Korxonasi (masalan "Chinobod ETK").
-model Etk {
-  id   String  @id @default(cuid())
-  name String  @unique
-  note String?
+/// Hisobot oyi. Excel varaq nomidagi sanadan ("13-sentabr, 2026") aniqlanadi.
+model Period {
+  id         String   @id @default(cuid())
+  /// Oyning birinchi kuni, masalan 2026-09-01. Davrning kaliti.
+  month      DateTime @unique @db.Date
+  /// Shu oyga yuklangan fayllardagi eng so'nggi hisobot sanasi (varaq nomidan).
+  reportDate DateTime @db.Date
 
-  substations Substation[]
+  substationSnapshots  SubstationSnapshot[]
+  feederSnapshots      FeederSnapshot[]
+  transformerSnapshots TransformerSnapshot[]
+  subscriberSnapshots  SubscriberSnapshot[]
+  violations           Violation[]
+  appeals              Appeal[]
+  importBatches        ImportBatch[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("etks")
+  @@map("periods")
 }
 
-/// Podstansiya (masalan 110/10 kV).
-model Substation {
-  id          String  @id @default(cuid())
-  etkId       String
-  name        String
-  /// Kuchlanish turi, masalan "110/10", "35/10".
-  voltageType String
-  address     String?
-  note        String?
+// ---------------------------------------------------------------------------
+// Obyektlar (oydan oyga barqaror)
+// ---------------------------------------------------------------------------
 
-  etk          Etk           @relation(fields: [etkId], references: [id], onDelete: Cascade)
-  transformers Transformer[]
+/// Ma'sul / biriktirilgan xodim. Shablonlarda faqat F.I.Sh. matni keladi.
+model Staff {
+  id      String @id @default(cuid())
+  /// Fayldagi ko'rinishi (birinchi uchragan yozuv).
+  name    String
+  /// Solishtirish kaliti: `nameKey()` (kichik harf, apostrof va bo'shliqlar bir xil).
+  nameKey String @unique
+
+  substationSnapshots  SubstationSnapshot[]
+  feederSnapshots      FeederSnapshot[]
+  transformerSnapshots TransformerSnapshot[]
+  subscriberSnapshots  SubscriberSnapshot[]
+  violations           Violation[]
+  appeals              Appeal[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([etkId, name])
-  @@index([etkId])
+  @@map("staff")
+}
+
+/// Podstansiya ("Elektr Podstansiyalar.xlsx" -> "Podstansiya Nomi").
+model Substation {
+  id      String @id @default(cuid())
+  name    String
+  nameKey String @unique
+
+  feeders      Feeder[]
+  transformers Transformer[]
+  snapshots    SubstationSnapshot[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@map("substations")
 }
 
-/// Podstansiyadagi kuch transformatori.
-model Transformer {
-  id           String  @id @default(cuid())
+/// Fider. Nomi faqat podstansiya ichida noyob.
+model Feeder {
+  id           String @id @default(cuid())
   substationId String
   name         String
-  capacityKva  Int
-  note         String?
+  nameKey      String
 
-  substation Substation @relation(fields: [substationId], references: [id], onDelete: Cascade)
-  feeders    Feeder[]
+  substation   Substation       @relation(fields: [substationId], references: [id], onDelete: Cascade)
+  transformers Transformer[]
+  snapshots    FeederSnapshot[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([substationId, name])
+  @@unique([substationId, nameKey])
   @@index([substationId])
-  @@map("transformers")
-}
-
-/// 10 kV fider (masalan "Xaqulobod").
-model Feeder {
-  id            String  @id @default(cuid())
-  transformerId String
-  name          String
-  /// Kuchlanish, kV.
-  voltage       Int     @default(10)
-  /// Hisoblagich koeffitsienti.
-  coefficient   Int     @default(1)
-  /// Shablonlarda uchraydigan muqobil nomlar (import moslashtirish uchun).
-  aliases       String[] @default([])
-  isActive      Boolean @default(true)
-  note          String?
-
-  transformer Transformer     @relation(fields: [transformerId], references: [id], onDelete: Cascade)
-  tpPoints    TpPoint[]
-  readings    FeederReading[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([transformerId, name])
-  @@index([transformerId])
   @@map("feeders")
 }
 
-/// TP - Transformator punkti (shablonlarda raqam bilan: "10", "24", "179").
-model TpPoint {
-  id          String  @id @default(cuid())
-  feederId    String
-  /// Hujjatdagi TP raqami, matn sifatida saqlanadi ("07" kabi nollar yo'qolmasin).
-  tpNumber    String
+/// Transformator punkti (TP). Nomi faqat fider ichida noyob; matn sifatida
+/// saqlanadi ("07" dagi nol yo'qolmasin).
+model Transformer {
+  id           String @id @default(cuid())
+  /// Fider orqali ham topiladi, lekin so'rovlar uchun takrorlab saqlanadi.
+  /// TP ning fideri (demak podstansiyasi ham) hech qachon o'zgarmaydi -
+  /// fider kalitning bir qismi.
+  substationId String
+  feederId     String
+  name         String
+  nameKey      String
+
+  substation          Substation            @relation(fields: [substationId], references: [id], onDelete: Cascade)
+  feeder              Feeder                @relation(fields: [feederId], references: [id], onDelete: Cascade)
+  snapshots           TransformerSnapshot[]
+  subscriberSnapshots SubscriberSnapshot[]
+  violations          Violation[]
+  appeals             Appeal[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([feederId, nameKey])
+  @@index([substationId])
+  @@index([nameKey])
+  @@map("transformers")
+}
+
+/// Abonent. Oydan oyga "Shartnoma raqami" orqali taniladi.
+model Subscriber {
+  id             String @id @default(cuid())
+  /// Fayldagi ko'rinishi.
+  contractNumber String
+  /// Solishtirish kaliti: `contractKey()` (bo'shliqsiz, katta harf).
+  contractKey    String @unique
+
+  snapshots  SubscriberSnapshot[]
+  violations Violation[]
+  appeals    Appeal[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("subscribers")
+}
+
+// ---------------------------------------------------------------------------
+// Oylik holatlar (Excel qatorlari)
+// ---------------------------------------------------------------------------
+
+/// "Elektr Podstansiyalar.xlsx" qatori.
+model SubstationSnapshot {
+  id            String  @id @default(cuid())
+  periodId      String
+  substationId  String
+  importBatchId String?
+  /// Excel'dagi qator raqami (xatolik va manba ko'rsatish uchun).
+  rowNumber     Int
+
+  /// "Umumiy oqim", kWh.
+  totalKwh    Decimal  @db.Decimal(18, 2)
+  /// "Foydali oqim", kWh.
+  usefulKwh   Decimal  @db.Decimal(18, 2)
+  /// "Yo'qotish", kWh. Manfiy bo'lishi mumkin.
+  lossKwh     Decimal  @db.Decimal(18, 2)
   address     String?
-  capacityKva Int?
-  coefficient Int     @default(1)
-  meterSerial String?
-  meterType   String?
-  isActive    Boolean @default(true)
-  note        String?
+  latitude    Decimal? @db.Decimal(9, 6)
+  longitude   Decimal? @db.Decimal(9, 6)
+  /// "Quvvati (KVA)".
+  capacityKva Decimal? @db.Decimal(12, 2)
+  staffId     String?
 
-  feeder   Feeder      @relation(fields: [feederId], references: [id], onDelete: Cascade)
-  readings TpReading[]
-  problems TpProblem[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([feederId, tpNumber])
-  @@index([feederId])
-  @@map("tp_points")
-}
-
-// ---------------------------------------------------------------------------
-// Ko'rsatkichlar (hisoblagich o'qishlari)
-// ---------------------------------------------------------------------------
-
-/// TP balans hisoblagichi bo'yicha davr ko'rsatkichi.
-model TpReading {
-  id        String   @id @default(cuid())
-  tpPointId String
-  /// Hisobot davri boshi (kunlik hisobotda periodStart = periodEnd).
-  periodStart DateTime @db.Date
-  periodEnd   DateTime @db.Date
-
-  /// Hisoblagichning davr oxiridagi ko'rsatkichi.
-  meterValue    Decimal @db.Decimal(14, 2)
-  /// Oldingi davr ko'rsatkichi.
-  previousValue Decimal @default(0) @db.Decimal(14, 2)
-  /// meterValue - previousValue.
-  difference    Decimal @db.Decimal(14, 2)
-  coefficient   Int     @default(1)
-
-  /// Balans hisoblagichdan olingan energiya, kWh (shablonda "Hisoblangan").
-  suppliedKwh Decimal  @db.Decimal(16, 2)
-  /// Biriktirilgan iste'molchilar hisoblagichlari yig'indisi, kWh ("Foydali oqim").
-  usefulKwh   Decimal? @db.Decimal(16, 2)
-  /// Tarmoqdagi yo'qotish, kWh (suppliedKwh - usefulKwh).
-  lossKwh     Decimal? @db.Decimal(16, 2)
-  /// Yo'qotish foizi. Manfiy bo'lishi mumkin - shuning uchun keng diapazon.
-  lossPercent Decimal? @db.Decimal(9, 4)
-
-  /// Biriktirilgan iste'molchilar soni.
-  consumersTotal   Int?
-  /// Aloqada (onlayn) hisoblagichlar soni.
-  consumersOnline  Int?
-  /// Aloqadamas (oflayn) hisoblagichlar soni.
-  consumersOffline Int?
-
-  /// Ko'p tarifli hisoblagich zonalari.
-  zoneT1 Decimal? @db.Decimal(14, 2)
-  zoneT2 Decimal? @db.Decimal(14, 2)
-  zoneT3 Decimal? @db.Decimal(14, 2)
-  zoneT4 Decimal? @db.Decimal(14, 2)
-
-  /// Reaktiv energiya.
-  reactivePlus  Decimal? @db.Decimal(14, 2)
-  reactiveMinus Decimal? @db.Decimal(14, 2)
-
-  /// Boshlang'ich (tayanch) o'qish - farq hisoblanmaydi.
-  isBaseline Boolean @default(false)
-  note       String?
-
-  importBatchId String?
-
-  tpPoint     TpPoint      @relation(fields: [tpPointId], references: [id], onDelete: Cascade)
+  period      Period       @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  substation  Substation   @relation(fields: [substationId], references: [id], onDelete: Cascade)
+  staff       Staff?       @relation(fields: [staffId], references: [id], onDelete: SetNull)
   importBatch ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([tpPointId, periodStart, periodEnd])
-  @@index([periodStart])
-  @@index([importBatchId])
-  @@map("tp_readings")
+  @@unique([periodId, substationId])
+  @@index([substationId])
+  @@index([staffId])
+  @@map("substation_snapshots")
 }
 
-/// Fider darajasidagi davr ko'rsatkichi.
-model FeederReading {
-  id       String   @id @default(cuid())
-  feederId String
-  periodStart DateTime @db.Date
-  periodEnd   DateTime @db.Date
-
-  meterValue    Decimal @db.Decimal(14, 2)
-  previousValue Decimal @default(0) @db.Decimal(14, 2)
-  difference    Decimal @db.Decimal(14, 2)
-  coefficient   Int     @default(1)
-
-  /// Fiderdan chiqarilgan energiya, kWh.
-  suppliedKwh Decimal  @db.Decimal(16, 2)
-  /// TP'lar bo'yicha foydali oqim yig'indisi, kWh.
-  usefulKwh   Decimal? @db.Decimal(16, 2)
-  lossKwh     Decimal? @db.Decimal(16, 2)
-  lossPercent Decimal? @db.Decimal(9, 4)
-
-  /// Texnik yo'qotish (normativ bo'yicha hisoblanadi).
-  technicalLossKwh     Decimal? @db.Decimal(16, 2)
-  technicalLossPercent Decimal? @db.Decimal(5, 2)
-  /// Tijorat yo'qotishi = umumiy yo'qotish - texnik yo'qotish.
-  commercialLossKwh    Decimal? @db.Decimal(16, 2)
-
-  isBaseline Boolean @default(false)
-  note       String?
-
+/// "Elektr Fiderlar.xlsx" qatori.
+model FeederSnapshot {
+  id            String  @id @default(cuid())
+  periodId      String
+  feederId      String
   importBatchId String?
+  rowNumber     Int
 
+  totalKwh    Decimal  @db.Decimal(18, 2)
+  usefulKwh   Decimal  @db.Decimal(18, 2)
+  lossKwh     Decimal  @db.Decimal(18, 2)
+  address     String?
+  capacityKva Decimal? @db.Decimal(12, 2)
+  staffId     String?
+
+  period      Period       @relation(fields: [periodId], references: [id], onDelete: Cascade)
   feeder      Feeder       @relation(fields: [feederId], references: [id], onDelete: Cascade)
+  staff       Staff?       @relation(fields: [staffId], references: [id], onDelete: SetNull)
   importBatch ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([feederId, periodStart, periodEnd])
-  @@index([periodStart])
-  @@index([importBatchId])
-  @@map("feeder_readings")
+  @@unique([periodId, feederId])
+  @@index([feederId])
+  @@index([staffId])
+  @@map("feeder_snapshots")
 }
 
-/// TP bo'yicha aniqlangan muammo (shablondagi "Muammolar" varag'i).
-model TpProblem {
-  id          String        @id @default(cuid())
-  tpPointId   String
-  /// Muammo matni (hujjatdagi asl ifoda).
-  description String
-  severity    ProblemSeverity @default(MEDIUM)
-  status      ProblemStatus   @default(OPEN)
-  detectedAt  DateTime        @db.Date
-  resolvedAt  DateTime?       @db.Date
+/// "Elektr Transformatorlar.xlsx" qatori.
+model TransformerSnapshot {
+  id            String  @id @default(cuid())
+  periodId      String
+  transformerId String
+  importBatchId String?
+  rowNumber     Int
 
-  tpPoint TpPoint @relation(fields: [tpPointId], references: [id], onDelete: Cascade)
+  totalKwh           Decimal   @db.Decimal(18, 2)
+  usefulKwh          Decimal   @db.Decimal(18, 2)
+  lossKwh            Decimal   @db.Decimal(18, 2)
+  /// "Aloqadagi abonentlar".
+  onlineSubscribers  Int
+  /// "Aloqadan chiqqan abonentlar".
+  offlineSubscribers Int
+  address            String?
+  latitude           Decimal?  @db.Decimal(9, 6)
+  longitude          Decimal?  @db.Decimal(9, 6)
+  capacityKva        Decimal?  @db.Decimal(12, 2)
+  /// "Joriy ta'mir sanasi".
+  currentRepairDate  DateTime? @db.Date
+  /// "To'la ta'mir sanasi".
+  overhaulDate       DateTime? @db.Date
+  staffId            String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  period      Period       @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  transformer Transformer  @relation(fields: [transformerId], references: [id], onDelete: Cascade)
+  staff       Staff?       @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  importBatch ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
 
-  @@index([tpPointId])
-  @@index([status])
-  @@map("tp_problems")
+  @@unique([periodId, transformerId])
+  @@index([transformerId])
+  @@index([staffId])
+  @@map("transformer_snapshots")
+}
+
+/// "Elektr Abonentlar.xlsx" qatori.
+model SubscriberSnapshot {
+  id            String  @id @default(cuid())
+  periodId      String
+  subscriberId  String
+  /// Shu oydagi TP (abonent boshqa TP ga o'tishi mumkin).
+  transformerId String
+  importBatchId String?
+  rowNumber     Int
+
+  /// "FISH".
+  fullName          String
+  /// "Abonent turi (Yuridik/Aholi)".
+  kind              SubscriberKind
+  /// "Holati (Aloqada / Aloqaga chiqmayotgan / Sxemasi o'zgartirilgan)".
+  meterStatus       MeterStatus
+  /// "Biriktirilgan xodim".
+  staffId           String?
+  address           String?
+  latitude          Decimal?  @db.Decimal(9, 6)
+  longitude         Decimal?  @db.Decimal(9, 6)
+  /// "Hisoblagich zavod raqami".
+  meterSerial       String?
+  /// "Hisoblagich turi".
+  meterType         String?
+  /// "Qarzdorlik", so'm. Bo'sh katak = 0.
+  debtUzs           Decimal   @default(0) @db.Decimal(18, 2)
+  /// "Haqdorlik", so'm. Bo'sh katak = 0.
+  creditUzs         Decimal   @default(0) @db.Decimal(18, 2)
+  /// "Hisoblagich ko'rsatgichi".
+  meterReading      Decimal?  @db.Decimal(18, 2)
+  /// "Oxirgi olingan ma'lumot".
+  lastReadingAt     DateTime?
+  /// "Oxirgi to'langan to'lov" (sana).
+  lastPaymentDate   DateTime? @db.Date
+  /// "Oxirgi to'langan summa", so'm.
+  lastPaymentUzs    Decimal?  @db.Decimal(18, 2)
+  /// "Shartnoma sanasi".
+  contractDate      DateTime? @db.Date
+  /// Shaxsiy ma'lumot - ro'yxat va qidiruvda ko'rsatilmaydi.
+  passport          String?
+  /// Shaxsiy ma'lumot - ro'yxat va qidiruvda ko'rsatilmaydi.
+  pinfl             String?
+  /// "Hisoblagich o'rnatilingan sana".
+  meterInstalledAt  DateTime? @db.Date
+
+  period      Period       @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  subscriber  Subscriber   @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+  transformer Transformer  @relation(fields: [transformerId], references: [id], onDelete: Cascade)
+  staff       Staff?       @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  importBatch ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+
+  @@unique([periodId, subscriberId])
+  @@index([periodId, transformerId])
+  @@index([subscriberId])
+  @@index([staffId])
+  @@map("subscriber_snapshots")
+}
+
+/// "Elektr Qoidabuzarliklar.xlsx" qatori.
+model Violation {
+  id            String  @id @default(cuid())
+  periodId      String
+  transformerId String
+  /// Abonent nomi shu TP abonentlari orasida bir ma'noli topilsa - bog'lanadi.
+  subscriberId  String?
+  importBatchId String?
+  rowNumber     Int
+
+  /// "Abonent" - fayldagi matn.
+  subscriberName String
+  /// "Turi (Yuridik/Jismoniy/Aybisiz)".
+  violatorType   ViolatorType
+  /// "Sana".
+  date           DateTime     @db.Date
+  address        String?
+  /// "Keltirilgan zarar miqdori (UZS)". Bo'sh katak = 0.
+  damageUzs      Decimal      @default(0) @db.Decimal(18, 2)
+  /// "Taxminiy zarar (kWh)". Bo'sh katak = 0.
+  damageKwh      Decimal      @default(0) @db.Decimal(18, 2)
+  staffId        String?
+
+  period      Period       @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  transformer Transformer  @relation(fields: [transformerId], references: [id], onDelete: Cascade)
+  subscriber  Subscriber?  @relation(fields: [subscriberId], references: [id], onDelete: SetNull)
+  staff       Staff?       @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  importBatch ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+
+  @@index([periodId, transformerId])
+  @@index([transformerId])
+  @@index([subscriberId])
+  @@index([staffId])
+  @@map("violations")
+}
+
+/// "Elektr Murojaatlar.xlsx" qatori.
+model Appeal {
+  id            String  @id @default(cuid())
+  periodId      String
+  transformerId String
+  subscriberId  String?
+  importBatchId String?
+  rowNumber     Int
+
+  /// "Murojaat" - murojaat matni.
+  text           String
+  /// "Abonent" - fayldagi matn.
+  subscriberName String
+  /// "Sana".
+  date           DateTime     @db.Date
+  address        String?
+  /// "Holati (Ijobiy hal etilgan / Rad etilgan / Jarayonda / Muddati buzilgan)".
+  status         AppealStatus
+  staffId        String?
+
+  period      Period       @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  transformer Transformer  @relation(fields: [transformerId], references: [id], onDelete: Cascade)
+  subscriber  Subscriber?  @relation(fields: [subscriberId], references: [id], onDelete: SetNull)
+  staff       Staff?       @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  importBatch ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+
+  @@index([periodId, transformerId])
+  @@index([transformerId])
+  @@index([subscriberId])
+  @@index([staffId])
+  @@index([periodId, status])
+  @@map("appeals")
 }
 
 // ---------------------------------------------------------------------------
-// Ma'lumot yuklash (Excel shablonlari)
+// Yuklash tarixi
 // ---------------------------------------------------------------------------
 
-/// Bitta fayl yuklash amali. Har bir yozuv qaysi yuklashdan kelganini biladi.
+/// Bitta faylni yuklash urinishi. Xato bo'lsa `FAILED` bilan qayd etiladi va
+/// bazaga hech qanday ma'lumot yozilmaydi (butun yuklash rad etiladi).
 model ImportBatch {
-  id           String         @id @default(cuid())
+  id           String       @id @default(cuid())
+  templateType TemplateType
+  status       ImportStatus
   fileName     String
   fileSize     Int
-  /// Shablon turi - qaysi parser ishlatilgani.
-  templateType ImportTemplate
-  status       ImportStatus   @default(PENDING)
+  sheetName    String?
 
-  /// Fayldan aniqlangan hisobot davri.
-  periodStart DateTime? @db.Date
-  periodEnd   DateTime? @db.Date
+  /// Aniqlangan hisobot oyi (xato varaq nomida bo'lsa - null).
+  periodId   String?
+  /// Varaq nomidagi sana.
+  reportDate DateTime? @db.Date
 
+  /// Ma'lumot qatorlari soni.
   totalRows    Int @default(0)
-  insertedRows Int @default(0)
+  /// Shu oyda avval bo'lmagan va endi qo'shilgan yozuvlar.
+  createdRows  Int @default(0)
+  /// Shu oyda avval bor bo'lgan va yangilangan yozuvlar.
   updatedRows  Int @default(0)
-  skippedRows  Int @default(0)
-  errorRows    Int @default(0)
+  /// Shu oyda avval bor bo'lgan, yangi faylda yo'q - o'chirilgan yozuvlar.
+  removedRows  Int @default(0)
 
-  /// Qator-qator xatoliklar ro'yxati: [{ row, column, message }].
-  errors Json?
+  /// Xatolar: [{ row, column, message }]. `status = FAILED` bo'lsa to'ldiriladi.
+  errors   Json?
+  /// Ogohlantirishlar (yuklashni to'xtatmaydi): [{ row, column, message }].
+  warnings Json?
 
   uploadedById String?
+
+  period       Period? @relation(fields: [periodId], references: [id], onDelete: SetNull)
   uploadedBy   User?   @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
 
-  tpReadings     TpReading[]
-  feederReadings FeederReading[]
+  substationSnapshots  SubstationSnapshot[]
+  feederSnapshots      FeederSnapshot[]
+  transformerSnapshots TransformerSnapshot[]
+  subscriberSnapshots  SubscriberSnapshot[]
+  violations           Violation[]
+  appeals              Appeal[]
 
-  createdAt  DateTime  @default(now())
-  finishedAt DateTime?
+  createdAt DateTime @default(now())
 
   @@index([templateType])
-  @@index([status])
+  @@index([periodId])
   @@index([createdAt])
   @@map("import_batches")
 }
 
 // ---------------------------------------------------------------------------
-// Foydalanuvchilar
+// Foydalanuvchilar (autentifikatsiya keyinroq)
 // ---------------------------------------------------------------------------
 
 model User {
-  id           String   @id @default(cuid())
-  username     String   @unique
+  id           String    @id @default(cuid())
+  username     String    @unique
   passwordHash String
   fullName     String
-  role         UserRole @default(VIEWER)
-  isActive     Boolean  @default(true)
+  role         UserRole  @default(VIEWER)
+  isActive     Boolean   @default(true)
   lastLoginAt  DateTime?
 
   imports ImportBatch[]
@@ -324,34 +466,63 @@ enum UserRole {
   VIEWER
 }
 
-enum ImportTemplate {
-  /// Kunlik TP hisoboti (balans hisoblagich, foydali oqim, yo'qotish).
-  TP_DAILY
-  /// Oylik yoki 10-kunlik TP hisoboti (Dan/Gacha oralig'i).
-  TP_PERIOD
-  /// Fider bo'yicha hisobot.
-  FEEDER_PERIOD
-  /// Iste'molchilar ro'yxati (aloqada / aloqadamas).
-  CONSUMERS
-  /// TP muammolari ro'yxati.
-  PROBLEMS
+/// Excel shablon turi. Yuklash tartibi shu ro'yxat tartibida.
+enum TemplateType {
+  /// Elektr Podstansiyalar.xlsx
+  SUBSTATIONS
+  /// Elektr Fiderlar.xlsx
+  FEEDERS
+  /// Elektr Transformatorlar.xlsx
+  TRANSFORMERS
+  /// Elektr Abonentlar.xlsx
+  SUBSCRIBERS
+  /// Elektr Qoidabuzarliklar.xlsx
+  VIOLATIONS
+  /// Elektr Murojaatlar.xlsx
+  APPEALS
 }
 
 enum ImportStatus {
-  PENDING
-  PROCESSING
   COMPLETED
   FAILED
 }
 
-enum ProblemSeverity {
-  LOW
-  MEDIUM
-  HIGH
+/// "Abonent turi".
+enum SubscriberKind {
+  /// Yuridik
+  LEGAL
+  /// Aholi
+  HOUSEHOLD
 }
 
-enum ProblemStatus {
-  OPEN
-  IN_PROGRESS
+/// Abonent "Holati".
+enum MeterStatus {
+  /// Aloqada
+  ONLINE
+  /// Aloqaga chiqmayotgan
+  NOT_RESPONDING
+  /// Sxemasi o'zgartirilgan
+  SCHEME_CHANGED
+}
+
+/// Qoidabuzarlik "Turi".
+enum ViolatorType {
+  /// Yuridik
+  LEGAL
+  /// Jismoniy
+  INDIVIDUAL
+  /// Aybisiz
+  INNOCENT
+}
+
+/// Murojaat "Holati".
+enum AppealStatus {
+  /// Ijobiy hal etilgan
   RESOLVED
+  /// Rad etilgan
+  REJECTED
+  /// Jarayonda
+  IN_PROGRESS
+  /// Muddati buzilgan
+  OVERDUE
 }
