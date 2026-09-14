@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { SelectField, type SelectOption } from "@/components/ui/SelectField";
+import { FEEDERS, findFeeder } from "@/lib/data/feeders";
 import { SUBSTATIONS } from "@/lib/data/substations";
 import { TRANSFORMERS } from "@/lib/data/transformers";
 import { cn } from "@/lib/ui/cn";
@@ -17,17 +18,20 @@ const SUBSTATION_OPTIONS: readonly SelectOption[] = SUBSTATIONS.map((item) => ({
 }));
 
 /**
- * Fiderlar alohida ma'lumot moduli sifatida yo'q, shuning uchun nomlar
- * "Eng ko'p sarfga ega fiderlar" diagrammasidagi bilan bir xil olingan.
+ * Tanlangan podstansiya va fiderga tegishli transformatorlar. Fider kodi
+ * faqat podstansiya ichida noyob, shuning uchun ikkalasi birga solishtiriladi.
  */
-const FEEDER_OPTIONS: readonly SelectOption[] = [
-  "Xaqulobod",
-  "Tovuqxona",
-  "Chinobod",
-  "Qiyali",
-  "Maslahat",
-  "Baliqchi",
-].map((name) => ({ value: name.toLowerCase(), label: name }));
+function transformersFor(substationId: string | null, feederId: string | null) {
+  const feeder = feederId ? findFeeder(feederId) : undefined;
+  return TRANSFORMERS.filter((item) => {
+    if (substationId && item.substationId !== substationId) return false;
+    if (feeder && (item.substationId !== feeder.substationId || item.feeder !== feeder.code)) {
+      return false;
+    }
+    return true;
+  });
+}
+
 
 /** Tanlov bo'yicha oqimlar - ranglar 1-qatordagi KPI kartalari bilan bir xil. */
 const METRICS = [
@@ -54,43 +58,63 @@ const METRICS = [
  * bo'shliq 8px).
  *
  * Maketda faqat yopiq holat chizilgan; ochiluvchi ro'yxat `SelectField` da.
- * Transformatorlar ro'yxati tanlangan podstansiyaga qarab qisqaradi - shuning
- * uchun podstansiya almashtirilganda unga tegishli bo'lmagan transformator
- * tanlovi bekor qilinadi.
+ * Tanlovlar zanjir: fiderlar podstansiyaga, transformatorlar esa podstansiya
+ * va fiderga qarab qisqaradi. Yuqoridagi tanlov almashtirilganda unga
+ * tegishli bo'lmagan pastki tanlovlar bekor qilinadi.
  */
 export function FilterCard({ className }: { className?: string }) {
   const [substation, setSubstation] = useState<string | null>(null);
   const [feeder, setFeeder] = useState<string | null>(null);
   const [transformer, setTransformer] = useState<string | null>(null);
 
-  const transformerOptions = useMemo<readonly SelectOption[]>(() => {
+  const feederOptions = useMemo<readonly SelectOption[]>(() => {
     const list = substation
-      ? TRANSFORMERS.filter((item) => item.substationId === substation)
-      : TRANSFORMERS;
-    return list.map((item) => ({
+      ? FEEDERS.filter((item) => item.substationId === substation)
+      : FEEDERS;
+    return list.map((item) => ({ value: item.id, label: item.name }));
+  }, [substation]);
+
+  const transformerOptions = useMemo<readonly SelectOption[]>(() => {
+    return transformersFor(substation, feeder).map((item) => ({
       value: item.id,
       label: item.code,
     }));
-  }, [substation]);
+  }, [substation, feeder]);
 
-  function pickSubstation(next: string | null) {
-    setSubstation(next);
-    // Tanlangan transformator yangi podstansiyaga tegishli bo'lmasa - tozalanadi.
+  /** Transformator tanlovi yangi shartlarga mos kelmasa - tozalanadi. */
+  function keepTransformer(nextSubstation: string | null, nextFeeder: string | null) {
     if (
       transformer &&
-      next &&
-      !TRANSFORMERS.some((item) => item.id === transformer && item.substationId === next)
+      !transformersFor(nextSubstation, nextFeeder).some((item) => item.id === transformer)
     ) {
       setTransformer(null);
     }
   }
 
+  function pickSubstation(next: string | null) {
+    setSubstation(next);
+    // Fider boshqa podstansiyaniki bo'lsa - tozalanadi.
+    const nextFeeder = feeder && next && findFeeder(feeder)?.substationId !== next ? null : feeder;
+    setFeeder(nextFeeder);
+    keepTransformer(next, nextFeeder);
+  }
+
+  function pickFeeder(next: string | null) {
+    setFeeder(next);
+    // Fider tanlansa, podstansiya ham avtomatik o'shanga o'rnatiladi.
+    const nextSubstation = (next && findFeeder(next)?.substationId) || substation;
+    setSubstation(nextSubstation);
+    keepTransformer(nextSubstation, next);
+  }
+
   /** Havola eng aniq tanlovga olib boradi. */
   const href = transformer
     ? `/transformers/${transformer}`
-    : substation
-      ? `/substations/${substation}`
-      : "/feeders";
+    : feeder
+      ? `/feeders/${feeder}`
+      : substation
+        ? `/substations/${substation}`
+        : "/feeders";
 
   return (
     <Card className={cn("gap-[23px] pb-2", className)}>
@@ -105,9 +129,9 @@ export function FilterCard({ className }: { className?: string }) {
         />
         <SelectField
           value={feeder}
-          options={FEEDER_OPTIONS}
+          options={feederOptions}
           placeholder="Fiderni tanlang"
-          onChange={setFeeder}
+          onChange={pickFeeder}
         />
         <SelectField
           value={transformer}
