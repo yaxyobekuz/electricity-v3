@@ -4,18 +4,22 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { Icon } from "@/components/ui/Icon";
+import { findFeeder } from "@/lib/data/feeders";
 import { cn } from "@/lib/ui/cn";
 
 import { AiPromo } from "./AiPromo";
 import { SidebarPanel } from "./AppShell";
 import { WORKSPACE_LINKS } from "./nav";
 
+const DISTRICT_TITLE = "Baliqchi tumani elektr ta’minoti";
+
 /**
  * Panel sarlavhasi: bosh sahifa maketida (Figma `4126:80`) butun tuman,
- * fider sahifasi maketida esa o'sha fider nomi.
+ * fider detal sahifasi maketida esa o'sha fider nomi ("Xaqulobod fideri").
  */
 function panelTitle(pathname: string): string {
-  return pathname.startsWith("/feeders") ? "Xaqulobod fideri" : "Baliqchi tumani elektr ta’minoti";
+  const feederId = /^\/feeders\/([^/]+)/.exec(pathname)?.[1];
+  return (feederId && findFeeder(feederId)?.name) || DISTRICT_TITLE;
 }
 
 /**
