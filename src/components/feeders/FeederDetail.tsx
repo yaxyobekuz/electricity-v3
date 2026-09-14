@@ -12,13 +12,13 @@ import { TopTransformersCard } from "@/components/cards/TopTransformersCard";
 import { ViolationsCard } from "@/components/cards/ViolationsCard";
 
 /**
- * Fider sahifasi (Figma `4029:930` -> "Main").
+ * Fider detal sahifasi (Figma `4029:930` -> "Main"), `/feeders/[id]`.
  *
  * 18 ustunli grid, 8px oraliq. Qator balandliklari maketdagi qiymatlar:
  * 196 / 298 / 336 / 209. `minmax(Npx, Nfr)` - 1064px balandlikda aynan
  * maketdagidek, balandroq ekranda mutanosib cho'ziladi.
  */
-export function FeederView() {
+export function FeederDetail() {
   return (
     <div className="grid h-full min-h-0 grid-cols-[repeat(18,minmax(0,1fr))] grid-rows-[minmax(196px,196fr)_minmax(298px,298fr)_minmax(336px,336fr)_minmax(209px,209fr)] gap-2 overflow-y-auto scrollbar-none">
       {/* 1-qator - KPI kartalari (6 x span-3) */}
