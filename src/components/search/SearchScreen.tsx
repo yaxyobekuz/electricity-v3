@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { type ReactNode, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   ChevronDown,
@@ -10,34 +11,28 @@ import {
   CircuitBoard,
   Factory,
   Hand,
-  History,
+  LoaderCircle,
   Map as MapIcon,
+  MessagesSquare,
   Search,
   SearchX,
-  TriangleAlert,
   Users,
+  Workflow,
   X,
 } from "lucide-react";
 
 import { AppShell, SidebarPanel } from "@/components/shell/AppShell";
 import { Card } from "@/components/ui/Card";
 import { type GlyphIcon, Icon } from "@/components/ui/Icon";
-import { transformerCount } from "@/lib/data/relations";
-import { between, energy, money, num, pick } from "@/lib/data/seed";
-import { SUBSCRIBER_KIND_LABEL, SUBSCRIBER_STATUS_LABEL, SUBSCRIBERS } from "@/lib/data/subscribers";
-import { SUBSTATION_STATUS_LABEL, SUBSTATIONS } from "@/lib/data/substations";
-import { TRANSFORMER_STATUS_LABEL, TRANSFORMERS } from "@/lib/data/transformers";
+import { UserGroup } from "@/components/ui/icons/UserGroup";
+import { num } from "@/lib/format";
 import { cn } from "@/lib/ui/cn";
+
+import type { SearchFilter, SearchHit, SearchHitGroup, SearchKind } from "./types";
 
 /* ---------------------------------------------------------------------------
    Natija turlari
    --------------------------------------------------------------------------- */
-
-/** Qidiruv natijasining turi - guruhlash va nishon rangi shu bo'yicha. */
-type HitKind = "incident" | "subscriber" | "substation" | "transformer" | "violation";
-
-/** Chap paneldagi filtr qiymati. */
-type FilterValue = "all" | HitKind;
 
 interface KindStyle {
   /** Nishondagi qisqa nom ("Abonent"). */
@@ -51,13 +46,20 @@ interface KindStyle {
   text: string;
 }
 
-const KIND_STYLE: Record<HitKind, KindStyle> = {
+const KIND_STYLE: Record<SearchKind, KindStyle> = {
   substation: {
     label: "Podstansiya",
     plural: "Podstansiyalar",
     icon: Factory,
     tint: "bg-tint-blue",
     text: "text-accent-blue",
+  },
+  feeder: {
+    label: "Fider",
+    plural: "Fiderlar",
+    icon: Workflow,
+    tint: "bg-tint-teal",
+    text: "text-accent-teal",
   },
   transformer: {
     label: "Transformator",
@@ -80,438 +82,203 @@ const KIND_STYLE: Record<HitKind, KindStyle> = {
     tint: "bg-tint-red",
     text: "text-accent-red",
   },
-  incident: {
-    label: "Hodisa",
-    plural: "Hodisalar",
-    icon: TriangleAlert,
+  appeal: {
+    label: "Murojaat",
+    plural: "Murojaatlar",
+    icon: MessagesSquare,
     tint: "bg-tint-amber",
     text: "text-accent-amber",
+  },
+  staff: {
+    label: "Xodim",
+    plural: "Ma’sul xodimlar",
+    icon: UserGroup,
+    tint: "bg-tint-purple",
+    text: "text-accent-purple",
   },
 };
 
 /** Guruhlar doim shu tartibda chiziladi - tarmoq ierarxiyasi bo'yicha. */
-const KIND_ORDER: readonly HitKind[] = [
+const KIND_ORDER: readonly SearchKind[] = [
   "substation",
+  "feeder",
   "transformer",
   "subscriber",
   "violation",
-  "incident",
+  "appeal",
+  "staff",
 ];
 
 /** Har bir guruhdan boshida ko'rsatiladigan natijalar soni. */
 const PREVIEW_LIMIT = 6;
 
-/** Matn bo'laklarini ajratuvchi nuqta (U+00B7). */
-const DOT = " · ";
+/** Terish to'xtagach URL (va server qidiruvi) yangilanishigacha kutish. */
+const DEBOUNCE_MS = 300;
 
-/* ---------------------------------------------------------------------------
-   Qoidabuzarlik va hodisa - maket ma'lumoti
-   Bu ikki ro'yxat uchun alohida modul yo'q, shuning uchun mavjud abonent va
-   transformatorlar ustiga determinlashgan tarzda quriladi (`Math.random` yo'q).
-   --------------------------------------------------------------------------- */
+/** Qidiruv bo'sh bo'lganda ko'rsatiladigan plitkalar: reyestr va uning birligi. */
+const QUICK_LINKS: ReadonlyArray<{ kind: SearchKind; href: string; unit: string }> = [
+  { kind: "substation", href: "/substations", unit: "podstansiya" },
+  { kind: "feeder", href: "/feeders", unit: "fider" },
+  { kind: "transformer", href: "/transformers", unit: "transformator" },
+  { kind: "subscriber", href: "/subscribers", unit: "abonent" },
+  { kind: "violation", href: "/violations", unit: "qoidabuzarlik" },
+  { kind: "appeal", href: "/appeals", unit: "murojaat" },
+  { kind: "staff", href: "/staff", unit: "xodim" },
+];
 
-const VIOLATION_TYPES = [
-  "Hisoblagichni chetlab o\u2019tish",
-  "Hisoblagich muhri buzilgan",
-  "Ruxsatsiz ulanish",
-  "Hisoblagich ko\u2019rsatkichiga aralashuv",
-  "Shartnomasiz iste\u2019mol",
-  "Tarifdan noto\u2019g\u2019ri foydalanish",
-] as const;
+/**
+ * Har bir turda qaysi shablon maydonlari bo'yicha qidiriladi - server
+ * qidiruvi (`search-hits.ts`) va reyestrlardagi qidiruv bilan bir xil.
+ */
+const SEARCH_FIELDS: Record<SearchKind, string> = {
+  substation: "podstansiya nomi, manzili va ma’sul xodimi",
+  feeder: "fider nomi, podstansiya nomi, manzil va ma’sul xodim",
+  transformer: "TP nomi, podstansiya va fider nomi, manzil va ma’sul xodim",
+  subscriber: "abonent F.I.Sh., shartnoma raqami, hisoblagich raqami va manzili",
+  violation: "qoidabuzar abonent nomi, TP nomi, manzil va ma’sul xodim",
+  appeal: "murojaat matni, abonent nomi, TP nomi, manzil va ma’sul xodim",
+  staff: "ma’sul xodim F.I.Sh.",
+};
 
-const VIOLATION_STATES = ["Tekshiruvda", "Dalolatnoma rasmiylashtirildi", "Yopilgan"] as const;
-
-const INCIDENT_TYPES = [
-  "Fider avariyasi",
-  "Transformator qizib ketdi",
-  "Kuchlanish me\u2019yordan pasaydi",
-  "Kabel uzilishi",
-  "Hisoblagichlar aloqasi uzildi",
-  "Himoya ishga tushdi",
-] as const;
-
-const INCIDENT_STATES = ["Ochiq", "Bartaraf etilmoqda", "Bartaraf etilgan"] as const;
-
-/** Hodisa va qoidabuzarlik sanalari - `TODAY` (10-avgust, 2026) dan oldingi kunlar. */
-const EVENT_DATES = [
-  "9-avgust, 2026",
-  "7-avgust, 2026",
-  "4-avgust, 2026",
-  "1-avgust, 2026",
-  "27-iyul, 2026",
-  "19-iyul, 2026",
-] as const;
-
-interface Violation {
-  id: string;
-  code: string;
-  type: string;
-  state: string;
-  subscriber: string;
-  area: string;
-  date: string;
-  /** Qayta hisoblangan summa, so'm. */
-  amount: number;
+function upperFirst(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-const VIOLATIONS: readonly Violation[] = Array.from({ length: 14 }, (_, index) => {
-  const seed = index + 701;
-  // Abonentlar ro'yxatidan qadam bilan olinadi - bir xil abonent takrorlanmaydi.
-  const subscriber = SUBSCRIBERS[(index * 7 + 3) % SUBSCRIBERS.length];
+const PLACEHOLDER_ALL =
+  "Obyekt nomi, abonent F.I.Sh., shartnoma yoki hisoblagich raqami, manzil bo’yicha qidiring...";
 
-  return {
-    id: `qb-${String(index + 1).padStart(3, "0")}`,
-    code: `QB-${between(seed * 3.1, 2100, 2990, 1)}`,
-    type: pick(seed * 5.3, VIOLATION_TYPES),
-    state: pick(seed * 7.9, VIOLATION_STATES),
-    subscriber: subscriber.name,
-    area: subscriber.area,
-    date: pick(seed * 11.3, EVENT_DATES),
-    amount: between(seed * 13.7, 380_000, 9_600_000, 1_000),
-  };
-});
-
-interface Incident {
-  id: string;
-  code: string;
-  type: string;
-  state: string;
-  transformerCode: string;
-  substationName: string;
-  area: string;
-  date: string;
-}
-
-const INCIDENTS: readonly Incident[] = Array.from({ length: 10 }, (_, index) => {
-  const seed = index + 811;
-  const transformer = TRANSFORMERS[(index * 5 + 2) % TRANSFORMERS.length];
-
-  return {
-    id: `hd-${String(index + 1).padStart(3, "0")}`,
-    code: `HD-${between(seed * 3.7, 110, 190, 1)}`,
-    type: pick(seed * 6.7, INCIDENT_TYPES),
-    state: pick(seed * 9.7, INCIDENT_STATES),
-    transformerCode: transformer.code,
-    substationName: transformer.substationName,
-    area: transformer.area,
-    date: pick(seed * 11.9, EVENT_DATES),
-  };
-});
-
-/* ---------------------------------------------------------------------------
-   Natijalar indeksi
-   --------------------------------------------------------------------------- */
-
-interface SearchHit {
-  id: string;
-  kind: HitKind;
-  title: string;
-  subtitle: string;
-  href: string;
-  /** Qidiruv shu normalizatsiya qilingan matn ustidan olib boriladi. */
-  haystack: string;
+/** `/search?q=...&kind=...` - bo'sh qiymatlar URL ga yozilmaydi. */
+function searchHref(query: string, kind: SearchFilter): string {
+  const params = new URLSearchParams();
+  if (query !== "") params.set("q", query);
+  if (kind !== "all") params.set("kind", kind);
+  const search = params.toString();
+  return search ? `/search?${search}` : "/search";
 }
 
 /**
- * Katta-kichik harf va apostrof turlarini bir ko'rinishga keltiradi
- * (maketda U+2019, klaviaturada odatda U+0027 teriladi).
+ * Katta-kichik harf va apostrof turlarini bir ko'rinishga keltiradi.
  *
  * Muhim: almashtirishlar belgilar sonini o'zgartirmaydi, shuning uchun
  * normalizatsiya qilingan matndagi indeks asl matndagi indeksga mos keladi -
  * `Highlight` shunga tayanadi.
  */
 function normalize(value: string): string {
-  return value.toLowerCase().replace(/[‘’ʼ`´]/g, "'");
+  return value.toLowerCase().replace(/[‘’ʻʼ`´′]/g, "'");
 }
-
-function makeHit(
-  kind: HitKind,
-  id: string,
-  href: string,
-  title: string,
-  parts: readonly string[],
-  extra: readonly string[] = [],
-): SearchHit {
-  return {
-    id,
-    kind,
-    href,
-    title,
-    subtitle: parts.join(DOT),
-    // Izohda ko'rinmaydigan maydonlar (hisoblagich raqami, holat) ham
-    // qidiriladi - shuning uchun ular `extra` orqali indeksga qo'shiladi.
-    haystack: normalize([title, ...parts, ...extra].join(" ")),
-  };
-}
-
-/**
- * Butun indeks bir marta - modul yuklanganda - quriladi. Ma'lumot statik
- * bo'lgani uchun uni komponent ichida qayta hisoblashning hojati yo'q.
- */
-const ALL_HITS: readonly SearchHit[] = [
-  ...SUBSTATIONS.map((item) =>
-    makeHit(
-      "substation",
-      item.id,
-      `/substations/${item.id}`,
-      item.name,
-      [
-        item.code,
-        item.voltage,
-        item.area,
-        `${num(transformerCount(item.id))} ta TP`,
-        energy(item.consumptionKwh),
-      ],
-      [item.address, item.responsible, SUBSTATION_STATUS_LABEL[item.status]],
-    ),
-  ),
-  ...TRANSFORMERS.map((item) =>
-    makeHit(
-      "transformer",
-      item.id,
-      `/transformers/${item.id}`,
-      `${item.code} transformatori`,
-      [
-        `${num(item.powerKva)} kVA`,
-        item.voltage,
-        item.substationName,
-        item.feeder,
-        `yuklama ${num(item.loadPercent)}%`,
-      ],
-      [item.area, item.address, item.responsible, TRANSFORMER_STATUS_LABEL[item.status]],
-    ),
-  ),
-  ...SUBSCRIBERS.map((item) =>
-    makeHit(
-      "subscriber",
-      item.id,
-      `/subscribers/${item.id}`,
-      item.name,
-      [
-        item.code,
-        SUBSCRIBER_KIND_LABEL[item.kind],
-        item.transformerCode,
-        item.address,
-        item.balance < 0 ? `qarz ${money(Math.abs(item.balance))}` : energy(item.monthlyKwh),
-      ],
-      [item.area, item.phone, item.meterNo, item.meterType, SUBSCRIBER_STATUS_LABEL[item.status]],
-    ),
-  ),
-  ...VIOLATIONS.map((item) =>
-    makeHit(
-      "violation",
-      item.id,
-      // Qoidabuzarlik uchun alohida detal sahifasi yo'q, reyestr ochiladi.
-      // Manzilga `?id=` qo'shilmaydi: loyihada hech bir sahifa `searchParams`
-      // ni o'qimaydi, ya'ni parametr faqat URL ni ifloslantirgan bo'lardi.
-      "/violations",
-      item.type,
-      [item.code, item.subscriber, item.area, item.date, money(item.amount)],
-      [item.state],
-    ),
-  ),
-  ...INCIDENTS.map((item) =>
-    makeHit(
-      "incident",
-      item.id,
-      // Hodisa yuzasidan ochilgan ish "Ishlar" reyestrida ko'rinadi
-      // (yuqoridagi sababga ko'ra bu yerda ham parametr uzatilmaydi).
-      "/works",
-      item.type,
-      [item.code, item.transformerCode, item.substationName, item.date, item.state],
-      [item.area],
-    ),
-  ),
-];
-
-/** Chap paneldagi filtr tugmalari tartibi. */
-const FILTERS: ReadonlyArray<{
-  value: FilterValue;
-  label: string;
-  icon: GlyphIcon;
-  text: string;
-}> = [
-  { value: "all", label: "Barchasi", icon: Search, text: "text-brand" },
-  ...KIND_ORDER.map((kind) => ({
-    value: kind,
-    label: KIND_STYLE[kind].label,
-    icon: KIND_STYLE[kind].icon,
-    text: KIND_STYLE[kind].text,
-  })),
-];
-
-/** Panel pastidagi "so'nggi qidiruvlar" - hammasi natija beradigan so'rovlar. */
-const RECENT_QUERIES = [
-  "TP-066",
-  "Baliqchi",
-  "Chinobod mahallasi",
-  "Qarzdor",
-  "Nosoz",
-] as const;
-
-/** Qidiruv bo'sh bo'lganda ko'rsatiladigan yirik plitkalar. */
-const QUICK_LINKS: ReadonlyArray<{
-  key: string;
-  href: string;
-  label: string;
-  hint: string;
-  icon: GlyphIcon;
-  tint: string;
-  text: string;
-}> = [
-  {
-    key: "substations",
-    href: "/substations",
-    label: "Podstansiyalar",
-    hint: `${num(SUBSTATIONS.length)} ta podstansiya, kuchlanish darajasi va yuklama bo\u2019yicha`,
-    icon: Factory,
-    tint: "bg-tint-blue",
-    text: "text-accent-blue",
-  },
-  {
-    key: "transformers",
-    href: "/transformers",
-    label: "Transformatorlar",
-    hint: `${num(TRANSFORMERS.length)} ta TP, quvvat va holat bo\u2019yicha reyestr`,
-    icon: CircuitBoard,
-    tint: "bg-tint-indigo",
-    text: "text-accent-indigo",
-  },
-  {
-    key: "subscribers",
-    href: "/subscribers",
-    label: "Abonentlar",
-    hint: `${num(SUBSCRIBERS.length)} ta shartnoma, balans va hisoblagich holati`,
-    icon: Users,
-    tint: "bg-tint-green",
-    text: "text-accent-green",
-  },
-  {
-    key: "map",
-    href: "/map",
-    label: "Xarita",
-    hint: "Tarmoq obyektlarini xaritada daraja bo\u2019yicha ko\u2019rish",
-    icon: MapIcon,
-    tint: "bg-tint-purple",
-    text: "text-accent-purple",
-  },
-];
-
-/** "Nimalarni qidirish mumkin" kartasidagi tayyor so'rovlar. */
-const SAMPLE_QUERIES = [
-  "TP-066",
-  "PS-01",
-  "Baliqchi podstansiyasi",
-  "Chinobod mahallasi",
-  "Navoiy ko\u2019chasi",
-  "Qarzdor",
-  "Kritik",
-  "Fider avariyasi",
-] as const;
 
 /* ---------------------------------------------------------------------------
    Ekran
    --------------------------------------------------------------------------- */
 
-export function SearchScreen() {
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<FilterValue>("all");
+export function SearchScreen({
+  query: serverQuery,
+  kind: serverKind,
+  groups,
+  counts,
+  periodLabel,
+  periodSelect,
+}: {
+  /** Sahifa chizilgan so'rov (URL dagi `q`, chetlari kesilgan). */
+  query: string;
+  /** URL dagi `kind`. */
+  kind: SearchFilter;
+  /** `query` bo'yicha natijalar; so'rov bo'sh bo'lsa - null (tezkor plitkalar). */
+  groups: SearchHitGroup[] | null;
+  /**
+   * Filtr tugmalaridagi sonlar: so'rov bo'lsa - topilganlar, bo'sh bo'lsa -
+   * oydagi reyestr hajmi. Yuklanmagan shablon - null.
+   */
+  counts: Record<SearchKind, number | null>;
+  /** "Sentabr 2026" */
+  periodLabel: string;
+  /** Yon paneldagi hisobot oyi tanlagichi (server qismi). */
+  periodSelect: ReactNode;
+}) {
+  const router = useRouter();
+  const [navigating, startTransition] = useTransition();
+  const [query, setQuery] = useState(serverQuery);
+  const [filter, setFilter] = useState<SearchFilter>(serverKind);
   // Qaysi guruhlar to'liq ochilgani ("Yana N ta" bosilgan guruhlar).
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [expanded, setExpanded] = useState<Partial<Record<SearchKind, boolean>>>({});
+  // Serverga so'nggi yuborilgan so'rov va serverdan so'nggi kelgan qiymatlar.
+  const [requested, setRequested] = useState(serverQuery);
+  const [seen, setSeen] = useState({ query: serverQuery, kind: serverKind });
+
+  // Tashqi o'tish (masalan, chap paneldagi "Qidiruv" havolasi) maydonni URL
+  // ga moslaydi. O'zimiz yuborgan so'rov javobi esa terilayotgan matnni
+  // bosib ketmasligi kerak - shuning uchun o'tish davomida e'tiborsiz.
+  if (seen.query !== serverQuery || seen.kind !== serverKind) {
+    setSeen({ query: serverQuery, kind: serverKind });
+    if (!navigating) {
+      if (serverQuery !== requested) {
+        setQuery(serverQuery);
+        setRequested(serverQuery);
+        setExpanded({});
+      }
+      setFilter(serverKind);
+    }
+  }
 
   const trimmed = query.trim();
 
-  /** So'rovdagi har bir so'z natijada bo'lishi shart (VA mantiqi). */
-  const matches = useMemo(() => {
-    const tokens = normalize(trimmed).split(/\s+/).filter(Boolean);
-    if (tokens.length === 0) return [];
-    return ALL_HITS.filter((hit) => tokens.every((token) => hit.haystack.includes(token)));
-  }, [trimmed]);
+  // Terish to'xtagach URL yangilanadi - server shu so'rov bo'yicha qidiradi.
+  useEffect(() => {
+    if (trimmed === requested) return;
+    const timer = setTimeout(() => {
+      setRequested(trimmed);
+      setExpanded({});
+      startTransition(() => {
+        router.replace(searchHref(trimmed, filter), { scroll: false });
+      });
+    }, DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [trimmed, requested, filter, router]);
 
-  // Filtr yonidagi sonlar: so'rov bo'sh bo'lsa - reyestrdagi umumiy son,
-  // aks holda - joriy so'rov bo'yicha topilgani.
-  const counted = trimmed === "" ? ALL_HITS : matches;
-  const countOf = (value: FilterValue) =>
-    value === "all"
-      ? counted.length
-      : counted.reduce((sum, hit) => (hit.kind === value ? sum + 1 : sum), 0);
+  const searching = navigating || trimmed !== requested;
 
-  const visible = filter === "all" ? matches : matches.filter((hit) => hit.kind === filter);
-
-  const groups = KIND_ORDER.map((kind) => ({
-    kind,
-    items: visible.filter((hit) => hit.kind === kind),
-  })).filter((group) => group.items.length > 0);
-
-  /** So'rov o'zgarganda ochilgan guruhlar yopiladi - ro'yxat qaytadan quriladi. */
-  function handleQuery(next: string) {
-    setQuery(next);
-    setExpanded({});
-  }
-
-  function handleFilter(next: FilterValue) {
+  /** Filtr serverga murojaatsiz almashadi: natijalar allaqachon bor, URL shunchaki yangilanadi. */
+  function handleFilter(next: SearchFilter) {
     setFilter(next);
     setExpanded({});
+    window.history.replaceState(null, "", searchHref(requested, next));
   }
+
+  // Barcha turlarda topilganlar. "Barchasi" yonida faqat so'rov bo'lganda va
+  // hamma tur yuklangan bo'lsa ko'rsatiladi: bo'sh so'rovda turli reyestrlar
+  // hajmini qo'shish ma'nosiz, yuklanmagan tur esa yig'indida 0 bo'lib qolardi.
+  const matchedCount = KIND_ORDER.reduce((total, kind) => total + (counts[kind] ?? 0), 0);
+  const allUploaded = KIND_ORDER.every((kind) => counts[kind] !== null);
+  const visible = (groups ?? []).filter(
+    (group) => (filter === "all" || group.kind === filter) && group.hits.length > 0,
+  );
 
   return (
     <AppShell
       sidebar={
-        <SidebarPanel
-          title="Qidiruv"
-          footer={
-            <div className="flex shrink-0 flex-col gap-1.5">
-              <p className="flex items-center gap-1.5 px-1 text-[11px] font-semibold text-ink-soft">
-                <Icon icon={History} size={14} />
-                So&rsquo;nggi qidiruvlar
-              </p>
-              {RECENT_QUERIES.map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => handleQuery(item)}
-                  className="flex h-9 w-full items-center gap-2 rounded-lg bg-canvas px-3 text-left text-xs text-ink-muted transition-colors hover:bg-black/5"
-                >
-                  <span className="shrink-0 text-ink-soft">
-                    <Icon icon={Search} size={14} />
-                  </span>
-                  <span className="truncate">{item}</span>
-                </button>
-              ))}
-            </div>
-          }
-        >
+        <SidebarPanel title="Qidiruv">
+          {periodSelect}
           <nav aria-label="Natija turlari">
             <ul className="flex flex-col gap-2">
-              {FILTERS.map((item) => {
-                const active = item.value === filter;
-                return (
-                  <li key={item.value}>
-                    <button
-                      type="button"
-                      aria-pressed={active}
-                      onClick={() => handleFilter(item.value)}
-                      className={cn(
-                        "flex h-12 w-full items-center gap-4 rounded-xl px-5 text-left transition-colors",
-                        active ? "bg-brand text-white" : "text-ink hover:bg-canvas",
-                      )}
-                    >
-                      <span className={cn("shrink-0", active ? "text-white" : item.text)}>
-                        <Icon icon={item.icon} size={24} />
-                      </span>
-                      <span className="truncate text-base font-semibold">{item.label}</span>
-                      <span
-                        className={cn(
-                          "ml-auto shrink-0 text-sm font-semibold",
-                          active ? "text-white" : "text-ink-soft",
-                        )}
-                      >
-                        {num(countOf(item.value))}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
+              <FilterButton
+                active={filter === "all"}
+                icon={Search}
+                iconClass="text-brand"
+                label="Barchasi"
+                count={groups !== null && allUploaded ? matchedCount : undefined}
+                onClick={() => handleFilter("all")}
+              />
+              {KIND_ORDER.map((kind) => (
+                <FilterButton
+                  key={kind}
+                  active={filter === kind}
+                  icon={KIND_STYLE[kind].icon}
+                  iconClass={KIND_STYLE[kind].text}
+                  label={KIND_STYLE[kind].plural}
+                  count={counts[kind]}
+                  onClick={() => handleFilter(kind)}
+                />
+              ))}
             </ul>
           </nav>
         </SidebarPanel>
@@ -521,15 +288,23 @@ export function SearchScreen() {
         {/* Qidiruv maydoni - sahifaning asosiy boshqaruv elementi, 48px. */}
         <div className="relative h-12 shrink-0">
           <span className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-ink-soft">
-            <Icon icon={Search} size={20} />
+            <Icon
+              icon={searching && trimmed !== "" ? LoaderCircle : Search}
+              size={20}
+              className={searching && trimmed !== "" ? "animate-spin" : undefined}
+            />
           </span>
           <input
             type="search"
             value={query}
-            onChange={(event) => handleQuery(event.target.value)}
+            onChange={(event) => setQuery(event.target.value)}
+            // Sahifa (`MAX_QUERY_LENGTH`) bilan bir xil chegara.
+            maxLength={120}
             aria-label="Umumiy qidiruv"
             placeholder={
-              "TP kodi, abonent nomi, shartnoma raqami yoki manzil bo\u2019yicha qidiring..."
+              filter === "all"
+                ? PLACEHOLDER_ALL
+                : `${upperFirst(SEARCH_FIELDS[filter])} bo’yicha qidiring...`
             }
             // Brauzerning o'z "tozalash" tugmasi o'chiriladi - o'ngda bizning X bor.
             className="h-12 w-full rounded-xl bg-surface pr-14 pl-12 text-sm text-ink outline-none placeholder:text-ink-soft focus:ring-1 focus:ring-brand/40 [&::-webkit-search-cancel-button]:appearance-none"
@@ -539,7 +314,7 @@ export function SearchScreen() {
           {query === "" ? null : (
             <button
               type="button"
-              onClick={() => handleQuery("")}
+              onClick={() => setQuery("")}
               aria-label="Qidiruvni tozalash"
               className="absolute top-1/2 right-3 flex size-8 -translate-y-1/2 items-center justify-center rounded-lg text-ink-soft transition-colors hover:bg-canvas"
             >
@@ -548,24 +323,34 @@ export function SearchScreen() {
           )}
         </div>
 
-        {/* Natijalar maydoni - sahifaning o'zi emas, shu blok skroll bo'ladi. */}
-        <div className="min-h-0 flex-1 overflow-y-auto scrollbar-none">
-          {trimmed === "" ? (
-            <QuickStart onPick={handleQuery} />
-          ) : groups.length === 0 ? (
-            <EmptyState
-              query={trimmed}
-              otherCount={filter === "all" ? 0 : matches.length}
+        {/* Natijalar maydoni - sahifaning o'zi emas, shu blok skroll bo'ladi.
+            Yangi javob kelguncha eski natija xira ko'rinadi. */}
+        <div
+          aria-busy={searching}
+          className={cn(
+            "min-h-0 flex-1 overflow-y-auto transition-opacity scrollbar-none",
+            searching && "opacity-60",
+          )}
+        >
+          {groups === null ? (
+            <QuickStart counts={counts} filter={filter} periodLabel={periodLabel} />
+          ) : visible.length === 0 ? (
+            <NoResults
+              query={serverQuery}
+              filter={filter}
+              filterTotal={filter === "all" ? null : counts[filter]}
+              otherCount={filter === "all" ? 0 : matchedCount}
+              showOtherCount={allUploaded}
+              periodLabel={periodLabel}
               onReset={() => handleFilter("all")}
             />
           ) : (
             <div className="flex flex-col gap-2">
-              {groups.map((group) => (
+              {visible.map((group) => (
                 <ResultGroup
                   key={group.kind}
-                  kind={group.kind}
-                  items={group.items}
-                  query={trimmed}
+                  group={group}
+                  query={serverQuery}
                   open={expanded[group.kind] === true}
                   onToggle={() =>
                     setExpanded((prev) => ({ ...prev, [group.kind]: prev[group.kind] !== true }))
@@ -580,26 +365,74 @@ export function SearchScreen() {
   );
 }
 
+function FilterButton({
+  active,
+  icon,
+  iconClass,
+  label,
+  count,
+  onClick,
+}: {
+  active: boolean;
+  icon: GlyphIcon;
+  iconClass: string;
+  label: string;
+  /** null - shablon shu oyga yuklanmagan; undefined - son ko'rsatilmaydi. */
+  count?: number | null;
+  onClick: () => void;
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        aria-pressed={active}
+        onClick={onClick}
+        className={cn(
+          "flex h-12 w-full items-center gap-4 rounded-xl px-5 text-left transition-colors",
+          active ? "bg-brand text-white" : "text-ink hover:bg-canvas",
+        )}
+      >
+        <span className={cn("shrink-0", active ? "text-white" : iconClass)}>
+          <Icon icon={icon} size={24} />
+        </span>
+        <span className="truncate text-base font-semibold">{label}</span>
+        {count === undefined ? null : (
+          <span
+            className={cn(
+              "ml-auto shrink-0 font-semibold",
+              count === null ? "text-xs" : "text-sm",
+              active ? "text-white" : "text-ink-soft",
+            )}
+          >
+            {count === null ? "yuklanmagan" : num(count)}
+          </span>
+        )}
+      </button>
+    </li>
+  );
+}
+
 /* ---------------------------------------------------------------------------
    Natijalar guruhi
    --------------------------------------------------------------------------- */
 
 function ResultGroup({
-  kind,
-  items,
+  group,
   query,
   open,
   onToggle,
 }: {
-  kind: HitKind;
-  items: readonly SearchHit[];
+  group: SearchHitGroup;
   query: string;
   open: boolean;
   onToggle: () => void;
 }) {
-  const style = KIND_STYLE[kind];
-  const shown = open ? items : items.slice(0, PREVIEW_LIMIT);
-  const rest = items.length - shown.length;
+  const style = KIND_STYLE[group.kind];
+  const shown = open ? group.hits : group.hits.slice(0, PREVIEW_LIMIT);
+  const rest = group.hits.length - shown.length;
+  const total = group.total ?? group.hits.length;
+  // Serverdan birinchi 20 tasi keladi; qolganlari reyestrda.
+  const truncated = total > group.hits.length;
 
   return (
     <Card>
@@ -615,23 +448,33 @@ function ResultGroup({
         </span>
         <h2 className="truncate text-sm font-bold text-ink">{style.plural}</h2>
         <span className="shrink-0 text-[11px] text-ink-soft">
-          {num(items.length)} ta natija
+          {num(total)} ta natija
+          {truncated ? `, birinchi ${num(group.hits.length)} tasi` : null}
         </span>
+        {truncated && group.registryHref ? (
+          <Link
+            href={group.registryHref}
+            className="ml-auto flex shrink-0 items-center gap-1 text-[11px] font-medium text-brand transition-opacity hover:opacity-70"
+          >
+            Barchasini ko’rish
+            <Icon icon={ArrowRight} size={14} />
+          </Link>
+        ) : null}
       </header>
 
       <div className="flex flex-col pt-2">
         {shown.map((hit) => (
-          <ResultRow key={hit.id} hit={hit} query={query} />
+          <ResultRow key={hit.id} kind={group.kind} hit={hit} query={query} />
         ))}
       </div>
 
-      {items.length > PREVIEW_LIMIT ? (
+      {group.hits.length > PREVIEW_LIMIT ? (
         <button
           type="button"
           onClick={onToggle}
           className="mt-2 flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-canvas text-xs font-medium text-brand transition-colors hover:bg-black/5"
         >
-          {open ? "Kamroq ko\u2019rsatish" : `Yana ${num(rest)} ta`}
+          {open ? "Kamroq ko’rsatish" : `Yana ${num(rest)} ta`}
           {/* Strelka holatni ko'rsatadi: yopiq - pastga, ochiq - tepaga. */}
           <Icon icon={open ? ChevronUp : ChevronDown} size={14} />
         </button>
@@ -640,8 +483,8 @@ function ResultGroup({
   );
 }
 
-function ResultRow({ hit, query }: { hit: SearchHit; query: string }) {
-  const style = KIND_STYLE[hit.kind];
+function ResultRow({ kind, hit, query }: { kind: SearchKind; hit: SearchHit; query: string }) {
+  const style = KIND_STYLE[kind];
 
   return (
     <Link
@@ -691,16 +534,11 @@ function ResultRow({ hit, query }: { hit: SearchHit; query: string }) {
  */
 function Highlight({ text, query }: { text: string; query: string }) {
   const haystack = normalize(text);
-  if (haystack.length !== text.length) return <>{text}</>;
-
-  const tokens = normalize(query).split(/\s+/).filter(Boolean);
-  // Avval butun so'rov, topilmasa - birinchi so'z bo'yicha belgilanadi.
-  const needle = [normalize(query).trim(), tokens[0] ?? ""].find(
-    (candidate) => candidate.length > 0 && haystack.includes(candidate),
-  );
-  if (needle === undefined) return <>{text}</>;
+  const needle = normalize(query).replace(/\s+/g, " ").trim();
+  if (haystack.length !== text.length || needle === "") return <>{text}</>;
 
   const at = haystack.indexOf(needle);
+  if (at < 0) return <>{text}</>;
   return (
     <>
       {text.slice(0, at)}
@@ -716,81 +554,159 @@ function Highlight({ text, query }: { text: string; query: string }) {
    Bo'sh so'rov va bo'sh natija holatlari
    --------------------------------------------------------------------------- */
 
-function QuickStart({ onPick }: { onPick: (query: string) => void }) {
+/**
+ * Bo'sh so'rov holati. "Barchasi" tanlangan bo'lsa - barcha reyestr
+ * plitkalari va har bir turda qidiriladigan maydonlar; bitta tur tanlangan
+ * bo'lsa - faqat shu tur plitkasi va uning qidiruv maydonlari (filtr tugmasi
+ * bosilgani ko'rinib turadi, keyingi so'rov shu tur bilan cheklanadi).
+ */
+function QuickStart({
+  counts,
+  filter,
+  periodLabel,
+}: {
+  counts: Record<SearchKind, number | null>;
+  filter: SearchFilter;
+  periodLabel: string;
+}) {
+  const tile = (item: (typeof QUICK_LINKS)[number]) => {
+    const style = KIND_STYLE[item.kind];
+    const value = counts[item.kind];
+    return (
+      <QuickTile
+        key={item.kind}
+        href={item.href}
+        label={style.plural}
+        hint={value === null ? `${style.plural} yuklanmagan` : `${num(value)} ta ${item.unit}`}
+        icon={style.icon}
+        tint={style.tint}
+        text={style.text}
+      />
+    );
+  };
+
+  if (filter !== "all") {
+    const item = QUICK_LINKS.find((link) => link.kind === filter);
+    return (
+      <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
+        {item ? tile(item) : null}
+        <Card className="xl:col-span-3">
+          <header className="flex h-8 shrink-0 items-center gap-2">
+            <h2 className="truncate text-sm font-bold text-ink">
+              {KIND_STYLE[filter].plural} bo’yicha qidiruv
+            </h2>
+            <span className="shrink-0 text-[11px] text-ink-soft">{periodLabel}</span>
+          </header>
+          <p className="pt-2 text-xs leading-relaxed text-ink-muted">
+            {counts[filter] === null ? (
+              <>{periodLabel} oyi uchun bu shablon hali yuklanmagan.</>
+            ) : (
+              <>
+                {periodLabel} oyi ma’lumotlarida {SEARCH_FIELDS[filter]} bo’yicha qidiriladi.
+                Katta-kichik harf va apostrof turi farq qilmaydi.
+              </>
+            )}
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-2">
-      <div className="grid grid-cols-4 gap-2">
-        {QUICK_LINKS.map((item) => (
-          <Link
-            key={item.key}
-            href={item.href}
-            className="flex h-42 flex-col justify-between rounded-2xl bg-surface p-4 transition-colors hover:bg-canvas"
-          >
-            <span
-              className={cn(
-                "flex size-11 items-center justify-center rounded-xl",
-                item.tint,
-                item.text,
-              )}
-            >
-              <Icon icon={item.icon} size={24} />
-            </span>
-            <span className="flex min-w-0 flex-col gap-1">
-              <span className="truncate text-sm font-bold text-ink">{item.label}</span>
-              <span className="text-[11px] leading-tight text-ink-soft">{item.hint}</span>
-            </span>
-            <span className="flex items-center gap-1.5 text-[11px] font-medium text-brand">
-              Ochish
-              <Icon icon={ArrowRight} size={14} />
-            </span>
-          </Link>
-        ))}
+      <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
+        {QUICK_LINKS.map(tile)}
+        <QuickTile
+          href="/map"
+          label="Xarita"
+          hint="Tarmoq obyektlarini xaritada ko’rish"
+          icon={MapIcon}
+          tint="bg-tint-brown"
+          text="text-accent-brown"
+        />
       </div>
 
       <Card>
         <header className="flex h-8 shrink-0 items-center gap-2">
-          <h2 className="truncate text-sm font-bold text-ink">
-            Nimalarni qidirish mumkin
-          </h2>
-          <span className="shrink-0 text-[11px] text-ink-soft">
-            {num(ALL_HITS.length)} ta yozuv indekslangan
-          </span>
+          <h2 className="truncate text-sm font-bold text-ink">Nimalarni qidirish mumkin</h2>
+          <span className="shrink-0 text-[11px] text-ink-soft">{periodLabel}</span>
         </header>
-        <div className="flex flex-col gap-3 pt-2">
-          <p className="text-xs leading-relaxed text-ink-muted">
-            Qidiruv podstansiya, transformator va abonent reyestrlari, shuningdek
-            qoidabuzarlik va hodisa yozuvlari ustidan olib boriladi: nom, kod,
-            shartnoma raqami, hisoblagich raqami, manzil, hudud va holat bo&rsquo;yicha.
-            Bir nechta so&rsquo;z yozilsa, natijada ularning hammasi qatnashadi.
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {SAMPLE_QUERIES.map((sample) => (
-              <button
-                key={sample}
-                type="button"
-                onClick={() => onPick(sample)}
-                className="flex h-8 items-center rounded-lg bg-canvas px-3 text-xs font-medium text-ink-muted transition-colors hover:bg-black/5"
-              >
-                {sample}
-              </button>
-            ))}
-          </div>
-        </div>
+        <p className="pt-2 text-xs leading-relaxed text-ink-muted">
+          Qidiruv tanlangan oyda yuklangan Excel shablonlari bo’yicha olib boriladi. Katta-kichik
+          harf va apostrof turi farq qilmaydi.
+        </p>
+        <dl className="grid gap-x-6 gap-y-1.5 pt-3 text-xs leading-relaxed xl:grid-cols-2">
+          {KIND_ORDER.map((kind) => (
+            <div key={kind} className="flex min-w-0 gap-1.5">
+              <dt className={cn("shrink-0 font-semibold", KIND_STYLE[kind].text)}>
+                {KIND_STYLE[kind].plural}:
+              </dt>
+              <dd className="min-w-0 text-ink-muted">{SEARCH_FIELDS[kind]}</dd>
+            </div>
+          ))}
+        </dl>
       </Card>
     </div>
   );
 }
 
-function EmptyState({
+function QuickTile({
+  href,
+  label,
+  hint,
+  icon,
+  tint,
+  text,
+}: {
+  href: string;
+  label: string;
+  hint: string;
+  icon: GlyphIcon;
+  tint: string;
+  text: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex h-42 flex-col justify-between rounded-2xl bg-surface p-4 transition-colors hover:bg-canvas"
+    >
+      <span className={cn("flex size-11 items-center justify-center rounded-xl", tint, text)}>
+        <Icon icon={icon} size={24} />
+      </span>
+      <span className="flex min-w-0 flex-col gap-1">
+        <span className="truncate text-sm font-bold text-ink">{label}</span>
+        <span className="text-[11px] leading-tight text-ink-soft">{hint}</span>
+      </span>
+      <span className="flex items-center gap-1.5 text-[11px] font-medium text-brand">
+        Ochish
+        <Icon icon={ArrowRight} size={14} />
+      </span>
+    </Link>
+  );
+}
+
+function NoResults({
   query,
+  filter,
+  filterTotal,
   otherCount,
+  showOtherCount,
+  periodLabel,
   onReset,
 }: {
   query: string;
-  /** Boshqa turlarda topilgan natijalar soni (filtr tor bo'lsa). */
+  filter: SearchFilter;
+  /** Tanlangan tur soni; null - shablon yuklanmagan. */
+  filterTotal: number | null;
+  /** Barcha turlarda topilgan natijalar soni (filtr tor bo'lsa). */
   otherCount: number;
+  /** Hamma tur yuklangan - son to'liq, tugmada ko'rsatsa bo'ladi. */
+  showOtherCount: boolean;
+  periodLabel: string;
   onReset: () => void;
 }) {
+  const notUploaded = filter !== "all" && filterTotal === null;
+
   return (
     <div className="flex h-full min-h-80 flex-col items-center justify-center gap-3 rounded-2xl bg-surface p-8 text-center">
       <span className="flex size-14 items-center justify-center rounded-2xl bg-canvas text-ink-soft">
@@ -799,19 +715,25 @@ function EmptyState({
       {/* Boshqa turlarda natija bo'lsa "hech narsa topilmadi" deyish noto'g'ri
           bo'lardi - matn filtr torligini aytadi. */}
       <p className="text-sm font-bold text-ink">
-        {otherCount > 0 ? <>Bu turda natija yo&rsquo;q</> : "Hech narsa topilmadi"}
+        {notUploaded
+          ? `${KIND_STYLE[filter].plural} yuklanmagan`
+          : otherCount > 0
+            ? "Bu turda natija yo’q"
+            : "Hech narsa topilmadi"}
       </p>
       <p className="max-w-110 text-xs leading-relaxed text-ink-soft">
-        {otherCount > 0 ? (
+        {notUploaded ? (
+          <>{periodLabel} oyi uchun bu shablon hali yuklanmagan.</>
+        ) : otherCount > 0 ? (
           <>
-            &laquo;{query}&raquo; bo&rsquo;yicha natijalar bor, ammo tanlangan turda
-            emas. Chap panelda boshqa turni tanlang yoki filtrni kengaytiring.
+            &laquo;{query}&raquo; bo’yicha natijalar bor, ammo tanlangan turda emas. Chap
+            panelda boshqa turni tanlang.
           </>
         ) : (
           <>
-            &laquo;{query}&raquo; bo&rsquo;yicha mos yozuv yo&rsquo;q. Kod (TP-066,
-            PS-01), shartnoma raqami (AB-104512), abonent nomi yoki manzil
-            bo&rsquo;yicha qisqaroq so&rsquo;rov bilan urinib ko&rsquo;ring.
+            &laquo;{query}&raquo; bo’yicha {periodLabel} oyi ma’lumotlarida mos yozuv
+            yo’q. Obyekt nomi, abonent F.I.Sh., shartnoma yoki hisoblagich raqamining bir
+            qismi bilan urinib ko’ring.
           </>
         )}
       </p>
@@ -821,7 +743,7 @@ function EmptyState({
           onClick={onReset}
           className="flex h-8 items-center gap-1.5 rounded-lg bg-brand px-3 text-xs font-medium text-white transition-opacity hover:opacity-90"
         >
-          Barcha turlarda ko&rsquo;rish ({num(otherCount)} ta)
+          Barcha turlarda ko’rish{showOtherCount ? ` (${num(otherCount)} ta)` : null}
           <Icon icon={ArrowRight} size={14} />
         </button>
       ) : null}

@@ -137,7 +137,8 @@ function loadGoogleMaps(key: string): Promise<void> {
   return loaderPromise;
 }
 
-function escapeHtml(value: string): string {
+/** Marker HTML matni uchun - fayldagi nomlar markupga aylanmasin. */
+export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -162,10 +163,22 @@ export const pinMarker: MarkerRenderer = (marker, selected) =>
     "</div>",
   ].join("");
 
+/** Tuman chegarasi (bbox) markazi - `center` berilmaganda boshlang'ich nuqta. */
+const DISTRICT_CENTER = {
+  lat: (BALIQCHI_DISTRICT.bbox[1] + BALIQCHI_DISTRICT.bbox[3]) / 2,
+  lng: (BALIQCHI_DISTRICT.bbox[0] + BALIQCHI_DISTRICT.bbox[2]) / 2,
+};
+const DISTRICT_ZOOM = 11;
+
+/** Markerlarga moslashda eng yaqin zoom - bitta nuqta ko'cha darajasida ko'rinsin. */
+const FIT_MAX_ZOOM = 17;
+
 interface MapCanvasProps {
   markers: MapMarker[];
-  center: { lat: number; lng: number };
-  zoom: number;
+  /** Berilmasa - tuman markazi. */
+  center?: { lat: number; lng: number };
+  /** Berilmasa - butun tuman ko'rinadigan zoom. */
+  zoom?: number;
   selectedId?: string | null;
   onSelect?: (id: string) => void;
   renderMarker?: MarkerRenderer;
@@ -195,14 +208,20 @@ interface MapCanvasProps {
    * butun Baliqchi tumani kadrga sig'adi.
    */
   fitDistrict?: boolean;
-  /** `fitDistrict` uchun piksel to'ldirma. */
+  /**
+   * Ko'rinishni markerlar chegarasiga moslaydi (bitta marker - uning atrofi).
+   * Marker yo'q bo'lsa - tuman chegarasi. Marker to'plami o'zgarganda qayta
+   * moslanadi. `fitDistrict` dan ustun.
+   */
+  fitMarkers?: boolean;
+  /** `fitDistrict` / `fitMarkers` uchun piksel to'ldirma. */
   fitPadding?: number;
 }
 
 export function MapCanvas({
   markers,
-  center,
-  zoom,
+  center = DISTRICT_CENTER,
+  zoom = DISTRICT_ZOOM,
   selectedId = null,
   onSelect,
   renderMarker = pinMarker,
@@ -214,6 +233,7 @@ export function MapCanvas({
   compactFallback = false,
   district = true,
   fitDistrict = false,
+  fitMarkers = false,
   fitPadding = 12,
 }: MapCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -419,22 +439,43 @@ export function MapCanvas({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, polylinesKey, circlesKey, district]);
 
-  // Markaz/zoom o'zgarsa - silliq o'tish.
+  // Markaz/zoom o'zgarsa - silliq o'tish. `fitMarkers` rejimida marker
+  // to'plami ham kalit: boshqa tugunga o'tilganda ko'rinish yangi markerlarga
+  // moslanadi (boshqa rejimlarda kalit o'zgarmas - avvalgi xatti-harakat).
+  const fitKey = fitMarkers ? markersKey : "";
   useEffect(() => {
     if (status !== "ready" || !mapRef.current) return;
-    if (fitDistrict) {
-      const g = (window as any).google;
+    const g = (window as any).google;
+    const map = mapRef.current;
+    if (fitMarkers && markers.length > 0) {
+      const first = markers[0];
+      const single = markers.every((marker) => marker.lat === first.lat && marker.lng === first.lng);
+      if (single) {
+        map.panTo({ lat: first.lat, lng: first.lng });
+        map.setZoom(FIT_MAX_ZOOM);
+        return;
+      }
+      const bounds = new g.maps.LatLngBounds();
+      markers.forEach((marker) => bounds.extend({ lat: marker.lat, lng: marker.lng }));
+      map.fitBounds(bounds, fitPadding);
+      // Bir-biriga juda yaqin nuqtalarda `fitBounds` haddan tashqari yaqinlashadi.
+      const listener = g.maps.event.addListenerOnce(map, "idle", () => {
+        if (map.getZoom() > FIT_MAX_ZOOM) map.setZoom(FIT_MAX_ZOOM);
+      });
+      return () => g.maps.event.removeListener(listener);
+    }
+    if (fitDistrict || fitMarkers) {
       const bounds = new g.maps.LatLngBounds();
       BALIQCHI_DISTRICT.rings.forEach((ring) => {
         ring.forEach(([lng, lat]) => bounds.extend({ lat, lng }));
       });
-      mapRef.current.fitBounds(bounds, fitPadding);
+      map.fitBounds(bounds, fitPadding);
       return;
     }
-    mapRef.current.panTo(center);
-    mapRef.current.setZoom(zoom);
+    map.panTo(center);
+    map.setZoom(zoom);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, center.lat, center.lng, zoom, recenterKey, fitDistrict, fitPadding]);
+  }, [status, center.lat, center.lng, zoom, recenterKey, fitDistrict, fitMarkers, fitPadding, fitKey]);
 
   if (!API_KEY || status === "error") {
     return (

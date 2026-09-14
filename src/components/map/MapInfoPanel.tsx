@@ -1,17 +1,23 @@
 "use client";
 
-// Xarita sahifasining o'ng paneli (Figma node 3947:249 "Right").
-// Galereya tanlovi holat talab qiladi, donut esa nivo - shuning uchun mijoz komponenti.
+// Xarita sahifasining o'ng paneli (Figma node 3947:249 "Right"). Donut - nivo,
+// shuning uchun mijoz komponenti. Barcha matnlar serverda tayyorlangan.
 
 import type { ReactNode } from "react";
-import { useState } from "react";
-import Image from "next/image";
+import Link from "next/link";
 import { ResponsivePie } from "@nivo/pie";
-import { CircuitBoard, Expand, UserShield } from "lucide-react";
+import { ArrowRight, UserShield } from "lucide-react";
 
-import type { MapNodeInfo } from "@/components/map/types";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/ui/cn";
+
+import { MAP_ICONS } from "./icons";
+import type { MapEnergy, MapInfo, MapStat, MapTopList } from "./types";
+
+/** Donut ranglari - `accent-green` / `accent-red` tokenlari (SVG atributida `var()` ishonchsiz). */
+const USEFUL_COLOR = "#22c55e";
+const LOSS_COLOR = "#ff383c";
 
 /** Donut uchun nivo kutadigan shakl (rang har bir segmentning o'zidan olinadi). */
 interface DonutDatum {
@@ -29,167 +35,191 @@ function Caption({ children }: { children: ReactNode }) {
   return <p className="mb-2.5 text-xs leading-4.5 text-ink-soft">{children}</p>;
 }
 
-export function MapInfoPanel({
-  node,
-  className,
-}: {
-  node: MapNodeInfo;
-  className?: string;
-}) {
-  // Boshqa tugun tanlanganda galereya birinchi rasmga qaytishi kerak, shuning
-  // uchun tanlov tugun nomi bilan saqlanadi - effektsiz qayta hisoblanadi.
-  const [picked, setPicked] = useState({ title: node.title, index: 0 });
-  const selected =
-    picked.title === node.title && picked.index < node.gallery.length ? picked.index : 0;
+/** Kulrang plitka: havola berilsa - bosiladigan. */
+function Tile({ href, className, children }: { href?: string | null; className?: string; children: ReactNode }) {
+  const base = cn("flex h-12 items-center gap-3 rounded-xl bg-canvas px-4 text-ink", className);
+  if (!href) return <div className={base}>{children}</div>;
+  return (
+    <Link href={href} className={cn(base, "transition-colors hover:bg-black/5")}>
+      {children}
+    </Link>
+  );
+}
 
-  const donut: DonutDatum[] = node.report.map((slice) => ({
-    id: slice.key,
-    label: slice.label,
-    value: slice.value,
-    color: slice.color,
-  }));
-
+export function MapInfoPanel({ info, className }: { info: MapInfo; className?: string }) {
   return (
     <aside
-      className={cn(
-        "flex w-[340px] shrink-0 flex-col overflow-hidden rounded-2xl bg-surface p-4",
-        className,
-      )}
+      className={cn("flex w-85 shrink-0 flex-col overflow-hidden rounded-2xl bg-surface p-4", className)}
     >
       {/* 1. Sarlavha qatori - skroll qilinmaydi, panel tepasida qotib turadi. */}
       <header className="flex h-5.25 shrink-0 items-center justify-between gap-2">
-        <h2 className="truncate text-base font-bold leading-5.25 text-ink">
-          Ma&rsquo;lumotlar
-        </h2>
-        <button
-          type="button"
-          aria-label="Kengaytirish"
-          className="flex shrink-0 text-ink transition-opacity hover:opacity-70"
-        >
-          <Icon icon={Expand} size={20} />
-        </button>
+        <h2 className="truncate text-base leading-5.25 font-bold text-ink">Ma&rsquo;lumotlar</h2>
+        <span className="shrink-0 text-xs text-ink-soft">{info.periodLabel}</span>
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pt-2.5 scrollbar-none">
-        {/* 2. Katta rasm 308x204. */}
-        <div className="relative h-51 w-full shrink-0 overflow-hidden rounded-xl bg-canvas">
-          <Image
-            src={node.gallery[selected]}
-            alt={node.title}
-            fill
-            sizes="308px"
-            className="object-cover"
-          />
-        </div>
-
-        {/* 3. Eskizlar: maketda 4 x 80px + 10px oraliq = 350px, panel ichi esa 308px -
-            o'lcham maketdagidek qoldirilib, qator gorizontal skroll qilinadi. */}
-        <div className="flex shrink-0 gap-2.5 overflow-x-auto scrollbar-none">
-          {node.gallery.map((src, index) => (
-            <button
-              key={`${index}-${src}`}
-              type="button"
-              onClick={() => setPicked({ title: node.title, index })}
-              aria-label={`${index + 1}-rasm`}
-              className="relative size-20 shrink-0 overflow-hidden rounded-lg bg-canvas"
-            >
-              <Image src={src} alt="" fill sizes="80px" className="object-cover" />
-              {/* Halqa ichkaridan chiziladi - aks holda 10px oraliqni yeb qo'yadi. */}
-              {index === selected ? (
-                <span className="pointer-events-none absolute inset-0 rounded-lg border-2 border-brand" />
-              ) : null}
-            </button>
-          ))}
-        </div>
-
-        {/* 4. Tugun nomi. */}
-        <h3 className="shrink-0 text-base font-bold leading-5.25 text-ink">{node.title}</h3>
-
-        {/* 5. 2x2 statistika. */}
-        <div className="grid shrink-0 grid-cols-2 gap-2.5">
-          {node.stats.map((stat) => (
-            <div key={stat.key} className="min-w-0">
-              <Caption>{stat.label}</Caption>
-              <div className="flex h-12 items-center gap-3 rounded-xl bg-canvas px-5 text-ink">
-                <Icon icon={stat.Icon} size={24} className="shrink-0" />
-                <span className="truncate text-base font-semibold leading-5.25">
-                  {stat.value}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* 6. Hisobot: chapda 80px donut, o'ngda uch qatorli izoh. */}
+        {/* 2. Tugun nomi va turi. */}
         <div className="shrink-0">
-          <Caption>Hisobot</Caption>
-          <div className="flex items-start gap-5 rounded-xl bg-canvas p-3">
-            <div className="size-20 shrink-0">
-              <ResponsivePie<DonutDatum>
-                data={donut}
-                margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
-                innerRadius={0.62}
-                padAngle={1.5}
-                cornerRadius={2}
-                colors={{ datum: "data.color" }}
-                borderWidth={0}
-                enableArcLabels={false}
-                enableArcLinkLabels={false}
-                isInteractive={false}
-                animate={false}
+          <p className="text-xs leading-4.5 text-ink-soft">{info.kindLabel}</p>
+          <h3 className="text-base leading-5.25 font-bold wrap-break-word text-ink">{info.title}</h3>
+        </div>
+
+        {info.emptyText ? (
+          <EmptyState variant="inline" action={false} title={info.emptyText} className="min-h-40 flex-none" />
+        ) : (
+          <>
+            {/* 3. Statistika plitkalari. */}
+            {info.stats.length > 0 ? (
+              <div className="grid shrink-0 grid-cols-2 gap-2.5">
+                {info.stats.map((stat) => (
+                  <StatTile key={stat.key} stat={stat} />
+                ))}
+              </div>
+            ) : null}
+
+            {/* 4. Hisobot: Umumiy / Foydali oqim va Yo'qotish. */}
+            {info.energy ? (
+              <EnergyBlock energy={info.energy} />
+            ) : info.energyEmptyText ? (
+              <div className="shrink-0">
+                <Caption>Hisobot</Caption>
+                <p className="rounded-xl bg-canvas px-4 py-3 text-xs text-ink-muted">{info.energyEmptyText}</p>
+              </div>
+            ) : null}
+
+            {/* 5. Ma'sul xodim. */}
+            {info.staff ? (
+              <div className="shrink-0">
+                <Caption>Ma&rsquo;sul xodim</Caption>
+                <Tile href={info.staff.href}>
+                  <Icon icon={UserShield} size={24} className="shrink-0" />
+                  <span className="truncate text-base leading-5.25 font-semibold">{info.staff.name}</span>
+                </Tile>
+              </div>
+            ) : null}
+
+            {/* 6. Eng ko'p: bolalar Foydali oqimi yoki TP qarzdorlari. */}
+            {info.top ? <TopBlock top={info.top} /> : null}
+          </>
+        )}
+      </div>
+
+      {/* 7. Obyekt sahifasiga o'tish - panel pastida qotib turadi. */}
+      <Link
+        href={info.detail.href}
+        className="mt-3 flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-brand text-sm font-semibold text-white transition-opacity hover:opacity-90"
+      >
+        {info.detail.label}
+        <Icon icon={ArrowRight} size={16} />
+      </Link>
+    </aside>
+  );
+}
+
+function StatTile({ stat }: { stat: MapStat }) {
+  return (
+    <div className={cn("min-w-0", stat.wide && "col-span-2")}>
+      <Caption>{stat.label}</Caption>
+      <Tile href={stat.href}>
+        <Icon icon={MAP_ICONS[stat.icon]} size={20} className="shrink-0" />
+        <span className="truncate text-base leading-5.25 font-semibold" title={stat.value}>
+          {stat.value}
+        </span>
+      </Tile>
+    </div>
+  );
+}
+
+function EnergyBlock({ energy }: { energy: MapEnergy }) {
+  const donut: DonutDatum[] = energy.donut
+    ? [
+        { id: "useful", label: "Foydali oqim", value: energy.donut.useful, color: USEFUL_COLOR },
+        { id: "loss", label: "Yo’qotish", value: energy.donut.loss, color: LOSS_COLOR },
+      ]
+    : [];
+
+  const rows: { key: string; label: string; value: string; hint?: string; color: string | null }[] = [
+    { key: "total", label: "Umumiy oqim", value: energy.total, color: null },
+    { key: "useful", label: "Foydali oqim", value: energy.useful, color: USEFUL_COLOR },
+    { key: "loss", label: "Yo’qotish", value: energy.loss, hint: energy.lossPercent, color: LOSS_COLOR },
+  ];
+
+  return (
+    <div className="shrink-0">
+      <Caption>Hisobot</Caption>
+      <div className="flex items-center gap-5 rounded-xl bg-canvas p-3">
+        {/* Manfiy yoki nol qiymatda ulushni chizib bo'lmaydi - faqat sonlar qoladi. */}
+        {donut.length > 0 ? (
+          <div className="size-20 shrink-0">
+            <ResponsivePie<DonutDatum>
+              data={donut}
+              margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
+              innerRadius={0.62}
+              padAngle={1.5}
+              cornerRadius={2}
+              colors={{ datum: "data.color" }}
+              borderWidth={0}
+              enableArcLabels={false}
+              enableArcLinkLabels={false}
+              isInteractive={false}
+              animate={false}
+            />
+          </div>
+        ) : null}
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          {rows.map((row) => (
+            <div key={row.key} className="flex items-center gap-2.5">
+              <span
+                className={cn("size-4 shrink-0 rounded-full", row.color ? null : "border-2 border-ink-soft")}
+                style={row.color ? { backgroundColor: row.color } : undefined}
               />
-            </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-3">
-              {node.report.map((slice) => (
-                <div key={slice.key} className="flex items-center gap-2.5">
-                  <span
-                    className="size-4 shrink-0 rounded-full"
-                    style={{ backgroundColor: slice.color }}
-                  />
-                  <div className="min-w-0">
-                    <p className="truncate text-xs leading-4.5 text-ink-soft">{slice.label}</p>
-                    <p className="mt-1.5 truncate text-base font-semibold leading-5.25 text-ink">
-                      {slice.display}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* 7. Ma'sul shaxs. */}
-        <div className="shrink-0">
-          <Caption>Ma&rsquo;sul shaxs</Caption>
-          <div className="flex h-12 items-center gap-3 rounded-xl bg-canvas px-5 text-ink">
-            <Icon icon={UserShield} size={24} className="shrink-0" />
-            <span className="truncate text-base font-semibold leading-5.25">
-              {node.responsible}
-            </span>
-          </div>
-        </div>
-
-        {/* 8. Sarfi yuqori transformatorlar - qiymat o'ngda va qizil. */}
-        <div className="shrink-0">
-          <Caption>Sarfi yuqori transformatorlar</Caption>
-          <div className="flex flex-col gap-2.5">
-            {node.topConsumers.map((tp) => (
-              <div
-                key={tp.id}
-                className="flex items-center justify-between gap-3 rounded-xl bg-canvas px-5 py-3 text-ink"
-              >
-                <span className="flex min-w-0 items-center gap-3">
-                  <Icon icon={CircuitBoard} size={20} className="shrink-0" />
-                  <span className="truncate text-base font-semibold leading-5.25">{tp.label}</span>
-                </span>
-                <span className="shrink-0 text-base font-semibold leading-5.25 text-trend-up">
-                  {tp.value}
-                </span>
+              <div className="min-w-0">
+                <p className="truncate text-xs leading-4.5 text-ink-soft">{row.label}</p>
+                <p className="mt-0.5 truncate text-base leading-5.25 font-semibold text-ink">
+                  {row.value}
+                  {row.hint ? <span className="ml-1.5 text-xs font-medium text-ink-soft">{row.hint}</span> : null}
+                </p>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </div>
-    </aside>
+    </div>
+  );
+}
+
+function TopBlock({ top }: { top: MapTopList }) {
+  return (
+    <div className="shrink-0">
+      <Caption>{top.title}</Caption>
+      {top.items.length === 0 ? (
+        <p className="rounded-xl bg-canvas px-4 py-3 text-xs text-ink-muted">{top.emptyText}</p>
+      ) : (
+        <div className="flex flex-col gap-2.5">
+          {top.items.map((item) => (
+            <Link
+              key={item.key}
+              href={item.href}
+              className="flex items-center justify-between gap-3 rounded-xl bg-canvas px-4 py-3 text-ink transition-colors hover:bg-black/5"
+            >
+              <span className="flex min-w-0 items-center gap-3">
+                <Icon icon={MAP_ICONS[item.icon]} size={20} className="shrink-0" />
+                <span className="truncate text-sm leading-5.25 font-semibold" title={item.label}>
+                  {item.label}
+                </span>
+              </span>
+              <span
+                className={cn(
+                  "shrink-0 text-sm leading-5.25 font-semibold",
+                  top.tone === "bad" ? "text-trend-up" : "text-ink",
+                )}
+              >
+                {item.value}
+              </span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
