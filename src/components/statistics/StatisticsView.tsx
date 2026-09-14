@@ -88,7 +88,7 @@ const CURRENT_YEAR = 2026;
  * qoladi - nivo esa indeks qiymatlarining noyobligini talab qiladi: nuqtali
  * o'q (`xScale: point`) takrorlangan qiymatni domendan tashlab yuboradi va
  * ikki oy bitta nuqtaga ustma-ust tushadi. Shuning uchun shu ikkitasi
- * ajratiladi (`SubstationDetail` dagi bilan bir xil konvensiya).
+ * ajratiladi.
  */
 const AXIS_MONTHS = MONTHS_SHORT_UZ.map((short, index) => {
   if (index === 5) return "Iyn";

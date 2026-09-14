@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { SubstationDetail } from "@/components/substations/SubstationDetail";
+import { HomeView } from "@/components/home/HomeView";
 import { findSubstation, SUBSTATIONS } from "@/lib/data/substations";
 
 // Marshrut: /substations/[id]. Ro'yxatdagi har bir qator shu sahifaga olib keladi.
@@ -23,15 +23,16 @@ export async function generateMetadata(
 }
 
 /**
- * Podstansiya detal sahifasi.
+ * Podstansiya detal sahifasi - `/dashboard` bilan 1ga 1 bir xil maket
+ * (Figma `4126:47`), shuning uchun o'sha `HomeView` qayta ishlatiladi.
+ * Noma'lum `id` esa baribir 404 beradi.
  *
  * `PageProps` - Next.js generatsiya qiladigan **global** tip, import
  * qilinmaydi. Parametrlar Next 16 da promise: `await props.params`.
  */
 export default async function SubstationPage(props: PageProps<"/substations/[id]">) {
   const { id } = await props.params;
-  const substation = findSubstation(id);
-  if (!substation) notFound();
+  if (!findSubstation(id)) notFound();
 
-  return <SubstationDetail substation={substation} />;
+  return <HomeView />;
 }
