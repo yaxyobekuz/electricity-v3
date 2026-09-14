@@ -51,11 +51,11 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
     uploaded: uploads[type],
   }));
 
+  // `key`: URL dagi qamrov o'zgarsa tanlagich `initial` dan qayta boshlanadi.
+  // Oy almashganda esa holat saqlanadi - ko'rinishning o'zi yangi oyda yo'q
+  // obyektni tanlovdan tushiradi.
   return (
     <ReportsView
-      // URL dagi qamrov o'zgarsa tanlagich `initial` dan qayta boshlanadi. Oy
-      // almashganda esa holat saqlanadi - ko'rinishning o'zi yangi oyda yo'q
-      // obyektni tanlovdan tushiradi.
       key={scopeParam(scope) || "district"}
       period={{ key: period.key, label: period.label, reportDate: formatDate(period.reportDate) }}
       yearly={{ rangeLabel: periodRangeLabel(history.map((item) => item.month)), months: history.length }}
