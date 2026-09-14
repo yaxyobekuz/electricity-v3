@@ -11,8 +11,11 @@ ma'lumotlar Excel shablonlari orqali yuklanadi.
   qilingan qarorlar, keyingi qadamlar
 - [`.claude/docs/domen.md`](.claude/docs/domen.md) - domen lug'ati (ETK, TP,
   fider, yo'qotish) va hisob-kitob formulalari
-- [`.claude/docs/shablonlar.md`](.claude/docs/shablonlar.md) - Excel shablon
-  tuzilmalari va parser uchun eslatmalar
+- [`.claude/docs/shablonlar.md`](.claude/docs/shablonlar.md) - 6 ta Excel
+  shablon ustunlari va katak o'qish qoidalari
+- [`.claude/docs/malumotlar.md`](.claude/docs/malumotlar.md) - **yagona
+  shartnoma**: import validatsiyasi, obyektlarni tanish, davr, har bir
+  ko'rsatkich manbasi
 - [`.claude/docs/hisobotlar.md`](.claude/docs/hisobotlar.md) - PDF/Excel
   hisobot generatorlari va `/api/reports`
 - [`.claude/docs/texnologiya.md`](.claude/docs/texnologiya.md) - buyruqlar,
@@ -20,6 +23,9 @@ ma'lumotlar Excel shablonlari orqali yuklanadi.
 
 ## Asosiy qoidalar
 
+- **Faqat Excel shablonidagi ma'lumot.** Shablonda yo'q qiymat (yuklama,
+  harorat, holat, telefon...) o'ylab topilmaydi va ko'rsatilmaydi. Har bir
+  son `src/lib/queries/*` orqali bazadan olinadi - `malumotlar.md` 5-bo'lim.
 - **UI matni - o'zbekcha, kod qiymatlari - inglizcha.** Batafsil:
   `loyiha.md` dagi "Til qoidasi".
 - **`prisma@latest` o'rnatmang** - `latest` teg RC versiyaga ishora qiladi.

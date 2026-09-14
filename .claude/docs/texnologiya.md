@@ -27,7 +27,29 @@ npm run db:studio    # Prisma Studio
 npm run db:reset     # bazani tozalab qayta qurish
 ```
 
+### Ma'lumot va test skriptlari
+
+```bash
+# namunaviy (TEST) Excel fayllar: .samples/2026-07..09 va .samples/invalid/
+npx tsx scripts/sample-data.ts
+
+# fayllarni import kodi orqali tekshirish / saqlash (/imports sahifasi bilan bir xil)
+npx tsx --conditions=react-server scripts/import-files.ts [--commit] [--json] <fayl.xlsx...>
+
+# so'rovlar qatlami moslik testi (tranzaksiyada, oxirida bekor qilinadi)
+npx tsx --conditions=react-server scripts/check-queries.ts
+```
+
+`--conditions=react-server` shart: `src/lib/db/prisma.ts` `server-only` ni
+import qiladi. So'rov loglarini o'chirish uchun `NODE_ENV=test`.
+
 ## Ma'lumotlar bazasi
+
+**Windows (2026-09-14 dan):** PostgreSQL 17 servisi (`postgresql-x64-17`),
+`C:\Program Files\PostgreSQL\17\bin\psql.exe`, lokal ulanishlar `trust`.
+Baza `electricity_v3`, foydalanuvchi `yaxyobek` (superuser).
+
+**macOS:**
 
 - Postgres **Postgres.app** orqali ishlaydi (Homebrew emas), binarlar:
   `/Applications/Postgres.app/Contents/Versions/latest/bin/`
@@ -54,6 +76,16 @@ ildizdagi `prisma.config.ts` da beriladi, runtime'da esa **driver adapter**
 npm'dagi `latest` teg `8.0.0-rc` (release candidate) ga ishora qiladi.
 Davlat loyihasida RC ishlatilmaydi - **`prisma@latest` yozmang**, versiyani
 qat'iy qoldiring. Oxirgi stabil: `npm view prisma dist-tags` -> `prev`.
+
+### 2a. Migratsiya interaktiv bo'lmagan terminalda
+
+`prisma migrate dev` interaktiv terminal talab qiladi. Agent/CI da:
+
+```bash
+npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma \
+  --script -o prisma/migrations/<YYYYMMDDHHMMSS>_<nom>/migration.sql
+npx prisma migrate deploy && npx prisma generate
+```
 
 ### 3. Generatsiya qilingan klient - `src/generated/prisma`
 
@@ -104,7 +136,15 @@ prisma/
 prisma.config.ts       # Prisma 7 konfiguratsiyasi (ulanish manzili)
 src/
   app/                 # Next.js App Router sahifalari
-  lib/db/prisma.ts     # PrismaClient singleton (adapter bilan)
+  app/api/imports/     # Excel yuklash API (validate / commit)
+  lib/db/prisma.ts     # PrismaClient singleton (adapter bilan, server-only)
+  lib/import/          # Excel parser, validatsiya, saqlash
+  lib/queries/         # sahifalar uchun yagona so'rovlar qatlami
+  lib/domain/          # enum yorliqlari, normallash, metrikalar
+  lib/format.ts        # son va sana formatlash
+  lib/period.ts        # tanlangan hisobot oyi (cookie)
   generated/prisma/    # generatsiya qilingan klient (git'da yo'q)
 .claude/docs/          # loyiha hujjatlari (shu papka)
+data_template/         # 6 ta bo'sh Excel shablon (public/templates/ da nusxasi)
+scripts/               # sample-data, import-files, check-queries
 ```

@@ -21,7 +21,7 @@ Asosiy qism - **admin panel**:
 | Mavzu | Qaror | Sana |
 |---|---|---|
 | Texnologiyalar | Next.js + TypeScript + Tailwind CSS + Prisma + PostgreSQL | 2026-09-05 |
-| Ma'lumotlar bazasi | Lokal PostgreSQL (Postgres.app), baza nomi `electricity_v3` | 2026-09-05 |
+| Ma'lumotlar bazasi | Lokal PostgreSQL (macOS: Postgres.app, Windows: PostgreSQL 17 servisi), baza nomi `electricity_v3` | 2026-09-05 |
 | Til | **Faqat o'zbek tili.** Ko'p tillilik (i18n) qo'shilmaydi | 2026-09-05 |
 | Ma'lumot kiritish | Faqat Excel shablon orqali import | 2026-09-05 |
 | Mavzu (theme) | **Faqat oq (light).** Tungi mavzu keyinroq qo'shilishi mumkin | 2026-09-05 |
@@ -30,6 +30,11 @@ Asosiy qism - **admin panel**:
 | Ikonkalar | `lucide-react`; chiziq `36/size` (maketda 1.5px absolyut) | 2026-09-09 |
 | Xarita | Google Maps JS API + custom OverlayView markerlar | 2026-09-09 |
 | Maket nusxasi | Figma MCP kvotasi tugagach `.claude/figma/` ga eksport qilindi | 2026-09-09 |
+| Excel shablonlari | 6 ta oylik shablon (`data_template/`): Podstansiyalar, Fiderlar, Transformatorlar, Abonentlar, Qoidabuzarliklar, Murojaatlar | 2026-09-14 |
+| **Faqat shablon ma'lumoti** | Platformada faqat shablondagi va undan hisoblangan qiymatlar. Shablonda yo'q hamma narsa (yuklama, harorat, holat, telefon, tarif...) olib tashlandi. Monitoring, Tarmoq holati, Sun'iy intellekt va Sozlamalar sahifalari o'chirildi | 2026-09-14 |
+| **Qat'iy import** | Faylda bitta xato bo'lsa ham butun yuklash rad etiladi, hech narsa saqlanmaydi | 2026-09-14 |
+| Hisobot davri | Oy (varaq nomidagi sanadan). Sahifalar yon paneldagi tanlangan oyni ko'rsatadi; oyga qayta yuklash shu oy yozuvlarini almashtiradi | 2026-09-14 |
+| Ma'lumot qoidalari | Yagona shartnoma - [`malumotlar.md`](./malumotlar.md) | 2026-09-14 |
 
 ## Til qoidasi
 
@@ -50,9 +55,8 @@ Asosiy qism - **admin panel**:
 
 ## Keyingi qadamlar
 
-- [ ] Autentifikatsiya (admin / operator / ko'ruvchi rollari)
-- [ ] Excel shablon parseri (`exceljs` o'rnatilgan)
-- [ ] Import oqimi: yuklash -> tekshirish -> oldindan ko'rish -> tasdiqlash
-- [ ] Analitik dashboard (KPI, yo'qotish dinamikasi, TP reytingi)
-- [ ] TP / fider / podstansiya ma'lumotnomalari (CRUD)
+- [x] Excel shablon parseri va qat'iy validatsiya (`src/lib/import/`)
+- [x] Import oqimi: yuklash -> tekshirish -> saqlash (`/imports`)
+- [x] Barcha sahifalar bazadagi ma'lumotga ulandi (`src/lib/queries/`)
+- [ ] Autentifikatsiya (admin / operator / ko'ruvchi rollari) - hozir `/api/imports` himoyalanmagan
 - [ ] Tungi mavzu (ixtiyoriy, keyinroq) - `src/app/globals.css` dagi izohga qarang

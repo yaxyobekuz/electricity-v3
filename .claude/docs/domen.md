@@ -2,52 +2,65 @@
 
 ## Ierarxiya
 
+Excel shablonlaridagi va bazadagi ierarxiya:
+
 ```
-ETK (Elektr Ta'minoti Korxonasi)   masalan "Chinobod ETK"
- └─ Podstansiya                    110/10 kV, 35/10 kV
-     └─ Transformator              kuch transformatori, kVA quvvat
-         └─ Fider (10 kV)          masalan "Xaqulobod"
-             └─ TP                 Transformator Punkti, raqam bilan: 10, 24, 179
-                 └─ Iste'molchilar hisoblagichlari
+Tuman (Baliqchi)
+ └─ Podstansiya                    "Elektr Podstansiyalar.xlsx"
+     └─ Fider (10 kV liniya)       "Elektr Fiderlar.xlsx"
+         └─ TP (Transformator)     "Elektr Transformatorlar.xlsx"
+             └─ Abonent            "Elektr Abonentlar.xlsx"
+
+TP ga bog'lanadi:  Qoidabuzarlik ("Elektr Qoidabuzarliklar.xlsx")
+                   Murojaat       ("Elektr Murojaatlar.xlsx")
 ```
+
+UI'da TP "Transformator" deb ataladi (`/transformers`). Oldingi sxemadagi ETK
+va podstansiya kuch transformatori darajalari shablonlarda yo'q - olib
+tashlangan.
 
 ## Atamalar
 
 | Atama | Ma'nosi | Kodda |
 |---|---|---|
-| **ETK** | Elektr Ta'minoti Korxonasi | `Etk` |
 | **Podstansiya** | Kuchlanishni pasaytiruvchi stansiya | `Substation` |
-| **Fider** | 10 kV chiquvchi liniya | `Feeder` |
-| **TP** | Transformator punkti (10/0.4 kV) | `TpPoint` |
-| **Balans hisoblagich** | TP kirishidagi hisoblagich - TP'ga qancha energiya kirgani | `suppliedKwh` |
-| **Foydali oqim** | Iste'molchilar hisoblagichlari yig'indisi - qancha sotilgani | `usefulKwh` |
-| **Yo'qotish** | `suppliedKwh - usefulKwh` | `lossKwh` |
-| **Yo'qotish foizi** | `lossKwh / suppliedKwh * 100` | `lossPercent` |
-| **Aloqada** | Onlayn (masofadan o'qiladigan) hisoblagich | `consumersOnline` |
-| **Aloqadamas** | Oflayn - joyiga borib o'qiladi | `consumersOffline` |
-| **Koeffitsient** | Hisoblagich ko'rsatkichini kWh ga aylantiruvchi ko'paytuvchi | `coefficient` |
-| **Xatlov** | Iste'molchilarni joyida tekshirish (inventarizatsiya) | - |
-| **Texnik yo'qotish** | Liniya va transformatorlardagi tabiiy yo'qotish (normativ) | `technicalLossKwh` |
-| **Tijorat yo'qotishi** | Umumiy yo'qotish - texnik yo'qotish (ya'ni o'g'irlik / hisobga olinmagan) | `commercialLossKwh` |
+| **Fider** | Podstansiyadan chiquvchi 10 kV liniya | `Feeder` |
+| **TP** | Transformator punkti (10/0.4 kV) | `Transformer` |
+| **Abonent** | Iste'molchi, shartnoma raqami bilan taniladi | `Subscriber` |
+| **Umumiy oqim** | Obyektga kirgan energiya, kWh | `totalKwh` |
+| **Foydali oqim** | Iste'molchilarga yetkazilgan (hisobga olingan) energiya, kWh | `usefulKwh` |
+| **Yo'qotish** | Umumiy - foydali, kWh (shablonda beriladi) | `lossKwh` |
+| **Yo'qotish ulushi** | `lossKwh / totalKwh * 100` | `lossPercent()` |
+| **Aloqadagi abonentlar** | Hisoblagichi masofadan o'qiladigan | `onlineSubscribers` |
+| **Aloqadan chiqqan abonentlar** | Hisoblagichi aloqaga chiqmayotgan yoki sxemasi o'zgartirilgan | `offlineSubscribers` |
+| **Qarzdorlik / Haqdorlik** | Abonentning qarzi / ortiqcha to'lovi, so'm | `debtUzs` / `creditUzs` |
+| **Qoidabuzar turi** | Yuridik / Jismoniy / Aybisiz | `ViolatorType` |
+| **Murojaat holati** | Ijobiy hal etilgan / Rad etilgan / Jarayonda / Muddati buzilgan | `AppealStatus` |
+| **Joriy / To'la ta'mir** | TP ta'mir sanalari; hisobot sanasigacha - bajarilgan | `currentRepairDate` / `overhaulDate` |
+| **Hisobot oyi** | Excel varaq nomidagi sana oyi | `Period` |
 
 ## Muhim hisob-kitoblar
 
 ```
-difference    = meterValue - previousValue
-suppliedKwh   = difference * coefficient
-lossKwh       = suppliedKwh - usefulKwh
-lossPercent   = lossKwh / suppliedKwh * 100
+lossPercent        = lossKwh / totalKwh * 100        (totalKwh <= 0 -> yo'q)
+yig'ma yo'qotish % = Σ lossKwh / Σ totalKwh * 100    (foizlar o'rtachasi EMAS)
+tuman oqimi        = Σ podstansiya oqimlari
+abonentlar soni    = Σ TP (aloqadagi + aloqadan chiqqan)
 ```
+
+Batafsil manba jadvali: [`malumotlar.md`](./malumotlar.md) 5-bo'lim.
 
 ## Ehtiyot bo'ling
 
-- **Yo'qotish manfiy bo'lishi mumkin.** Real ma'lumotlarda `-172%` gacha
-  uchraydi (iste'molchi hisoblagichlari TP balans hisoblagichidan ko'proq
-  ko'rsatadi - hisoblagich nosozligi yoki noto'g'ri biriktirilgan TP).
-  Shuning uchun `lossPercent` uchun `Decimal(9,4)` - keng diapazon olingan.
-- **TP raqami - matn, son emas.** Hujjatda `07` kabi oldingi nolli raqamlar
-  bor, ularni son qilsak yo'qoladi.
-- **`suppliedKwh` nol yoki bo'sh bo'lishi mumkin** - hisoblagich ishlamagan
-  davrlar. Bunda foizni hisoblamang (nolga bo'lish).
-- Shablonlarda **kirill va o'zbek lotin** aralash keladi, ba'zi sarlavhalar
-  rus tilida. Parser ikkalasini ham tanishi kerak.
+- **Yo'qotish manfiy bo'lishi mumkin** (foydali oqim umumiydan katta -
+  hisoblagich nosozligi yoki noto'g'ri biriktirish). Grafik va halqalar
+  manfiy qiymatni ko'tarishi kerak.
+- **Podstansiya oqimi uning fiderlari yig'indisiga teng emas** - liniyadagi
+  yo'qotishlar bor. Har bir obyekt o'z qiymatini ko'rsatadi.
+- **TP nomi - matn.** `07` dagi nol yo'qolmasin; nom faqat fider ichida
+  noyob. Qoidabuzarlik va murojaat faqat "TP Nomi" bilan keladi - nom oyda
+  bir nechta fiderda bo'lsa, ularni bog'lab bo'lmaydi (import xatosi).
+- **Hisoblagich ko'rsatkichi farqi kWh emas** - koeffitsient shablonda yo'q,
+  shuning uchun UI'da "Ko'rsatkich farqi" deb yoziladi.
+- **Passport va PINFL** - shaxsiy ma'lumot: bazada saqlanadi, UI, qidiruv va
+  hisobotlarda ko'rsatilmaydi.
