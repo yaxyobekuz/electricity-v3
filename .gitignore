@@ -52,3 +52,6 @@ next-env.d.ts
 
 # prisma generated client
 /src/generated
+
+# namunaviy (test) Excel fayllar - scripts/sample-data.ts
+/.samples

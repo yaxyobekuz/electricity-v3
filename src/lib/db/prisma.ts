@@ -1,3 +1,5 @@
+import "server-only";
+
 import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "@/generated/prisma";
@@ -9,23 +11,32 @@ if (!connectionString) {
   throw new Error("DATABASE_URL o'rnatilmagan. `.env` faylini tekshiring.");
 }
 
+/*
+ * Loglar: doim faqat ogohlantirish va xatolar. Har bir SQL so'rovni ko'rish
+ * kerak bo'lsa (so'rovni sozlash paytida) - `.env` da `PRISMA_LOG_QUERIES=1`.
+ * Dev rejimida Next.js server loglarini brauzer konsoliga ham uzatadi, shuning
+ * uchun so'rov logi standart holatda o'chiq.
+ */
 const createPrismaClient = () =>
   new PrismaClient({
     adapter: new PrismaPg({ connectionString }),
     log:
-      process.env.NODE_ENV === "development"
+      process.env.PRISMA_LOG_QUERIES === "1"
         ? ["query", "warn", "error"]
-        : ["error"],
+        : process.env.NODE_ENV === "development"
+          ? ["warn", "error"]
+          : ["error"],
   });
 
 // Next.js dev rejimida hot reload har safar yangi klient yaratmasligi uchun
-// globalThis'da saqlaymiz.
+// globalThis'da saqlaymiz. Kalit nomi klient sozlamasi o'zgarganda
+// almashtiriladi - aks holda ishlab turgan dev server eski klientni ishlataveradi.
 const globalForPrisma = globalThis as unknown as {
-  prisma?: ReturnType<typeof createPrismaClient>;
+  prismaClient?: ReturnType<typeof createPrismaClient>;
 };
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+export const prisma = globalForPrisma.prismaClient ?? createPrismaClient();
 
 if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+  globalForPrisma.prismaClient = prisma;
 }
