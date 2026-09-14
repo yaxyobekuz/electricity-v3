@@ -1,5 +1,4 @@
 import {
-  Astroid,
   ChartNoAxesColumn,
   CircuitBoard,
   Factory,
@@ -7,19 +6,20 @@ import {
   Hand,
   House,
   LayoutDashboard,
-  LayoutPanelTop,
   ListChecks,
   Map as MapIcon,
   MessagesSquare,
   Search,
-  Settings,
+  Upload,
   Users,
   Workflow,
-  Zap,
 } from "lucide-react";
 
 import type { GlyphIcon } from "@/components/ui/Icon";
 import { UserGroup } from "@/components/ui/icons/UserGroup";
+
+/** Ish maydoni yon panelining standart sarlavhasi (obyekt sahifasidan tashqari). */
+export const DISTRICT_TITLE = "Baliqchi tumani elektr ta’minoti";
 
 /** Chap ikonka panelidagi yirik bo'lim. */
 export interface RailSection {
@@ -40,6 +40,8 @@ export interface SidebarLink {
   href: string;
 }
 
+// Monitoring, Tarmoq holati va Sun'iy intellekt bo'limlari olib tashlangan:
+// ularning Excel shablonlarida manbasi yo'q (`.claude/docs/malumotlar.md`, 8-bo'lim).
 export const RAIL_SECTIONS: RailSection[] = [
   {
     key: "workspace",
@@ -57,21 +59,12 @@ export const RAIL_SECTIONS: RailSection[] = [
       "/works",
       "/staff",
       "/reports",
-      "/settings",
       "/appeals",
+      "/imports",
     ],
   },
   { key: "search", label: "Qidiruv", Icon: Search, href: "/search", match: ["/search"] },
   { key: "map", label: "Xarita", Icon: MapIcon, href: "/map", match: ["/map"] },
-  { key: "ai", label: "Sun'iy intellekt", Icon: Astroid, href: "/ai", match: ["/ai"] },
-  {
-    key: "monitoring",
-    label: "Monitoring paneli",
-    Icon: LayoutPanelTop,
-    href: "/monitoring",
-    match: ["/monitoring"],
-  },
-  { key: "grid", label: "Tarmoq holati", Icon: Zap, href: "/grid", match: ["/grid"] },
 ];
 
 /** "Boshqaruv paneli" bo'limining ikkilamchi paneli. */
@@ -86,8 +79,7 @@ export const WORKSPACE_LINKS: SidebarLink[] = [
   { key: "works", label: "Ishlar", Icon: ListChecks, href: "/works" },
   { key: "staff", label: "Ma’sul xodimlar", Icon: UserGroup, href: "/staff" },
   { key: "reports", label: "Hisobotlar", Icon: FileText, href: "/reports" },
-  { key: "settings", label: "Sozlamalar", Icon: Settings, href: "/settings" },
-  // Maketda (Figma `4263:2870`) bu havolaga "Sozlamalar" ning ikonkasi
-  // nusxalanib qolgan - ikki xil sahifada bir xil tishli g'ildirak chalg'itadi.
   { key: "appeals", label: "Murojaatlar", Icon: MessagesSquare, href: "/appeals" },
+  // Barcha ma'lumot shu sahifadagi Excel shablonlaridan keladi.
+  { key: "imports", label: "Ma’lumot yuklash", Icon: Upload, href: "/imports" },
 ];

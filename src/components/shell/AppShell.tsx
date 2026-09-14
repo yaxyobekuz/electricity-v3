@@ -22,13 +22,16 @@ export function AppShell({
   );
 }
 
-/** Ikkilamchi panel qobig'i (340px, oq, r16). */
+/**
+ * Ikkilamchi panel qobig'i (340px, oq, r16). `title` - matn yoki server
+ * tomonda chizilgan sarlavha (ish maydonidagi `@title` sloti).
+ */
 export function SidebarPanel({
   title,
   children,
   footer,
 }: {
-  title: string;
+  title: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
 }) {

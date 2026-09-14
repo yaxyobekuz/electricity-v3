@@ -2,43 +2,54 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { ReactNode } from "react";
 
 import { Icon } from "@/components/ui/Icon";
-import { findFeeder } from "@/lib/data/feeders";
-import { findTransformer } from "@/lib/data/transformers";
 import { cn } from "@/lib/ui/cn";
 
-import { AiPromo } from "./AiPromo";
 import { SidebarPanel } from "./AppShell";
-import { WORKSPACE_LINKS } from "./nav";
+import { DISTRICT_TITLE, WORKSPACE_LINKS } from "./nav";
 
-const DISTRICT_TITLE = "Baliqchi tumani elektr ta’minoti";
+/** Sarlavhasi obyekt nomi bo'ladigan detal sahifalar (`/<bo'lim>/<id>`). */
+const DETAIL_SECTIONS = new Set(["substations", "feeders", "transformers", "subscribers"]);
 
-/**
- * Panel sarlavhasi: bosh sahifa maketida (Figma `4126:80`) butun tuman,
- * fider detal sahifasi maketida esa o'sha fider nomi ("Xaqulobod fideri").
- * TP sahifasi fider maketida va faqat o'z qamrovini ko'rsatadi - sarlavhada
- * ham o'sha TP.
- */
-function panelTitle(pathname: string): string {
-  const [, section, id] = pathname.split("/");
-  if (section === "feeders" && id) return findFeeder(id)?.name ?? DISTRICT_TITLE;
-  if (section === "transformers" && id) {
-    const transformer = findTransformer(id);
-    return transformer ? `${transformer.code} transformatori` : DISTRICT_TITLE;
-  }
-  return DISTRICT_TITLE;
+function isDetailPath(pathname: string): boolean {
+  const [, section, id, rest] = pathname.split("/");
+  return DETAIL_SECTIONS.has(section) && Boolean(id) && !rest;
 }
 
 /**
- * "Boshqaruv paneli" bo'limining ikkilamchi paneli - sahifa havolalari va
- * pastda AI reklama kartasi.
+ * "Boshqaruv paneli" bo'limining ikkilamchi paneli: sarlavha, hisobot oyi
+ * tanlagichi va sahifa havolalari.
+ *
+ * Sarlavha: detal sahifalarida - serverda bazadan olingan obyekt nomi
+ * (`(workspace)/@title` sloti), qolgan sahifalarda - tuman sarlavhasi.
+ * Tuman sarlavhasi slotdan emas, shu yerdan chiziladi: `loading.tsx` slotni
+ * ham Suspense bilan o'raydi va ro'yxat sahifalari orasida sarlavha
+ * bekorga skeletga almashib ketardi.
+ *
+ * `periodSelect` - maketda `<Suspense>` ichida chizilgan server qismi
+ * (`SidebarPeriod`); bu mijoz komponenti bazaga murojaat qilmaydi.
+ *
+ * `workspace-title` klassi - `loading.tsx` / `error.tsx` sarlavha ichida
+ * chizilganini CSS orqali bilib, ixcham ko'rinishga o'tishi uchun.
  */
-export function WorkspaceSidebar() {
+export function WorkspaceSidebar({
+  title,
+  periodSelect,
+}: {
+  title: ReactNode;
+  periodSelect: ReactNode;
+}) {
   const pathname = usePathname();
 
   return (
-    <SidebarPanel title={panelTitle(pathname)} footer={<AiPromo />}>
+    <SidebarPanel
+      title={
+        isDetailPath(pathname) ? <span className="workspace-title">{title}</span> : DISTRICT_TITLE
+      }
+    >
+      {periodSelect}
       <nav aria-label="Boshqaruv paneli sahifalari">
         <ul className="flex flex-col gap-2">
           {WORKSPACE_LINKS.map((link) => {

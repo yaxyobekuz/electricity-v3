@@ -1,9 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, Settings } from "lucide-react";
+import { LayoutGrid } from "lucide-react";
 
 import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/ui/cn";
@@ -13,6 +12,9 @@ import { RAIL_SECTIONS } from "./nav";
 /**
  * Chapdagi qora ikonka paneli (72px). Yirik bo'limlar shu yerda; faol bo'lim
  * joriy URL prefiksi bo'yicha aniqlanadi.
+ *
+ * Pastdagi profil va sozlamalar havolalari olib tashlangan: tizimda
+ * foydalanuvchi/profil ma'lumoti yo'q.
  */
 export function IconRail() {
   const pathname = usePathname();
@@ -20,7 +22,7 @@ export function IconRail() {
   return (
     <nav
       aria-label="Asosiy bo'limlar"
-      className="flex w-[72px] shrink-0 select-none flex-col justify-between overflow-hidden rounded-2xl bg-rail p-1.5"
+      className="flex w-[72px] shrink-0 select-none flex-col overflow-hidden rounded-2xl bg-rail p-1.5"
     >
       <ul className="flex flex-col items-center gap-3">
         {/* Portalga qaytish. Usiz tarmoq yo'nalishini tanlash ekraniga faqat
@@ -58,37 +60,6 @@ export function IconRail() {
             </li>
           );
         })}
-      </ul>
-
-      <ul className="flex flex-col items-center gap-3">
-        <li className="w-full">
-          <Link
-            href="/settings"
-            title="Profil"
-            aria-label="Profil"
-            className="flex h-14 w-full items-center justify-center rounded-lg transition-colors hover:bg-white/10"
-          >
-            <span className="flex size-8 items-center justify-center overflow-hidden rounded-full bg-white">
-              <Image
-                src="/brand/avatar.png"
-                alt=""
-                width={32}
-                height={32}
-                className="size-8 object-cover"
-              />
-            </span>
-          </Link>
-        </li>
-        <li className="w-full">
-          <Link
-            href="/settings"
-            title="Sozlamalar"
-            aria-label="Sozlamalar"
-            className="flex h-14 w-full items-center justify-center rounded-lg text-white transition-colors hover:bg-white/10"
-          >
-            <Icon icon={Settings} size={32} />
-          </Link>
-        </li>
       </ul>
     </nav>
   );
