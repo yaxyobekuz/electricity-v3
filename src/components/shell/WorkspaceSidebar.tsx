@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 import { Icon } from "@/components/ui/Icon";
 import { findFeeder } from "@/lib/data/feeders";
+import { findTransformer } from "@/lib/data/transformers";
 import { cn } from "@/lib/ui/cn";
 
 import { AiPromo } from "./AiPromo";
@@ -16,10 +17,17 @@ const DISTRICT_TITLE = "Baliqchi tumani elektr ta’minoti";
 /**
  * Panel sarlavhasi: bosh sahifa maketida (Figma `4126:80`) butun tuman,
  * fider detal sahifasi maketida esa o'sha fider nomi ("Xaqulobod fideri").
+ * TP sahifasi fider maketida va faqat o'z qamrovini ko'rsatadi - sarlavhada
+ * ham o'sha TP.
  */
 function panelTitle(pathname: string): string {
-  const feederId = /^\/feeders\/([^/]+)/.exec(pathname)?.[1];
-  return (feederId && findFeeder(feederId)?.name) || DISTRICT_TITLE;
+  const [, section, id] = pathname.split("/");
+  if (section === "feeders" && id) return findFeeder(id)?.name ?? DISTRICT_TITLE;
+  if (section === "transformers" && id) {
+    const transformer = findTransformer(id);
+    return transformer ? `${transformer.code} transformatori` : DISTRICT_TITLE;
+  }
+  return DISTRICT_TITLE;
 }
 
 /**
