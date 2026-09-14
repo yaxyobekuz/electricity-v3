@@ -1,546 +1,389 @@
 "use client";
 
-// Sahifa to'liq mijozda ishlaydi: davr tanlagichi holat (`useState`) talab
-// qiladi va barcha grafiklar @nivo (faqat brauzerda chiziladi).
+// Davr oynasi tanlagichi holat (`useState`) talab qiladi, grafiklar esa
+// @nivo (faqat brauzerda chiziladi) - shuning uchun ko'rinish mijozda.
+// Barcha sonlar serverda so'rovlardan tayyorlanadi (`statistics-data.ts`),
+// bu yerda faqat `format.ts` orqali matnga aylantiriladi.
 
-import { ResponsiveBar } from "@nivo/bar";
-import { ResponsiveLine } from "@nivo/line";
+import { type BarCustomLayerProps, ResponsiveBar } from "@nivo/bar";
 import { ResponsivePie } from "@nivo/pie";
-import { Cable, FileDown, PlugZap, TriangleAlert, Wallet, Zap } from "lucide-react";
-import { useState } from "react";
+import { FileDown, Percent, PlugZap, Unplug, Users, Wallet, Zap } from "lucide-react";
+import Link from "next/link";
+import { type ReactNode, useMemo, useState } from "react";
 
+import { finite, linearScale, plainNumber } from "@/components/cards/chart-scale";
+import { ConsumptionDynamicsCard, type DynamicsMonth } from "@/components/cards/ConsumptionDynamicsCard";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
-import {
-  Badge,
-  type BadgeTone,
-  DataTable,
-  type TableColumn,
-  type TableRow,
-} from "@/components/ui/DataTable";
-import { CycleSelect } from "@/components/ui/Filters";
+import { DataTable, type TableColumn } from "@/components/ui/DataTable";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { type FilterChip, FilterChips } from "@/components/ui/Filters";
 import { HeaderButton, PageHeader } from "@/components/ui/PageHeader";
-import { StatCard, StatRow } from "@/components/ui/StatCard";
-import {
-  between,
-  dec,
-  energy,
-  money,
-  MONTHS_SHORT_UZ,
-  MONTHS_UZ,
-  num,
-  series,
-} from "@/lib/data/seed";
-import { SUBSCRIBERS, subscriberTotals } from "@/lib/data/subscribers";
-import { SUBSTATIONS, substationTotals } from "@/lib/data/substations";
-import { TRANSFORMERS } from "@/lib/data/transformers";
-
-// Maketdagi o'zbekcha apostrof - U+2019: JSX matnida `&rsquo;`, `string`
-// proplarda (sarlavha, ustun nomi) \u2019 escape sifatida yoziladi.
+import { type StatTone, StatCard, StatRow } from "@/components/ui/StatCard";
+import type { SubscriberKind } from "@/generated/prisma";
+import { SUBSCRIBER_KIND_LABEL, SUBSCRIBER_KIND_ORDER } from "@/lib/domain/labels";
+import { delta, fractions, share } from "@/lib/domain/metrics";
+import { EMPTY, energy, money, num, percent, scaled, type ScaledValue } from "@/lib/format";
+import type {
+  StatisticsData,
+  StatisticsMonth,
+  StatisticsWindow,
+  StatisticsWindowId,
+} from "@/lib/queries/statistics-data";
+import { cn } from "@/lib/ui/cn";
 
 /* ---------------------------------------------------------------------------
-   Ma'lumot - `seed.ts` yordamida determinlashgan (server va mijoz bir xil
-   markup chizishi shart, shuning uchun `Math.random`/`new Date` yo'q).
+   Yordamchilar
    --------------------------------------------------------------------------- */
 
-/** Oylik kesim. Domen: `Hisoblangan` - balans hisoblagich (TP kirishi),
- *  `Iste'mol` - foydali oqim (abonent hisoblagichlari), farqi - yo'qotish. */
-interface MonthStat {
-  key: string;
-  /** "Avgust 2026" - oyning to'liq nomi va yili. */
-  label: string;
-  /** O'q yorlig'i: "Avg". */
-  short: string;
-  /** Hisoblangan (tarmoqqa berilgan), kWh. */
-  supplied: number;
-  /** Foydali energiya, kWh. */
-  useful: number;
-  /** Yo'qotish, kWh. */
-  loss: number;
-  lossPercent: number;
-  /** Hisoblangan to'lov, so'm. */
-  billed: number;
-  /** Yig'ilgan to'lov, so'm. */
-  paid: number;
-  collectPercent: number;
+const WINDOW_LABEL: Record<StatisticsWindowId, string> = {
+  month: "Oy",
+  quarter: "Chorak",
+  year: "Yil",
+};
+
+/** `energy()` bilan bir xil yaxlitlash, lekin qiymat va birlik alohida (KPI kartasi uchun). */
+function energyParts(kwh: number | null | undefined): ScaledValue {
+  if (kwh == null) return { value: EMPTY, unit: "" };
+  return Math.abs(kwh) >= 1_000_000 ? scaled(kwh, "kWh", 2) : { value: num(kwh), unit: "kWh" };
 }
 
-const DISTRICT = substationTotals();
+/** "+3,2%" / "-1,6%" - o'tgan oyga nisbatan o'zgarish. */
+function signedPercent(value: number): string {
+  return value > 0 ? `+${percent(value)}` : percent(value);
+}
 
-/**
- * Tuman bo'yicha yo'qotish - podstansiyalar bo'yicha oddiy o'rtacha emas,
- * iste'mol hajmiga vaznlangan (kichik PS katta PS ni "tortib" yubormasin).
- */
-const DISTRICT_LOSS_PERCENT =
-  SUBSTATIONS.reduce((sum, item) => sum + item.consumptionKwh * item.lossPercent, 0) /
-  DISTRICT.consumption;
+/** O'sishi yomon ko'rsatkich (yo'qotish) uchun izoh ohangi. */
+function lossTone(diff: number): StatTone {
+  if (diff === 0) return "flat";
+  return diff > 0 ? "bad" : "good";
+}
 
-/** O'rtacha tarif, so'm/kWh - abonent bazasidan iste'mol hajmiga vaznlangan. */
-const AVG_TARIFF =
-  SUBSCRIBERS.reduce((sum, item) => sum + item.monthlyKwh * item.tariff, 0) /
-  SUBSCRIBERS.reduce((sum, item) => sum + item.monthlyKwh, 0);
+interface Kpi {
+  id: string;
+  label: string;
+  value: ScaledValue;
+  hint: string;
+  tone: StatTone;
+}
 
-/** `TODAY` = "10-avgust, 2026": oyna oxirgi 12 oy - sentabr 2025 ... avgust 2026. */
-const CURRENT_MONTH = 7;
-const CURRENT_YEAR = 2026;
+function buildKpis(data: StatisticsData, win: StatisticsWindow): Kpi[] {
+  const { energy: totals } = win;
+  const previous = win.id === "month" ? data.previousMonth : null;
+  const missingEnergy = "Podstansiyalar yuklanmagan";
+  const skipped = win.periods - win.energyPeriods;
 
-/**
- * O'q yorliqlari. `MONTHS_SHORT_UZ` da Iyun ham, Iyul ham "Iyu" bo'lib
- * qoladi - nivo esa indeks qiymatlarining noyobligini talab qiladi: nuqtali
- * o'q (`xScale: point`) takrorlangan qiymatni domendan tashlab yuboradi va
- * ikki oy bitta nuqtaga ustma-ust tushadi. Shuning uchun shu ikkitasi
- * ajratiladi.
- */
-const AXIS_MONTHS = MONTHS_SHORT_UZ.map((short, index) => {
-  if (index === 5) return "Iyn";
-  if (index === 6) return "Iyl";
-  return short;
-});
-
-const MONTHS: readonly MonthStat[] = series(
-  7.7,
-  12,
-  DISTRICT.consumption,
-  0.14,
-  0.16,
-).map((supplied, index) => {
-  // 0 -> 11 oy oldin; manfiy indeks o'tgan yilga tushadi.
-  const offset = CURRENT_MONTH - 11 + index;
-  const monthIndex = (offset + 12) % 12;
-  const year = offset < 0 ? CURRENT_YEAR - 1 : CURRENT_YEAR;
-
-  // Yo'qotish tuman o'rtachasi atrofida +-2.2 p.p. tebranadi (mavsumiylik).
-  const lossPercent = DISTRICT_LOSS_PERCENT + between(index * 3.7 + 11.3, -22, 22, 1) / 10;
-  const loss = Math.round((supplied * lossPercent) / 100);
-  const useful = supplied - loss;
-  const billed = Math.round(useful * AVG_TARIFF);
-  const collectPercent = between(index * 5.1 + 17.9, 886, 991, 1) / 10;
-
-  return {
-    key: `m-${index}`,
-    label: `${MONTHS_UZ[monthIndex]} ${year}`,
-    short: AXIS_MONTHS[monthIndex],
-    supplied,
-    useful,
-    loss,
-    lossPercent,
-    billed,
-    paid: Math.round((billed * collectPercent) / 100),
-    collectPercent,
+  // O'tgan oyga nisbatan farq (faqat "Oy" oynasida, o'tgan oy bazada bo'lsa).
+  const change = (current: number | undefined, before: number | null | undefined) => {
+    const result = previous ? delta(current, before) : null;
+    return result && result.percent != null ? result : null;
   };
-});
 
-/**
- * Umumiy yo'qotishning tarkibi. Domen bo'yicha texnik yo'qotish - normativ,
- * qolgani tijorat; "hisobsiz" (hisoblagichdan o'tmagan) ulush tahlil uchun
- * tijoratdan alohida ajratib ko'rsatiladi.
- */
-const LOSS_SPLIT = { technical: 0.6, commercial: 0.27, unmetered: 0.13 } as const;
+  const totalChange = change(totals?.totalKwh, previous?.totalKwh);
+  const lossChange = change(totals?.lossKwh, previous?.lossKwh);
 
-/** Halqaning bir bo'lagi. Rang nivo'ga `colors={{ datum: "data.color" }}`
- *  orqali uzatiladi - nivo SVG ichida CSS tokenini o'qiy olmaydi. */
-interface LossSlice {
-  id: string;
-  label: string;
-  /** Yoy o'lchami, kWh. */
-  value: number;
-  color: string;
+  const totalHint = !totals
+    ? missingEnergy
+    : totalChange
+      ? `O’tgan oyga nisbatan ${signedPercent(totalChange.percent!)}`
+      : skipped > 0
+        ? `${win.rangeLabel} · ${num(skipped)} oyga yuklanmagan`
+        : win.rangeLabel;
+
+  const lossHint = !totals
+    ? missingEnergy
+    : lossChange
+      ? `O’tgan oyga nisbatan ${signedPercent(lossChange.percent!)}`
+      : win.energyPeriods > 1
+        ? `${num(win.energyPeriods)} oy yig’indisi`
+        : win.rangeLabel;
+
+  let shareHint = missingEnergy;
+  let shareTone: StatTone = "flat";
+  if (totals) {
+    if (win.id === "month") {
+      const before = previous?.lossPercent ?? null;
+      const now = totals.lossPercent;
+      shareHint = before != null ? `O’tgan oy: ${percent(before, 2)}` : "Σ yo’qotish / Σ umumiy oqim";
+      if (before != null && now != null) shareTone = lossTone(now - before);
+    } else {
+      shareHint = win.peakLossMonth
+        ? `Eng yuqori: ${win.peakLossMonth.label} (${percent(win.peakLossMonth.lossPercent, 2)})`
+        : "Σ yo’qotish / Σ umumiy oqim";
+    }
+  }
+
+  const { subscribers } = data.current;
+  const list = data.current.subscriberList;
+
+  return [
+    {
+      id: "total",
+      label: "Umumiy oqim",
+      value: energyParts(totals?.totalKwh),
+      hint: totalHint,
+      tone: "flat",
+    },
+    {
+      id: "useful",
+      label: "Foydali oqim",
+      value: energyParts(totals?.usefulKwh),
+      hint: totals ? `Umumiy oqimning ${percent(win.usefulShare)}` : missingEnergy,
+      tone: "flat",
+    },
+    {
+      id: "loss",
+      label: "Yo’qotish",
+      value: energyParts(totals?.lossKwh),
+      hint: lossHint,
+      tone: lossChange ? lossTone(lossChange.diff) : "flat",
+    },
+    {
+      id: "loss-share",
+      label: "Yo’qotish ulushi",
+      value: { value: totals ? percent(totals.lossPercent, 2) : EMPTY, unit: "" },
+      hint: shareHint,
+      tone: shareTone,
+    },
+    {
+      id: "subscribers",
+      label: "Abonentlar",
+      value: subscribers ? { value: num(subscribers.total), unit: "ta" } : { value: EMPTY, unit: "" },
+      hint: subscribers
+        ? `${data.period.label} · aloqadan chiqqan ${num(subscribers.offline)}`
+        : "Transformatorlar yuklanmagan",
+      tone: "flat",
+    },
+    {
+      id: "debt",
+      label: "Qarzdorlik",
+      value: list.uploaded ? scaled(list.debtUzs, "so’m") : { value: EMPTY, unit: "" },
+      hint: list.uploaded
+        ? `${data.period.label} · ${num(list.debtors)} ta qarzdor`
+        : "Abonentlar ro’yxati yuklanmagan",
+      tone: "flat",
+    },
+  ];
 }
 
-interface PeriodOption {
-  id: string;
-  label: string;
-  /** Oynaning oxiridan sanaladigan oylar soni. */
-  months: number;
+const KPI_STYLE: Record<string, { icon: typeof Zap; accent: string; tint: string }> = {
+  total: { icon: Zap, accent: "bg-accent-blue", tint: "bg-tint-blue" },
+  useful: { icon: PlugZap, accent: "bg-accent-green", tint: "bg-tint-green" },
+  loss: { icon: Unplug, accent: "bg-accent-red", tint: "bg-tint-red" },
+  "loss-share": { icon: Percent, accent: "bg-accent-amber", tint: "bg-tint-amber" },
+  subscribers: { icon: Users, accent: "bg-accent-indigo", tint: "bg-tint-indigo" },
+  debt: { icon: Wallet, accent: "bg-accent-purple", tint: "bg-tint-purple" },
+};
+
+/** Karta sarlavhasining o'ng tomonidagi kichik izoh. */
+function Caption({ children }: { children: ReactNode }) {
+  return <span className="truncate text-[11px] text-ink-soft">{children}</span>;
 }
 
-const PERIODS: readonly PeriodOption[] = [
-  { id: "month", label: "Oy", months: 1 },
-  { id: "quarter", label: "Chorak", months: 3 },
-  { id: "year", label: "Yil", months: 12 },
-];
+/* ---------------------------------------------------------------------------
+   Yo'qotish ulushi dinamikasi
+   --------------------------------------------------------------------------- */
 
-interface PeriodTotals {
-  supplied: number;
-  useful: number;
-  loss: number;
-  lossPercent: number;
-  paid: number;
-  collectPercent: number;
-  /** "Avgust 2026" yoki "Sentabr 2025 — Avgust 2026". */
-  range: string;
-}
+type LossBar = { id: string; label: string; fullLabel: string; value: number };
 
-function aggregate(months: number): PeriodTotals {
-  const slice = MONTHS.slice(MONTHS.length - months);
-  const supplied = slice.reduce((sum, item) => sum + item.supplied, 0);
-  const loss = slice.reduce((sum, item) => sum + item.loss, 0);
-  const billed = slice.reduce((sum, item) => sum + item.billed, 0);
-  const paid = slice.reduce((sum, item) => sum + item.paid, 0);
-  const first = slice[0];
-  const last = slice[slice.length - 1];
+const LOSS_COLOR = "#cf4646";
+const LOSS_COLOR_SOFT = "#eeb4b4";
 
-  return {
-    supplied,
-    useful: supplied - loss,
-    loss,
-    lossPercent: (loss / supplied) * 100,
-    paid,
-    collectPercent: (paid / billed) * 100,
-    range: months === 1 ? last.label : `${first.label} — ${last.label}`,
-  };
-}
-
-/** Uchala davr oldindan hisoblanadi - qayta chizishda arifmetika takrorlanmaydi. */
-const TOTALS_BY_PERIOD: readonly PeriodTotals[] = PERIODS.map((period) =>
-  aggregate(period.months),
-);
-
-/** "Baliqchi podstansiyasi" -> "Baliqchi": grafik o'qi va jadval katagi tor. */
-function shortName(name: string): string {
-  return name.replace(" podstansiyasi", "");
-}
-
-/* --- Iste'molchi turlari: ulushlar abonent bazasidan olinadi ---------------- */
-
-const SUBSCRIBER_TOTALS = subscriberTotals();
-
-const SAMPLE_KWH = SUBSCRIBERS.reduce((sum, item) => sum + item.monthlyKwh, 0);
-
-interface KindShare {
-  id: string;
-  /** Abonentlar soni - o'q yorlig'ida qavs ichida. */
-  count: number;
-  /** Shu turning foydali energiyadagi ulushi (0..1). */
-  share: number;
-  color: string;
-}
-
-const KIND_SHARES: readonly KindShare[] = [
-  {
-    id: "Aholi",
-    count: SUBSCRIBER_TOTALS.household,
-    share:
-      SUBSCRIBERS.filter((item) => item.kind === "household").reduce(
-        (sum, item) => sum + item.monthlyKwh,
-        0,
-      ) / SAMPLE_KWH,
-    color: "#3b82f6",
-  },
-  {
-    id: "Yuridik",
-    count: SUBSCRIBER_TOTALS.legal,
-    share:
-      SUBSCRIBERS.filter((item) => item.kind === "legal").reduce(
-        (sum, item) => sum + item.monthlyKwh,
-        0,
-      ) / SAMPLE_KWH,
-    color: "#6155f5",
-  },
-  {
-    id: "Budjet",
-    count: SUBSCRIBER_TOTALS.budget,
-    share:
-      SUBSCRIBERS.filter((item) => item.kind === "budget").reduce(
-        (sum, item) => sum + item.monthlyKwh,
-        0,
-      ) / SAMPLE_KWH,
-    color: "#14b8a6",
-  },
-];
-
-/** Pastki o'qdagi yorliq - qavsda abonentlar soni: "Aholi (37)". */
-const KIND_AXIS: Record<string, string> = Object.fromEntries(
-  KIND_SHARES.map((kind) => [kind.id, `${kind.id} (${kind.count})`]),
-);
-
-/* --- Reyting va eng yomon TP ----------------------------------------------- */
-
-const TOP_SUBSTATIONS = [...SUBSTATIONS]
-  .sort((a, b) => b.consumptionKwh - a.consumptionKwh)
-  .slice(0, 6);
-
-/** Chap o'qdagi yorliq: nivo indeksi `id`, ekranda esa qisqa nom. */
-const SUBSTATION_AXIS: Record<string, string> = Object.fromEntries(
-  TOP_SUBSTATIONS.map((item) => [item.id, shortName(item.name)]),
-);
-
-const WORST_TRANSFORMERS = [...TRANSFORMERS]
-  .sort((a, b) => b.lossPercent - a.lossPercent)
-  .slice(0, 6);
-
-/** Yo'qotish nishonining rangi: 14% dan yuqorisi kritik, 11% dan - ogohlantirish. */
-function lossTone(percent: number): BadgeTone {
-  if (percent >= 14) return "red";
-  if (percent >= 11) return "amber";
-  return "green";
-}
-
-/* --- Grafik sozlamalari ---------------------------------------------------- */
-
-const CHART_THEME = {
-  text: { fontFamily: "inherit", fontSize: 10, fill: "#767676" },
+const BAR_THEME = {
+  text: { fontFamily: "inherit", fontSize: 10, fill: "#4d4d4d" },
   axis: {
-    ticks: { text: { fontFamily: "inherit", fontSize: 10, fill: "#767676" } },
+    ticks: { text: { fontSize: 10, fill: "#4d4d4d" } },
     domain: { line: { stroke: "transparent" } },
   },
-  grid: { line: { stroke: "#e8e8ec", strokeDasharray: "2 2" } },
-  labels: { text: { fontFamily: "inherit", fontSize: 10, fontWeight: 600 } },
+  grid: { line: { stroke: "#d9d9dd", strokeDasharray: "2 2" } },
 } as const;
 
-interface LineSeries {
-  id: "loss" | "supplied" | "useful";
-  label: string;
-  color: string;
+/** Ustun ustida (manfiy bo'lsa - ostida) foiz yozuvi. */
+function LossValueLabels({ bars }: BarCustomLayerProps<LossBar>) {
+  return (
+    <g>
+      {bars.map((bar) => {
+        const value = bar.data.value ?? 0;
+        const negative = value < 0;
+        return (
+          <text
+            key={bar.key}
+            x={bar.x + bar.width / 2}
+            y={negative ? bar.y + bar.height + 4 : bar.y - 4}
+            textAnchor="middle"
+            dominantBaseline={negative ? "text-before-edge" : "text-after-edge"}
+            style={{ fontSize: 10, fontWeight: 600, fill: "#333333" }}
+          >
+            {percent(value, 2)}
+          </text>
+        );
+      })}
+    </g>
+  );
 }
 
-/** Legenda ham, chiziq ranglari ham shu ro'yxatdan olinadi (bitta manba). */
-const LINE_SERIES: readonly LineSeries[] = [
-  { id: "supplied", label: "Jami iste\u2019mol", color: "#3b82f6" },
-  { id: "useful", label: "Foydali energiya", color: "#22c55e" },
-  { id: "loss", label: "Yo\u2019qotish", color: "#ef4444" },
-];
-
-const LINE_COLORS = LINE_SERIES.map((item) => item.color);
-
-/**
- * Grafik ming kWh da chiziladi (kWh da o'q yorliqlari 7 xonali bo'lib ketardi).
- * Yuqori chegara 2 000 ming (2 mln) ga yaxlitlanadi - shunda barcha
- * bo'linmalar butun qiymatda chiqadi.
- */
-const LINE_MAX =
-  Math.ceil(Math.max(...MONTHS.map((item) => item.supplied)) / 2_000_000) * 2000;
-
-const Y_TICKS = Array.from({ length: LINE_MAX / 2000 + 1 }, (_, index) => index * 2000);
-
-const LINE_DATA = LINE_SERIES.map((item) => ({
-  id: item.label,
-  data: MONTHS.map((month) => ({ x: month.short, y: Math.round(month[item.id] / 1000) })),
-}));
-
-const LINE_MARGIN = { top: 6, right: 12, bottom: 22, left: 46 } as const;
-
-/* --- Oylik jadval ---------------------------------------------------------- */
-
-const MONTH_COLUMNS: TableColumn[] = [
-  { key: "month", label: "Oy", grow: 1.35, align: "left" },
-  { key: "billed", label: "Hisoblangan", grow: 1.15 },
-  { key: "usage", label: "Iste\u2019mol", grow: 1.15 },
-  { key: "loss", label: "Yo\u2019qotish", grow: 1.1 },
-  { key: "lossPercent", label: "Yo\u2019qotish %", grow: 0.9 },
-  { key: "payment", label: "To\u2019lov", grow: 1.35 },
-  { key: "collect", label: "Yig\u2019ilish %", grow: 0.9 },
-];
-
-function monthRows(items: readonly MonthStat[]): TableRow[] {
-  return items.map((month) => ({
-    key: month.key,
-    cells: [
-      <span key="month" className="font-medium">
-        {month.label}
-      </span>,
-      energy(month.supplied),
-      energy(month.useful),
-      energy(month.loss),
-      <span key="loss" className="font-semibold text-trend-up">
-        {dec(month.lossPercent, 1)}%
-      </span>,
-      money(month.paid),
-      <span
-        key="collect"
-        className={month.collectPercent >= 95 ? "font-semibold text-trend-down" : ""}
-      >
-        {dec(month.collectPercent, 1)}%
-      </span>,
-    ],
-  }));
-}
-
-/** Ikkita 6 qatorli jadval - 12 qator bitta ustunda 240px kartaga sig'maydi. */
-const MONTH_HALVES = [MONTHS.slice(0, 6), MONTHS.slice(6)] as const;
-
-const TP_COLUMNS: TableColumn[] = [
-  { key: "code", label: "TP", grow: 1, align: "left" },
-  { key: "substation", label: "Podstansiya", grow: 1.3, align: "left" },
-  { key: "usage", label: "Oylik iste\u2019mol", grow: 1.2 },
-  { key: "loss", label: "Yo\u2019qotish %", grow: 1 },
-];
-
-/* ---------------------------------------------------------------------------
-   Ko'rinish
-   --------------------------------------------------------------------------- */
-
-export function StatisticsView() {
-  const [periodIndex, setPeriodIndex] = useState(0);
-  const period = PERIODS[periodIndex];
-  const totals = TOTALS_BY_PERIOD[periodIndex];
-
-  const technical = totals.loss * LOSS_SPLIT.technical;
-  const commercial = totals.loss * LOSS_SPLIT.commercial;
-  const unmetered = totals.loss * LOSS_SPLIT.unmetered;
-
-  const lossSlices: LossSlice[] = [
-    { id: "technical", label: "Texnik", value: technical, color: "#f59e0b" },
-    { id: "commercial", label: "Tijorat", value: commercial, color: "#ef4444" },
-    { id: "unmetered", label: "Hisobsiz", value: unmetered, color: "#6155f5" },
-  ];
-
-  // Tanlangan davr barcha grafiklarga ta'sir qiladi: ustunlar ham shu
-  // davrdagi hajmni ko'rsatadi (ming kWh).
-  const kindBars = KIND_SHARES.map((kind) => ({
-    id: kind.id,
-    value: Math.round((totals.useful * kind.share) / 1000),
-    color: kind.color,
-  }));
-
-  const substationBars = TOP_SUBSTATIONS.map((item) => ({
-    id: item.id,
-    value: Math.round((item.consumptionKwh * period.months) / 1000),
-  })).reverse();
+function LossShareDynamicsCard({ months, selectedKey }: { months: readonly StatisticsMonth[]; selectedKey: string }) {
+  const bars = useMemo<LossBar[]>(
+    () =>
+      months.flatMap((month) =>
+        month.hasData && month.lossPercent != null
+          ? [{ id: month.key, label: month.short, fullLabel: month.label, value: month.lossPercent }]
+          : [],
+      ),
+    [months],
+  );
+  const scale = useMemo(() => linearScale(bars.map((bar) => bar.value), 4), [bars]);
+  const labelById = useMemo(() => Object.fromEntries(bars.map((bar) => [bar.id, bar.label])), [bars]);
+  const selected = bars.find((bar) => bar.id === selectedKey);
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-2 overflow-y-auto scrollbar-none">
-      <PageHeader
-        title="Statistika"
-        subtitle={"Iste\u2019mol, yo\u2019qotish va to\u2019lovlar tahlili"}
-      >
-        <CycleSelect
-          label="Davr"
-          value={period.label}
-          onCycle={() => setPeriodIndex((index) => (index + 1) % PERIODS.length)}
-        />
-        <HeaderButton icon={FileDown}>Yuklab olish</HeaderButton>
-      </PageHeader>
+    <Card className="col-span-4">
+      <CardHeader title="Yo’qotish ulushi dinamikasi">
+        {selected ? (
+          <Caption>
+            {selected.fullLabel}: {percent(selected.value, 2)}
+          </Caption>
+        ) : null}
+      </CardHeader>
+      <CardBody>
+        {bars.length === 0 ? (
+          <EmptyState variant="inline" action={false} title="Oqim ma’lumoti yuklanmagan" />
+        ) : (
+          <div className="min-h-0 flex-1">
+            <ResponsiveBar<LossBar>
+              data={bars}
+              keys={["value"]}
+              indexBy="id"
+              margin={{ top: 18, right: 8, bottom: 22, left: 40 }}
+              padding={0.45}
+              valueScale={{ type: "linear", min: scale.min, max: scale.max }}
+              colors={(bar) => (bar.data.id === selectedKey ? LOSS_COLOR : LOSS_COLOR_SOFT)}
+              borderRadius={3}
+              enableLabel={false}
+              enableGridX={false}
+              gridYValues={scale.ticks}
+              axisTop={null}
+              axisRight={null}
+              axisBottom={{
+                tickSize: 0,
+                tickPadding: 6,
+                format: (value: string) => labelById[value] ?? value,
+              }}
+              axisLeft={{
+                tickSize: 0,
+                tickPadding: 6,
+                tickValues: scale.ticks,
+                format: (value: number) => `${plainNumber(value)}%`,
+              }}
+              layers={["grid", "axes", "bars", LossValueLabels]}
+              theme={BAR_THEME}
+              animate={false}
+              tooltip={({ data, color }) => (
+                <div className="flex items-center gap-1.5 rounded-md bg-surface px-2 py-1 text-[11px] whitespace-nowrap text-ink shadow-md">
+                  <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+                  <span className="text-ink-soft">{data.fullLabel}</span>
+                  <span className="font-semibold">{percent(finite(data.value), 2)}</span>
+                </div>
+              )}
+            />
+          </div>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
 
-      <StatRow>
-        <StatCard
-          label={"Jami iste\u2019mol"}
-          value={energy(totals.supplied)}
-          icon={Zap}
-          accent="bg-accent-blue"
-          tint="bg-tint-blue"
-          hint={totals.range}
-        />
-        <StatCard
-          label="Foydali energiya"
-          value={energy(totals.useful)}
-          icon={PlugZap}
-          accent="bg-accent-green"
-          tint="bg-tint-green"
-          hint={`Samaradorlik ${dec((totals.useful / totals.supplied) * 100, 1)}%`}
-          hintTone="good"
-        />
-        <StatCard
-          label={"Texnik yo\u2019qotish"}
-          value={energy(technical)}
-          icon={Cable}
-          accent="bg-accent-amber"
-          tint="bg-tint-amber"
-          hint={`Tarmoqdan ${dec((technical / totals.supplied) * 100, 1)}%`}
-        />
-        <StatCard
-          label={"Tijorat yo\u2019qotish"}
-          value={energy(commercial)}
-          icon={TriangleAlert}
-          accent="bg-accent-red"
-          tint="bg-tint-red"
-          hint={`Tarmoqdan ${dec((commercial / totals.supplied) * 100, 1)}%`}
-          hintTone="bad"
-        />
-        <StatCard
-          label={"Yig\u2019ilgan to\u2019lov"}
-          value={money(totals.paid)}
-          icon={Wallet}
-          accent="bg-accent-indigo"
-          tint="bg-tint-indigo"
-          hint={`Yig\u2019ilish ${dec(totals.collectPercent, 1)}%`}
-          hintTone="good"
-        />
-      </StatRow>
+/* ---------------------------------------------------------------------------
+   Podstansiyalar reytingi va yo'qotish tarkibi (tanlangan oyna)
+   --------------------------------------------------------------------------- */
 
-      {/* Balandlik qator sifatida beriladi, karta klassida emas: `Card` ning
-          o'zida `h-full` bor va Tailwind uni `h-[300px]` dan keyin chizadi -
-          ya'ni kartaga qo'yilgan aniq balandlik ishlamay qolardi. `shrink-0`
-          esa past ekranda qatorlarni siqilishdan saqlaydi (sahifa skroll bo'ladi). */}
-      <div className="grid shrink-0 grid-cols-12 grid-rows-[300px_280px_240px] gap-2">
-        {/* a) Dinamika - sahifadagi eng katta grafik, tultip yoqilgan. */}
-        <Card className="col-span-8">
-          <CardHeader title={"Iste\u2019mol va yo\u2019qotish dinamikasi"}>
-            <span className="text-[11px] text-ink-soft">ming kWh &middot; 12 oy</span>
-          </CardHeader>
-          <CardBody>
-            {/* Legenda grafik ustida: nivo legendasi past kartada joy yeydi. */}
-            <div className="flex shrink-0 items-center gap-3 text-[10px] text-ink-soft">
-              {LINE_SERIES.map((item) => (
-                <span key={item.id} className="flex items-center gap-1 whitespace-nowrap">
+function SubstationRankingCard({ win }: { win: StatisticsWindow }) {
+  const bars = fractions(win.substations.map((row) => row.usefulKwh));
+
+  return (
+    <Card className="col-span-5">
+      <CardHeader title="Podstansiyalar reytingi">
+        <Caption>Foydali oqim · {win.rangeLabel}</Caption>
+      </CardHeader>
+      <CardBody>
+        {!win.energy || win.substations.length === 0 ? (
+          <EmptyState variant="inline" action={false} title="Podstansiyalar yuklanmagan" />
+        ) : (
+          <>
+            <div className="flex shrink-0 items-center gap-3 border-b border-hairline pb-1.5 text-[10px] font-medium text-ink-soft">
+              <span className="w-28 shrink-0">Podstansiya</span>
+              <span className="min-w-0 flex-1" />
+              <span className="w-24 shrink-0 text-right">Foydali oqim</span>
+              <span className="w-16 shrink-0 text-right">Yo’qotish, %</span>
+            </div>
+            <ul className="scrollbar-none flex min-h-0 flex-1 flex-col overflow-y-auto">
+              {win.substations.map((row, index) => (
+                <li key={row.id} className="flex min-h-9 shrink-0 items-center gap-3 border-b border-hairline last:border-b-0">
+                  <Link
+                    href={`/substations/${row.id}`}
+                    className="w-28 shrink-0 truncate text-xs font-medium text-ink hover:text-brand"
+                    title={row.name}
+                  >
+                    {row.name}
+                  </Link>
+                  <span className="h-2.5 min-w-0 flex-1 overflow-hidden rounded-full bg-canvas">
+                    <span
+                      className="block h-full rounded-full bg-brand"
+                      style={{ width: `${(bars[index] * 100).toFixed(2)}%` }}
+                    />
+                  </span>
+                  <span className="w-24 shrink-0 truncate text-right text-xs font-semibold text-ink">
+                    {energy(row.usefulKwh)}
+                  </span>
                   <span
-                    className="size-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: item.color }}
-                  />
-                  {item.label}
-                </span>
+                    className="w-16 shrink-0 text-right text-[11px] text-ink-muted"
+                    title="Yo’qotish ulushi"
+                  >
+                    {percent(row.lossPercent, 2)}
+                  </span>
+                </li>
               ))}
-            </div>
+            </ul>
+          </>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
 
-            <div className="mt-2 min-h-0 flex-1">
-              <ResponsiveLine
-                data={LINE_DATA}
-                margin={LINE_MARGIN}
-                xScale={{ type: "point" }}
-                yScale={{ type: "linear", min: 0, max: LINE_MAX, stacked: false }}
-                curve="monotoneX"
-                colors={LINE_COLORS}
-                lineWidth={2}
-                theme={CHART_THEME}
-                axisTop={null}
-                axisRight={null}
-                axisBottom={{ tickSize: 0, tickPadding: 6 }}
-                axisLeft={{
-                  tickSize: 0,
-                  tickPadding: 6,
-                  tickValues: Y_TICKS,
-                  format: (value: number) => num(value),
-                }}
-                enableGridX={false}
-                gridYValues={Y_TICKS}
-                pointSize={5}
-                pointColor="#ffffff"
-                pointBorderWidth={1.5}
-                pointBorderColor={{ from: "seriesColor" }}
-                enableCrosshair={false}
-                enableTouchCrosshair={false}
-                useMesh
-                animate={false}
-                tooltip={({ point }) => (
-                  <div className="rounded-md bg-surface px-2 py-1 whitespace-nowrap shadow-md">
-                    <div className="text-[9px] text-ink-soft">{point.data.xFormatted}</div>
-                    <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-ink">
-                      <span
-                        className="size-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: point.seriesColor }}
-                      />
-                      <span className="text-ink-soft">{point.seriesId}</span>
-                      <span className="font-semibold">
-                        {num(Number(point.data.y))} ming kWh
-                      </span>
-                    </div>
-                  </div>
-                )}
-              />
-            </div>
-          </CardBody>
-        </Card>
+const SLICE_COLORS = ["#467acf", "#f59e0b", "#46cf61", "#cb30e0", "#6155f5", "#14b8a6", "#ac7f5e", "#cf4646"];
 
-        {/* b) Yo'qotish tuzilmasi - halqa va yonida legenda. */}
-        <Card className="col-span-4">
-          <CardHeader title={"Yo\u2019qotish tuzilmasi"} />
-          <CardBody>
-            <div className="flex min-h-0 flex-1 items-center gap-3">
-              <div className="relative h-full w-[150px] shrink-0">
-                {/* Karta `overflow-hidden` - nivo tultipi kesilardi, shuning
-                    uchun grafik statik, ma'lumot legendada to'liq ko'rinadi. */}
+type LossSlice = { id: string; label: string; value: number; color: string };
+
+function LossStructureCard({ win }: { win: StatisticsWindow }) {
+  const rows = useMemo(
+    () =>
+      [...win.substations]
+        .sort((a, b) => b.lossKwh - a.lossKwh)
+        .map((row, index) => ({ ...row, color: SLICE_COLORS[index % SLICE_COLORS.length] })),
+    [win.substations],
+  );
+  // Halqa faqat barcha yo'qotishlar musbat bo'lganda to'g'ri ulush ko'rsatadi.
+  const drawable = rows.length > 0 && rows.every((row) => row.lossKwh >= 0) && (win.energy?.lossKwh ?? 0) > 0;
+  const slices: LossSlice[] = rows
+    .filter((row) => row.lossKwh > 0)
+    .map((row) => ({ id: row.id, label: row.name, value: row.lossKwh, color: row.color }));
+  const center = energyParts(win.energy?.lossKwh);
+
+  return (
+    <Card className="col-span-4">
+      <CardHeader title="Yo’qotish tarkibi">
+        <Caption>podstansiyalar bo’yicha</Caption>
+      </CardHeader>
+      <CardBody>
+        {!win.energy || rows.length === 0 ? (
+          <EmptyState variant="inline" action={false} title="Podstansiyalar yuklanmagan" />
+        ) : (
+          <div className="flex min-h-0 flex-1 items-center gap-3">
+            {drawable ? (
+              <div className="relative h-full max-h-47.5 w-42.5 shrink-0">
                 <ResponsivePie<LossSlice>
-                  data={lossSlices}
-                  innerRadius={0.7}
+                  data={slices}
+                  innerRadius={0.68}
                   padAngle={1.2}
                   cornerRadius={2}
                   margin={{ top: 8, right: 8, bottom: 8, left: 8 }}
@@ -550,174 +393,336 @@ export function StatisticsView() {
                   isInteractive={false}
                   animate={false}
                 />
-
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-xl leading-none font-bold text-ink">
-                    {dec(totals.lossPercent, 1)}%
-                  </span>
-                  <span className="mt-1 text-[9px] text-ink-soft">umumiy yo&rsquo;qotish</span>
+                  <span className="text-lg leading-none font-bold text-ink">{center.value}</span>
+                  <span className="mt-1 text-[10px] text-ink-soft">{center.unit}</span>
                 </div>
               </div>
+            ) : null}
 
-              <div className="flex min-w-0 flex-1 flex-col justify-center gap-3">
-                {lossSlices.map((slice) => (
-                  <div key={slice.id} className="flex min-w-0 items-center gap-2">
-                    <span
-                      className="size-2.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: slice.color }}
-                    />
-                    <div className="min-w-0">
-                      <span className="block truncate text-[10px] leading-[13px] text-ink-soft">
-                        {slice.label}
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              {!drawable ? (
+                <p className="text-[11px] leading-4 text-ink-soft">
+                  Manfiy yo’qotishli podstansiya bor - ulush halqasi chizilmaydi.
+                </p>
+              ) : null}
+              <ul className="scrollbar-none flex max-h-50 flex-col gap-2.5 overflow-y-auto">
+                {rows.map((row) => (
+                  <li key={row.id} className="flex min-w-0 items-center gap-2">
+                    <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: row.color }} />
+                    <div className="min-w-0 flex-1">
+                      <span className="block truncate text-[11px] leading-3.5 text-ink-muted">{row.name}</span>
+                      <span className="mt-0.5 flex items-baseline gap-1">
+                        <span className="truncate text-xs leading-4 font-semibold text-ink">
+                          {energy(row.lossKwh)}
+                        </span>
+                        <span className="shrink-0 text-[10px] text-ink-soft">({percent(row.lossShare)})</span>
                       </span>
-                      <div className="mt-0.5 flex items-baseline gap-1">
-                        <span className="min-w-0 truncate text-[11px] leading-[14px] font-semibold text-ink">
-                          {energy(slice.value)}
-                        </span>
-                        <span className="shrink-0 text-[9px] text-ink-soft">
-                          ({dec((slice.value / totals.loss) * 100, 0)}%)
-                        </span>
-                      </div>
                     </div>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
-          </CardBody>
-        </Card>
+          </div>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
 
-        {/* c) Iste'molchi turlari - vertikal ustunlar, qavsda abonent soni. */}
-        <Card className="col-span-4">
-          <CardHeader title={"Iste\u2019molchi turlari bo\u2019yicha"}>
-            <span className="text-[11px] text-ink-soft">ming kWh</span>
-          </CardHeader>
-          <CardBody>
-            <div className="min-h-0 flex-1">
-              <ResponsiveBar
-                data={kindBars}
-                keys={["value"]}
-                indexBy="id"
-                margin={{ top: 8, right: 8, bottom: 24, left: 46 }}
-                padding={0.42}
-                colors={{ datum: "data.color" }}
-                borderRadius={4}
-                enableGridX={false}
-                gridYValues={4}
-                axisTop={null}
-                axisRight={null}
-                axisBottom={{
-                  tickSize: 0,
-                  tickPadding: 8,
-                  format: (value: string) => KIND_AXIS[value] ?? value,
-                }}
-                axisLeft={{
-                  tickSize: 0,
-                  tickPadding: 6,
-                  tickValues: 4,
-                  format: (value: number) => num(value),
-                }}
-                valueFormat={(value) => num(value)}
-                labelSkipHeight={18}
-                labelTextColor="#ffffff"
-                theme={CHART_THEME}
-                isInteractive={false}
-                animate={false}
-              />
-            </div>
-          </CardBody>
-        </Card>
+/* ---------------------------------------------------------------------------
+   Abonent turlari (tanlangan oy)
+   --------------------------------------------------------------------------- */
 
-        {/* d) Podstansiyalar reytingi - eng ko'p iste'mol qiluvchi oltitasi. */}
-        <Card className="col-span-4">
-          <CardHeader title="Podstansiyalar reytingi">
-            <span className="text-[11px] text-ink-soft">ming kWh</span>
-          </CardHeader>
-          <CardBody>
-            <div className="min-h-0 flex-1">
-              <ResponsiveBar
-                data={substationBars}
-                keys={["value"]}
-                indexBy="id"
-                layout="horizontal"
-                margin={{ top: 4, right: 8, bottom: 4, left: 68 }}
-                padding={0.3}
-                colors={["#007cd2"]}
-                borderRadius={4}
-                enableGridX={false}
-                enableGridY={false}
-                axisTop={null}
-                axisRight={null}
-                axisBottom={null}
-                axisLeft={{
-                  tickSize: 0,
-                  tickPadding: 8,
-                  format: (value: string) => SUBSTATION_AXIS[value] ?? value,
-                }}
-                valueFormat={(value) => num(value)}
-                labelSkipWidth={48}
-                labelTextColor="#ffffff"
-                theme={CHART_THEME}
-                isInteractive={false}
-                animate={false}
-              />
-            </div>
-          </CardBody>
-        </Card>
+const KIND_COLOR: Record<SubscriberKind, string> = {
+  HOUSEHOLD: "bg-accent-blue",
+  LEGAL: "bg-accent-indigo",
+};
 
-        {/* e) Yo'qotish bo'yicha eng yomon TP - foiz bo'yicha saralangan. */}
-        <Card className="col-span-4">
-          <CardHeader title={"Yo\u2019qotish bo\u2019yicha eng yomon TP"} />
-          <CardBody>
-            <div className="min-h-0 flex-1">
-              <DataTable
-                className="leading-tight"
-                compact
-                columns={TP_COLUMNS}
-                rows={WORST_TRANSFORMERS.map((item) => ({
-                  key: item.id,
-                  cells: [
-                    <span key="code" className="font-medium">
-                      {item.code}
-                    </span>,
-                    shortName(item.substationName),
-                    energy(item.consumptionKwh),
-                    <Badge key="loss" tone={lossTone(item.lossPercent)}>
-                      {dec(item.lossPercent, 1)}%
-                    </Badge>,
-                  ],
-                }))}
-              />
-            </div>
-            <p className="shrink-0 pt-2 text-[10px] text-ink-soft">
-              Normativ chegara &mdash; 8%. 14% dan yuqorisi tekshiruvga chiqariladi.
+function ShareBar({ value, color }: { value: number | null; color: string }) {
+  const width = Math.min(100, Math.max(0, finite(value)));
+  return (
+    <span className="block h-1.5 w-full overflow-hidden rounded-full bg-canvas">
+      <span className={cn("block h-full rounded-full", color)} style={{ width: `${width.toFixed(2)}%` }} />
+    </span>
+  );
+}
+
+function SubscriberKindsCard({ data }: { data: StatisticsData }) {
+  const list = data.current.subscriberList;
+
+  return (
+    <Card className="col-span-3">
+      <CardHeader title="Abonent turlari">
+        <Caption>{data.period.label}</Caption>
+      </CardHeader>
+      <CardBody>
+        {!list.uploaded ? (
+          <EmptyState variant="inline" action={false} title="Abonentlar ro’yxati yuklanmagan" />
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col justify-between gap-2">
+            {SUBSCRIBER_KIND_ORDER.map((kind) => {
+              const countShare = share(list.byKind[kind], list.total);
+              const debtShare = share(list.debtByKind[kind], list.debtUzs);
+              return (
+                <Link
+                  key={kind}
+                  href={`/subscribers?kind=${kind}`}
+                  className="flex flex-col gap-1.5 rounded-lg bg-canvas/60 p-2.5 transition-colors hover:bg-canvas"
+                >
+                  <span className="flex items-baseline justify-between gap-2">
+                    <span className="truncate text-xs font-semibold text-ink">{SUBSCRIBER_KIND_LABEL[kind]}</span>
+                    <span className="shrink-0 text-xs font-semibold text-ink">
+                      {num(list.byKind[kind])} ta{" "}
+                      <span className="font-normal text-ink-soft">({percent(countShare)})</span>
+                    </span>
+                  </span>
+                  <ShareBar value={countShare} color={KIND_COLOR[kind]} />
+                  <span className="mt-0.5 flex items-baseline justify-between gap-2 text-[11px]">
+                    <span className="truncate text-ink-muted">Qarzdorlik</span>
+                    <span className="shrink-0 font-medium text-ink">
+                      {money(list.debtByKind[kind])}{" "}
+                      <span className="text-ink-soft">({percent(debtShare)})</span>
+                    </span>
+                  </span>
+                  <ShareBar value={debtShare} color="bg-accent-purple" />
+                </Link>
+              );
+            })}
+            <p className="shrink-0 truncate text-[11px] text-ink-soft">
+              Jami: {num(list.total)} ta · {money(list.debtUzs)}
             </p>
-          </CardBody>
-        </Card>
+          </div>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
 
-        {/* f) Oylik kesim - 12 oy ikkita jadvalga bo'lingan (240px kartaga
-            bitta ustunda 12 qator sig'maydi). */}
-        <Card className="col-span-12">
-          <CardHeader title={"Oylik ko\u2019rsatkichlar jadvali"}>
-            <span className="text-[11px] text-ink-soft">
-              {MONTHS[0].label} &mdash; {MONTHS[MONTHS.length - 1].label}
-            </span>
-          </CardHeader>
-          <CardBody>
-            <div className="grid min-h-0 flex-1 grid-cols-2 gap-2">
-              {MONTH_HALVES.map((half) => (
-                <DataTable
-                  key={half[0].key}
-                  className="leading-tight"
-                  compact
-                  rowHeight={22}
-                  lastRowHeight={24}
-                  columns={MONTH_COLUMNS}
-                  rows={monthRows(half)}
-                />
-              ))}
-            </div>
-          </CardBody>
-        </Card>
+/* ---------------------------------------------------------------------------
+   Eng yuqori yo'qotishli TP lar (tanlangan oy)
+   --------------------------------------------------------------------------- */
+
+const TP_COLUMNS: TableColumn[] = [
+  { key: "rank", label: "№", grow: 0.4 },
+  { key: "name", label: "TP", grow: 1.2, align: "left" },
+  { key: "substation", label: "Podstansiya", grow: 1.3, align: "left" },
+  { key: "feeder", label: "Fider", grow: 1.3, align: "left" },
+  { key: "total", label: "Umumiy oqim", grow: 1.2, align: "right" },
+  { key: "loss", label: "Yo’qotish", grow: 1.1, align: "right" },
+  { key: "share", label: "Yo’qotish ulushi", grow: 1.1, align: "right" },
+  { key: "subscribers", label: "Abonentlar", grow: 0.9, align: "right" },
+];
+
+function EntityLink({ href, children, strong = false }: { href: string; children: ReactNode; strong?: boolean }) {
+  return (
+    <Link href={href} className={cn("hover:text-brand hover:underline", strong && "font-semibold")}>
+      {children}
+    </Link>
+  );
+}
+
+function WorstTransformersCard({ data }: { data: StatisticsData }) {
+  const rows = data.worstTransformers;
+
+  return (
+    <Card className="col-span-12">
+      <CardHeader title="Yo’qotish ulushi eng yuqori TP lar">
+        {rows ? (
+          <Caption>
+            {data.period.label} · umumiy oqimi bor {num(data.rankedTransformers)} ta TP orasida
+          </Caption>
+        ) : null}
+      </CardHeader>
+      <CardBody>
+        {rows == null ? (
+          <EmptyState variant="inline" action={false} title="Transformatorlar yuklanmagan" />
+        ) : (
+          <DataTable
+            columns={TP_COLUMNS}
+            lastRowFooter={false}
+            emptyText="Shu oyda umumiy oqimi bor TP yo’q"
+            rows={rows.map((row, index) => ({
+              key: row.id,
+              cells: [
+                <span key="rank" className="text-ink-soft">
+                  {index + 1}
+                </span>,
+                <EntityLink key="name" href={`/transformers/${row.id}`} strong>
+                  {row.name}
+                </EntityLink>,
+                <EntityLink key="substation" href={`/substations/${row.substation.id}`}>
+                  {row.substation.name}
+                </EntityLink>,
+                <EntityLink key="feeder" href={`/feeders/${row.feeder.id}`}>
+                  {row.feeder.name}
+                </EntityLink>,
+                energy(row.totalKwh),
+                energy(row.lossKwh),
+                <span key="share" className="font-semibold text-trend-up">
+                  {percent(row.lossPercent, 2)}
+                </span>,
+                num(row.subscribers),
+              ],
+            }))}
+          />
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   Oylik jadval
+   --------------------------------------------------------------------------- */
+
+const MONTH_COLUMNS: TableColumn[] = [
+  { key: "month", label: "Oy", grow: 1.2, align: "left" },
+  { key: "total", label: "Umumiy oqim", grow: 1.1, align: "right" },
+  { key: "useful", label: "Foydali oqim", grow: 1.1, align: "right" },
+  { key: "loss", label: "Yo’qotish", grow: 1, align: "right" },
+  { key: "share", label: "Yo’qotish ulushi", grow: 1, align: "right" },
+  { key: "subscribers", label: "Abonentlar", grow: 0.9, align: "right" },
+  { key: "debt", label: "Qarzdorlik", grow: 1.1, align: "right" },
+  { key: "violations", label: "Qoidabuzarlik", grow: 0.9, align: "right" },
+  { key: "appeals", label: "Murojaat", grow: 0.8, align: "right" },
+];
+
+function MonthlyTableCard({ data }: { data: StatisticsData }) {
+  const hasMissing = data.months.some(
+    (month) =>
+      !month.hasData ||
+      month.subscribers == null ||
+      month.debtUzs == null ||
+      month.violations == null ||
+      month.appeals == null,
+  );
+
+  return (
+    <Card className="col-span-12">
+      <CardHeader title="Oylik ko’rsatkichlar">
+        <Caption>
+          {data.historyLabel} · {num(data.months.length)} oy
+        </Caption>
+      </CardHeader>
+      <CardBody>
+        <DataTable
+          columns={MONTH_COLUMNS}
+          lastRowFooter={false}
+          rows={data.months.map((month) => {
+            const selected = month.key === data.period.key;
+            return {
+              key: month.key,
+              cells: [
+                <span key="month" className={selected ? "font-bold" : "font-medium"}>
+                  {month.label}
+                </span>,
+                energy(month.totalKwh),
+                energy(month.usefulKwh),
+                energy(month.lossKwh),
+                percent(month.lossPercent, 2),
+                month.subscribers == null ? EMPTY : num(month.subscribers),
+                money(month.debtUzs),
+                month.violations == null ? EMPTY : num(month.violations),
+                month.appeals == null ? EMPTY : num(month.appeals),
+              ],
+            };
+          })}
+        />
+        {hasMissing ? (
+          <p className="shrink-0 pt-2 text-[10px] text-ink-soft">
+            {EMPTY} - shu oy uchun tegishli shablon yuklanmagan.
+          </p>
+        ) : null}
+      </CardBody>
+    </Card>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   Ko'rinish
+   --------------------------------------------------------------------------- */
+
+/**
+ * "Statistika" - tuman bo'yicha tahlil. Davr oynasi (Oy / Chorak / Yil) -
+ * tanlangan oy va undan oldingi bazadagi 1 / 3 / 12 ta davr; u KPI lar,
+ * podstansiyalar reytingi va yo'qotish tarkibiga ta'sir qiladi. Dinamika,
+ * TP reytingi va abonentlar - tanlangan oy (va undan oldingi 12 davr).
+ */
+export function StatisticsView({ data }: { data: StatisticsData }) {
+  const [windowId, setWindowId] = useState<StatisticsWindowId>("month");
+  const win = data.windows.find((item) => item.id === windowId) ?? data.windows[0];
+
+  const chips: ReadonlyArray<FilterChip<StatisticsWindowId>> = data.windows.map((item) => ({
+    value: item.id,
+    label: WINDOW_LABEL[item.id],
+  }));
+
+  const kpis = buildKpis(data, win);
+
+  const dynamics = useMemo<DynamicsMonth[]>(
+    () =>
+      data.months.flatMap((month) =>
+        month.hasData
+          ? [
+              {
+                key: month.key,
+                label: month.label,
+                billed: month.totalKwh ?? 0,
+                consumed: month.usefulKwh ?? 0,
+                loss: month.lossKwh ?? 0,
+              },
+            ]
+          : [],
+      ),
+    [data.months],
+  );
+
+  const shortage =
+    win.periods < win.requested ? ` · bazada ${num(win.requested)} oy o’rniga ${num(win.periods)} oy bor` : "";
+
+  return (
+    <div className="scrollbar-none flex h-full min-h-0 flex-col gap-2 overflow-y-auto">
+      <PageHeader title="Statistika" subtitle={`Tuman bo’yicha tahlil · ${win.rangeLabel}${shortage}`}>
+        <FilterChips items={chips} value={windowId} onChange={setWindowId} />
+        <HeaderButton icon={FileDown} href="/reports">
+          Hisobotlar
+        </HeaderButton>
+      </PageHeader>
+
+      <StatRow>
+        {kpis.map((kpi) => (
+          <StatCard
+            key={kpi.id}
+            label={kpi.label}
+            value={kpi.value.value}
+            unit={kpi.value.unit || undefined}
+            icon={KPI_STYLE[kpi.id].icon}
+            accent={KPI_STYLE[kpi.id].accent}
+            tint={KPI_STYLE[kpi.id].tint}
+            hint={kpi.hint}
+            hintTone={kpi.tone}
+          />
+        ))}
+      </StatRow>
+
+      <div className="grid h-75 shrink-0 grid-cols-12 gap-2">
+        <ConsumptionDynamicsCard className="col-span-8" months={dynamics} />
+        <LossShareDynamicsCard months={data.months} selectedKey={data.period.key} />
+      </div>
+
+      <div className="grid h-75 shrink-0 grid-cols-12 gap-2">
+        <SubstationRankingCard win={win} />
+        <LossStructureCard win={win} />
+        <SubscriberKindsCard data={data} />
+      </div>
+
+      <div className="grid shrink-0 grid-cols-12 gap-2">
+        <WorstTransformersCard data={data} />
+      </div>
+
+      <div className="grid shrink-0 grid-cols-12 gap-2">
+        <MonthlyTableCard data={data} />
       </div>
     </div>
   );
