@@ -4,16 +4,23 @@ import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { DataTable, type TableColumn, type TableRow } from "@/components/ui/DataTable";
 import { IconPill } from "@/components/ui/IconPill";
 
-interface CompletedWork {
+export interface CompletedWork {
+  /** Qator kaliti - bir transformatorda bir nechta ish bo'lishi mumkin. */
+  id: string;
   tp: string;
   work: string;
   date: string;
 }
 
 const WORKS: readonly CompletedWork[] = [
-  { tp: "TP-01", work: "Xatlov o\u2019tkazish", date: "21-avgust, 2026" },
-  { tp: "TP-004", work: "Toka transformatorni ta\u2019mirlash", date: "1-avgust, 2026" },
-  { tp: "TP-005", work: "Hisoblagich o\u2019rnatish", date: "18-avgust, 2026" },
+  { id: "01-xatlov", tp: "TP-01", work: "Xatlov o’tkazish", date: "21-avgust, 2026" },
+  {
+    id: "004-repair",
+    tp: "TP-004",
+    work: "Toka transformatorni ta’mirlash",
+    date: "1-avgust, 2026",
+  },
+  { id: "005-meter", tp: "TP-005", work: "Hisoblagich o’rnatish", date: "18-avgust, 2026" },
 ];
 
 /**
@@ -26,20 +33,31 @@ const COLUMNS: TableColumn[] = [
   { key: "date", label: "Sana", grow: 18 },
 ];
 
-const ROWS: TableRow[] = WORKS.map((item) => ({
-  key: item.tp,
-  cells: [
-    // Maketda 1-ustun qolganlaridan qalinroq (medium).
-    <span key="tp" className="font-medium">
-      {item.tp}
-    </span>,
-    item.work,
-    item.date,
-  ],
-}));
+function buildRows(works: readonly CompletedWork[]): TableRow[] {
+  return works.map((item) => ({
+    key: item.id,
+    cells: [
+      // Maketda 1-ustun qolganlaridan qalinroq (medium).
+      <span key="tp" className="font-medium">
+        {item.tp}
+      </span>,
+      item.work,
+      item.date,
+    ],
+  }));
+}
 
-/** Fider sahifasining 4-qatoridagi "Bajarilgan ishlar" kartasi (span-6, 209px). */
-export function CompletedWorksCard({ className }: { className?: string }) {
+/**
+ * Fider sahifasining 4-qatoridagi "Bajarilgan ishlar" kartasi (span-6, 209px).
+ * Transformator sahifasida ro'yxat o'sha TP ishlaridan - `works`.
+ */
+export function CompletedWorksCard({
+  works = WORKS,
+  className,
+}: {
+  works?: readonly CompletedWork[];
+  className?: string;
+}) {
   return (
     <Card className={className}>
       <CardHeader title="Bajarilgan ishlar">
@@ -47,7 +65,7 @@ export function CompletedWorksCard({ className }: { className?: string }) {
       </CardHeader>
       <CardBody>
         {/* Maketda bu jadval qatorlari 28px, oxirgisi 32px (XML: 4080:479). */}
-        <DataTable columns={COLUMNS} rows={ROWS} rowHeight={28} lastRowHeight={32} />
+        <DataTable columns={COLUMNS} rows={buildRows(works)} rowHeight={28} lastRowHeight={32} />
       </CardBody>
     </Card>
   );

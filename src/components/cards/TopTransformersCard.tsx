@@ -2,7 +2,7 @@
 
 import { ResponsiveBar } from "@nivo/bar";
 import { ChartNoAxesColumn, FileDown, Table } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 
 import { Card, CardBody, CardFooterLink, CardHeader } from "@/components/ui/Card";
 import { Badge, type BadgeTone, DataTable, type TableColumn } from "@/components/ui/DataTable";
@@ -92,16 +92,32 @@ const COLUMNS: TableColumn[] = [
   { key: "loss", label: "Yo\u2019qotish" },
 ];
 
-/** Nivo indeksi noyob bo'lishi shart - TP-004 ikki marta uchraydi. */
-const NAME_BY_ID: Record<string, string> = Object.fromEntries(
-  TRANSFORMERS.map((row) => [row.id, row.name]),
-);
+/** Karta qatori: jadval kataklari va grafikdagi ustun (yorliq + qiymat). */
+export interface TopRow {
+  /** Noyob kalit - nivo indeksi ham shu (nomlar takrorlanishi mumkin). */
+  id: string;
+  cells: ReactNode[];
+  /** Grafik o'qidagi yorliq. */
+  label: string;
+  value: number;
+}
 
-/** Gorizontal ustunlar pastdan yuqoriga chiziladi, shuning uchun teskari. */
-const CHART_DATA = TRANSFORMERS.map((row) => ({
+const ROWS: readonly TopRow[] = TRANSFORMERS.map((row) => ({
   id: row.id,
+  label: row.name,
   value: row.usageValue,
-})).reverse();
+  cells: [
+    <span key="name" className="font-medium">
+      {row.name}
+    </span>,
+    <Badge key="status" tone={row.status.tone}>
+      {row.status.label}
+    </Badge>,
+    row.billed,
+    row.usage,
+    row.loss,
+  ],
+}));
 
 const CHART_THEME = {
   axis: { ticks: { text: { fontSize: 11, fill: "#767676", fontWeight: 500 } } },
@@ -120,13 +136,47 @@ const VIEWS = [
  *
  * Jadval maketda 208px joy egallaydi, umumiy karta esa 298px - shuning uchun
  * pastki bo'shliq 8px (maketdagidek), aks holda oxirgi qator sig'maydi.
+ *
+ * Transformator sahifasida xuddi shu karta o'sha TP ning eng ko'p iste'mol
+ * qiluvchi abonentlarini ko'rsatadi - `title` / `columns` / `rows` proplari.
+ * Grafik yorlig'i: `value` + `valueSuffix` (standart - "ming", 1 xona).
  */
-export function TopTransformersCard({ className }: { className?: string }) {
+export function TopTransformersCard({
+  title = "Eng ko’p sarfga ega transformatorlar",
+  columns = COLUMNS,
+  rows = ROWS,
+  valueSuffix = "ming",
+  valueDigits = 1,
+  axisWidth = 48,
+  footerHref,
+  className,
+}: {
+  title?: string;
+  columns?: TableColumn[];
+  rows?: readonly TopRow[];
+  valueSuffix?: string;
+  valueDigits?: number;
+  /** Grafikdagi yorliq ustunining eni, px. */
+  axisWidth?: number;
+  footerHref?: string;
+  className?: string;
+}) {
   const [view, setView] = useState<View>("table");
+
+  const labelById = useMemo<Record<string, string>>(
+    () => Object.fromEntries(rows.map((row) => [row.id, row.label])),
+    [rows],
+  );
+
+  /** Gorizontal ustunlar pastdan yuqoriga chiziladi, shuning uchun teskari. */
+  const chartData = useMemo(
+    () => rows.map((row) => ({ id: row.id, value: row.value })).reverse(),
+    [rows],
+  );
 
   return (
     <Card padded={false} className={cn("px-4 pt-4 pb-2", className)}>
-      <CardHeader title="Eng ko&rsquo;p sarfga ega transformatorlar">
+      <CardHeader title={title}>
         <SegmentedIcons items={VIEWS} value={view} onChange={setView} />
         <IconPill icon={FileDown} label="Yuklab olish" />
       </CardHeader>
@@ -138,29 +188,16 @@ export function TopTransformersCard({ className }: { className?: string }) {
               /* 11px sarlavha katagida o'z leading'i yo'q - maketdagi 14px qator
                  balandligi ota elementdan meros olinadi. */
               className="leading-tight"
-              columns={COLUMNS}
-              rows={TRANSFORMERS.map((row) => ({
-                key: row.id,
-                cells: [
-                  <span key="name" className="font-medium">
-                    {row.name}
-                  </span>,
-                  <Badge key="status" tone={row.status.tone}>
-                    {row.status.label}
-                  </Badge>,
-                  row.billed,
-                  row.usage,
-                  row.loss,
-                ],
-              }))}
+              columns={columns}
+              rows={rows.map((row) => ({ key: row.id, cells: row.cells }))}
             />
           ) : (
             <ResponsiveBar
-              data={CHART_DATA}
+              data={chartData}
               keys={["value"]}
               indexBy="id"
               layout="horizontal"
-              margin={{ top: 2, right: 8, bottom: 2, left: 48 }}
+              margin={{ top: 2, right: 8, bottom: 2, left: axisWidth }}
               padding={0.35}
               colors={["#007cd2"]}
               borderRadius={4}
@@ -172,9 +209,11 @@ export function TopTransformersCard({ className }: { className?: string }) {
               axisLeft={{
                 tickSize: 0,
                 tickPadding: 8,
-                format: (value: string) => NAME_BY_ID[value] ?? value,
+                format: (value: string) => labelById[value] ?? value,
               }}
-              valueFormat={(value) => `${value.toFixed(1).replace(".", ",")} ming`}
+              valueFormat={(value) =>
+                `${value.toFixed(valueDigits).replace(".", ",")} ${valueSuffix}`
+              }
               labelSkipWidth={56}
               labelTextColor="#ffffff"
               theme={CHART_THEME}
@@ -185,7 +224,7 @@ export function TopTransformersCard({ className }: { className?: string }) {
         </div>
       </CardBody>
 
-      <CardFooterLink>Ba&apos;tafsil</CardFooterLink>
+      <CardFooterLink href={footerHref}>Ba&apos;tafsil</CardFooterLink>
     </Card>
   );
 }

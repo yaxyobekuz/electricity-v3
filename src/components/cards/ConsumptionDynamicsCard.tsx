@@ -8,6 +8,7 @@ import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { DataTable, type TableColumn, type TableRow } from "@/components/ui/DataTable";
 import { IconPill } from "@/components/ui/IconPill";
 import { type SegmentItem, SegmentedIcons } from "@/components/ui/Toggle";
+import { energy } from "@/lib/data/seed";
 import { cn } from "@/lib/ui/cn";
 
 type ViewMode = "chart" | "table";
@@ -22,7 +23,7 @@ const DEFAULT_LABELS: DynamicsLabels = {
   loss: "Yo’qotish",
 };
 
-interface DayRow {
+export interface DayRow {
   day: number;
   billed: number;
   consumed: number;
@@ -103,13 +104,28 @@ const LINE_COLORS = SERIES.map((series) => series.color);
  * shkala chiziqli emas. `symlog` + constant 250 aynan shuni beradi:
  * ln(1+500/250) / ln(1+2000/250) = 1/2.
  */
-const Y_SCALE = {
-  type: "symlog",
-  constant: 250,
-  min: 0,
-  max: 2000,
-  nice: false,
-} as const;
+const DEFAULT_Y_MAX = 2000;
+
+/**
+ * Tashqi ma'lumot (`days`) uchun shkala chegarasi: eng katta qiymatdan
+ * yuqoridagi "yarim tartibli" son (5 600 -> 6 000, 1 300 -> 1 500). Maketdagi
+ * geometriya saqlanadi: o'rta chiziq `max / 4` da, symlog konstantasi
+ * `max / 8` - shunda 0 / chorak / max yorliqlari yana teng oraliqda turadi.
+ */
+function niceMax(value: number): number {
+  if (value <= 0) return DEFAULT_Y_MAX;
+  const half = 10 ** Math.floor(Math.log10(value)) / 2;
+  return Math.ceil(value / half) * half;
+}
+
+function yScaleFor(max: number) {
+  return { type: "symlog", constant: max / 8, min: 0, max, nice: false } as const;
+}
+
+/** O'q yorlig'i: 33px ustunga sig'ishi uchun o'n mingdan boshlab "12K". */
+function formatAxisValue(value: number): string {
+  return value >= 10_000 ? `${Number((value / 1000).toFixed(1))}K`.replace(".", ",") : String(value);
+}
 
 /**
  * Grafik chekkalari: chapda o'q ustuni 33px (Figma `yAxisLeft`), o'ngda
@@ -476,23 +492,36 @@ function RangeSlider({
  *
  * Bosh sahifada (Figma `4126:369`) geometriya aynan shu, sarlavha va seriya
  * nomlari esa boshqa ("Foydali oqim dinamikasi") - `title` / `labels` propi.
+ *
+ * Transformator sahifasida kunlar o'sha TP niki - `days` (aynan 30 ta, kWh).
+ * Bunda shkala ma'lumotga moslashadi, yorliqdagi yig'indi esa tanlangan
+ * kunlardan hisoblanadi.
  */
 export function ConsumptionDynamicsCard({
   title = "Iste’mol dinamikasi",
   labels = DEFAULT_LABELS,
+  days,
   className,
 }: {
   title?: string;
   labels?: DynamicsLabels;
+  days?: readonly DayRow[];
   className?: string;
 }) {
   const [view, setView] = useState<ViewMode>("chart");
   // Standart holat - maketdagidek birinchi 7 kun.
   const [range, setRange] = useState({ start: 1, end: MIN_DAYS });
 
+  const source = days ?? DAYS;
+
+  const yMax = useMemo(
+    () => (days ? niceMax(Math.max(...days.map((row) => row.billed))) : DEFAULT_Y_MAX),
+    [days],
+  );
+
   const visibleDays = useMemo(
-    () => DAYS.slice(range.start - 1, range.end),
-    [range.start, range.end],
+    () => source.slice(range.start - 1, range.end),
+    [source, range.start, range.end],
   );
 
   const chartData = useMemo(
@@ -527,8 +556,13 @@ export function ConsumptionDynamicsCard({
 
   const rows = useMemo(() => buildRows(visibleDays), [visibleDays]);
 
-  // Yorliqdagi yig'indi tanlangan kunlar soniga mutanosib.
+  // Maketda yorliqdagi yig'indi qat'iy va tanlangan kunlar soniga mutanosib;
+  // tashqi ma'lumotda esa ko'rinib turgan kunlarning haqiqiy yig'indisi.
   const totalScale = visibleDays.length / MIN_DAYS;
+  const totalOf = (series: (typeof SERIES)[number]) =>
+    days
+      ? energy(visibleDays.reduce((sum, row) => sum + row[series.id], 0))
+      : formatTotal(series.total * totalScale);
 
   return (
     <Card className={className}>
@@ -546,7 +580,7 @@ export function ConsumptionDynamicsCard({
                   data={chartData}
                   margin={CHART_MARGIN}
                   xScale={{ type: "point" }}
-                  yScale={Y_SCALE}
+                  yScale={yScaleFor(yMax)}
                   curve="monotoneX"
                   colors={LINE_COLORS}
                   lineWidth={2}
@@ -558,10 +592,11 @@ export function ConsumptionDynamicsCard({
                   axisLeft={{
                     tickSize: 0,
                     tickPadding: 4,
-                    tickValues: [0, 500, 2000],
+                    tickValues: [0, yMax / 4, yMax],
+                    format: formatAxisValue,
                   }}
                   // 0 chizig'ini `BaselineRule` chizadi, shuning uchun to'rda yo'q.
-                  gridYValues={[500, 2000]}
+                  gridYValues={[yMax / 4, yMax]}
                   // Tik chiziqlarni `XGridLines` chizadi (maketda ular kaltaroq).
                   enableGridX={false}
                   layers={chartLayers}
@@ -600,7 +635,7 @@ export function ConsumptionDynamicsCard({
                         {labels[series.id]}
                       </span>
                       <span className="mt-1.5 block truncate text-xs leading-4 font-semibold text-ink">
-                        {formatTotal(series.total * totalScale)}
+                        {totalOf(series)}
                       </span>
                     </div>
                   </div>

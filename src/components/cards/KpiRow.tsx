@@ -45,7 +45,9 @@ const MONTHLY_DEBT = [
   0.282, 0.282, 0.41, 0.41, 0.179, 0.41, 1, 0.744, 0.41, 0.667, 0.41, 0.282,
 ] as const;
 
-const KPIS: readonly (KpiCardProps & { id: string })[] = [
+export type KpiItem = KpiCardProps & { id: string };
+
+const KPIS: readonly KpiItem[] = [
   {
     id: "calculated",
     title: "Hisoblangan",
@@ -141,11 +143,14 @@ const KPIS: readonly (KpiCardProps & { id: string })[] = [
 /**
  * Fider sahifasining 1-qatori: 6 ta KPI kartasi.
  * Fragment qaytaradi - kartalar 18 ustunli gridning bevosita farzandlari.
+ *
+ * Transformator sahifasida geometriya aynan shu, ko'rsatkichlar esa o'sha
+ * TP niki - `kpis` orqali uzatiladi.
  */
-export function KpiRow() {
+export function KpiRow({ kpis = KPIS }: { kpis?: readonly KpiItem[] }) {
   return (
     <>
-      {KPIS.map(({ id, ...kpi }) => (
+      {kpis.map(({ id, ...kpi }) => (
         <KpiCard key={id} className="col-span-3" {...kpi} />
       ))}
     </>

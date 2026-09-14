@@ -1,6 +1,7 @@
 "use client";
 
 import { Expand, Info } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { MapCanvas, type MapMarker, type MarkerRenderer } from "@/components/map/MapCanvas";
 import { Card, CardBody, CardFooterLink, CardHeader } from "@/components/ui/Card";
@@ -86,6 +87,33 @@ const chipMarker: MarkerRenderer = (marker, selected) => {
   );
 };
 
+/** Xarita ustidagi tultip mazmuni. */
+export interface MapTooltip {
+  title: string;
+  /** Obyekt nomi (rangli nuqta yonida). */
+  label: string;
+  /** Nuqta rangi, masalan `bg-accent-red`. */
+  dot: string;
+  value: string;
+  unit: string;
+  /** Pastdagi ogohlantirish matni; berilmasa blok chizilmaydi. */
+  note?: ReactNode;
+}
+
+const DEFAULT_TOOLTIP: MapTooltip = {
+  title: "Yuqori sarfga ega transformator",
+  label: "TP A303",
+  dot: "bg-accent-red",
+  value: "51,5",
+  unit: "ming kWh",
+  note: (
+    <>
+      Ushbu transformator o&rsquo;tgan oyga nisbatan <span className="font-bold">20,1</span> ming
+      kWh ga ko&rsquo;p energiya iste&rsquo;mol qilmoqda.
+    </>
+  ),
+};
+
 /**
  * "Interaktiv ko'rinish" kartasi (Figma `4060:1285`, 487x336).
  *
@@ -99,15 +127,31 @@ const chipMarker: MarkerRenderer = (marker, selected) => {
  * Bosh sahifada (Figma `4126:753`, 816x402) tultipdagi ko'rsatkich nomi
  * boshqa ("Bu oygi Foydali oqim") va tultip pastdan 12px da turadi -
  * `monthlyLabel` / `tooltipBottom` proplari.
+ *
+ * Transformator sahifasida xarita o'sha TP ga markazlanadi (`fitDistrict`
+ * o'chiriladi) va tultip uning holatini ko'rsatadi - `markers`, `center`,
+ * `zoom`, `selectedId`, `tooltip` proplari.
  */
 export function InteractiveMapCard({
   monthlyLabel = "Bu oygi iste’mol",
   tooltipBottom = 14,
+  markers = MARKERS,
+  center = CENTER,
+  zoom = ZOOM,
+  selectedId = SELECTED_ID,
+  fitDistrict = true,
+  tooltip = DEFAULT_TOOLTIP,
   className,
 }: {
   monthlyLabel?: string;
   /** Tultipning xarita pastki chetidan masofasi, px. */
   tooltipBottom?: number;
+  markers?: MapMarker[];
+  center?: { lat: number; lng: number };
+  zoom?: number;
+  selectedId?: string;
+  fitDistrict?: boolean;
+  tooltip?: MapTooltip;
   className?: string;
 }) {
   return (
@@ -118,11 +162,11 @@ export function InteractiveMapCard({
       <CardBody>
         <div className="relative min-h-0 flex-1">
           <MapCanvas
-            markers={MARKERS}
-            center={CENTER}
-            zoom={ZOOM}
-            fitDistrict
-            selectedId={SELECTED_ID}
+            markers={markers}
+            center={center}
+            zoom={zoom}
+            fitDistrict={fitDistrict}
+            selectedId={selectedId}
             compactFallback
             renderMarker={chipMarker}
             className="h-full w-full rounded-sm"
@@ -131,29 +175,25 @@ export function InteractiveMapCard({
             style={{ bottom: tooltipBottom }}
             className="absolute right-3 w-[215px] rounded-lg bg-surface p-2.5 shadow-[0_2px_12px_rgba(0,0,0,0.12)]"
           >
-            <p className="text-xs leading-4 font-semibold text-ink">
-              Yuqori sarfga ega transformator
-            </p>
+            <p className="text-xs leading-4 font-semibold text-ink">{tooltip.title}</p>
             <div className="mt-1 flex items-center gap-2">
-              <span className="size-2 shrink-0 rounded-full bg-accent-red" />
+              <span className={cn("size-2 shrink-0 rounded-full", tooltip.dot)} />
               <span className="text-[10px] leading-[13px] font-medium text-[#999999]">
-                TP A303
+                {tooltip.label}
               </span>
             </div>
             {/* Maketda kulrang qism 10px, faqat qiymat 12px bold; qator qutisi 16px. */}
             <p className="mt-2 text-[10px] leading-4 text-[#999999]">
               {monthlyLabel}:{" "}
-              <span className="text-xs font-bold text-ink">51,5</span> ming kWh
+              <span className="text-xs font-bold text-ink">{tooltip.value}</span> {tooltip.unit}
             </p>
             {/* Ogohlantirish bloki: maketda tokeni yo'q - aniq hex (#f59e0b / #fefaf2) */}
-            <div className="mt-2 flex items-start gap-1 rounded-md bg-[#fefaf2] p-1 pb-[7px] text-[#f59e0b]">
-              <Icon icon={Info} size={12} className="shrink-0" />
-              <p className="w-[167px] text-[10px] leading-[13px]">
-                Ushbu transformator o&rsquo;tgan oyga nisbatan{" "}
-                <span className="font-bold">20,1</span> ming kWh ga ko&rsquo;p energiya
-                iste&rsquo;mol qilmoqda.
-              </p>
-            </div>
+            {tooltip.note ? (
+              <div className="mt-2 flex items-start gap-1 rounded-md bg-[#fefaf2] p-1 pb-[7px] text-[#f59e0b]">
+                <Icon icon={Info} size={12} className="shrink-0" />
+                <p className="w-[167px] text-[10px] leading-[13px]">{tooltip.note}</p>
+              </div>
+            ) : null}
           </div>
         </div>
       </CardBody>
