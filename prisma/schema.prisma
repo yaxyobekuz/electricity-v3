@@ -82,6 +82,8 @@ model Substation {
   feeders      Feeder[]
   transformers Transformer[]
   snapshots    SubstationSnapshot[]
+  violations   Violation[]
+  appeals      Appeal[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -99,6 +101,8 @@ model Feeder {
   substation   Substation       @relation(fields: [substationId], references: [id], onDelete: Cascade)
   transformers Transformer[]
   snapshots    FeederSnapshot[]
+  violations   Violation[]
+  appeals      Appeal[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -166,6 +170,9 @@ model SubstationSnapshot {
   importBatchId String?
   /// Excel'dagi qator raqami (xatolik va manba ko'rsatish uchun).
   rowNumber     Int
+  /// Excel qatorining asl ko'rinishi: sarlavha -> qiymat (shablonda yo'q ustunlar ham).
+  /// Platformada ko'rsatilmasa ham fayldagi hech bir ma'lumot yo'qolmaydi.
+  sourceRow     Json?
 
   /// "Umumiy oqim", kWh.
   totalKwh    Decimal  @db.Decimal(18, 2)
@@ -198,6 +205,9 @@ model FeederSnapshot {
   feederId      String
   importBatchId String?
   rowNumber     Int
+  /// Excel qatorining asl ko'rinishi: sarlavha -> qiymat (shablonda yo'q ustunlar ham).
+  /// Platformada ko'rsatilmasa ham fayldagi hech bir ma'lumot yo'qolmaydi.
+  sourceRow     Json?
 
   totalKwh    Decimal  @db.Decimal(18, 2)
   usefulKwh   Decimal  @db.Decimal(18, 2)
@@ -224,6 +234,9 @@ model TransformerSnapshot {
   transformerId String
   importBatchId String?
   rowNumber     Int
+  /// Excel qatorining asl ko'rinishi: sarlavha -> qiymat (shablonda yo'q ustunlar ham).
+  /// Platformada ko'rsatilmasa ham fayldagi hech bir ma'lumot yo'qolmaydi.
+  sourceRow     Json?
 
   totalKwh           Decimal   @db.Decimal(18, 2)
   usefulKwh          Decimal   @db.Decimal(18, 2)
@@ -262,42 +275,45 @@ model SubscriberSnapshot {
   transformerId String
   importBatchId String?
   rowNumber     Int
+  /// Excel qatorining asl ko'rinishi: sarlavha -> qiymat (shablonda yo'q ustunlar ham).
+  /// Platformada ko'rsatilmasa ham fayldagi hech bir ma'lumot yo'qolmaydi.
+  sourceRow     Json?
 
   /// "FISH".
-  fullName          String
+  fullName         String
   /// "Abonent turi (Yuridik/Aholi)".
-  kind              SubscriberKind
+  kind             SubscriberKind
   /// "Holati (Aloqada / Aloqaga chiqmayotgan / Sxemasi o'zgartirilgan)".
-  meterStatus       MeterStatus
+  meterStatus      MeterStatus
   /// "Biriktirilgan xodim".
-  staffId           String?
-  address           String?
-  latitude          Decimal?  @db.Decimal(9, 6)
-  longitude         Decimal?  @db.Decimal(9, 6)
+  staffId          String?
+  address          String?
+  latitude         Decimal?       @db.Decimal(9, 6)
+  longitude        Decimal?       @db.Decimal(9, 6)
   /// "Hisoblagich zavod raqami".
-  meterSerial       String?
+  meterSerial      String?
   /// "Hisoblagich turi".
-  meterType         String?
+  meterType        String?
   /// "Qarzdorlik", so'm. Bo'sh katak = 0.
-  debtUzs           Decimal   @default(0) @db.Decimal(18, 2)
+  debtUzs          Decimal        @default(0) @db.Decimal(18, 2)
   /// "Haqdorlik", so'm. Bo'sh katak = 0.
-  creditUzs         Decimal   @default(0) @db.Decimal(18, 2)
+  creditUzs        Decimal        @default(0) @db.Decimal(18, 2)
   /// "Hisoblagich ko'rsatgichi".
-  meterReading      Decimal?  @db.Decimal(18, 2)
+  meterReading     Decimal?       @db.Decimal(18, 2)
   /// "Oxirgi olingan ma'lumot".
-  lastReadingAt     DateTime?
+  lastReadingAt    DateTime?
   /// "Oxirgi to'langan to'lov" (sana).
-  lastPaymentDate   DateTime? @db.Date
+  lastPaymentDate  DateTime?      @db.Date
   /// "Oxirgi to'langan summa", so'm.
-  lastPaymentUzs    Decimal?  @db.Decimal(18, 2)
+  lastPaymentUzs   Decimal?       @db.Decimal(18, 2)
   /// "Shartnoma sanasi".
-  contractDate      DateTime? @db.Date
+  contractDate     DateTime?      @db.Date
   /// Shaxsiy ma'lumot - ro'yxat va qidiruvda ko'rsatilmaydi.
-  passport          String?
+  passport         String?
   /// Shaxsiy ma'lumot - ro'yxat va qidiruvda ko'rsatilmaydi.
-  pinfl             String?
+  pinfl            String?
   /// "Hisoblagich o'rnatilingan sana".
-  meterInstalledAt  DateTime? @db.Date
+  meterInstalledAt DateTime?      @db.Date
 
   period      Period       @relation(fields: [periodId], references: [id], onDelete: Cascade)
   subscriber  Subscriber   @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
@@ -316,11 +332,22 @@ model SubscriberSnapshot {
 model Violation {
   id            String  @id @default(cuid())
   periodId      String
-  transformerId String
-  /// Abonent nomi shu TP abonentlari orasida bir ma'noli topilsa - bog'lanadi.
+  /**
+   * Bog'lanish (malumotlar.md 4.3d): TP "TP Nomi" yoki abonent shartnoma raqami
+   * orqali topilsa - TP, fider va podstansiya; TP topilmasa, lekin ma'sul xodim
+   * shu oyda bitta podstansiyaga biriktirilgan bo'lsa - faqat podstansiya.
+   * Hech biri topilmasa - uchalasi ham null (yozuv baribir saqlanadi).
+   */
+  transformerId String?
+  feederId      String?
+  substationId  String?
+  /// Abonent shartnoma raqami yoki nomi bo'yicha bir ma'noli topilsa - bog'lanadi.
   subscriberId  String?
   importBatchId String?
   rowNumber     Int
+  /// Excel qatorining asl ko'rinishi: sarlavha -> qiymat (shablonda yo'q ustunlar ham).
+  /// Platformada ko'rsatilmasa ham fayldagi hech bir ma'lumot yo'qolmaydi.
+  sourceRow     Json?
 
   /// "Abonent" - fayldagi matn.
   subscriberName String
@@ -336,12 +363,16 @@ model Violation {
   staffId        String?
 
   period      Period       @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  transformer Transformer  @relation(fields: [transformerId], references: [id], onDelete: Cascade)
+  transformer Transformer? @relation(fields: [transformerId], references: [id], onDelete: SetNull)
+  feeder      Feeder?      @relation(fields: [feederId], references: [id], onDelete: SetNull)
+  substation  Substation?  @relation(fields: [substationId], references: [id], onDelete: SetNull)
   subscriber  Subscriber?  @relation(fields: [subscriberId], references: [id], onDelete: SetNull)
   staff       Staff?       @relation(fields: [staffId], references: [id], onDelete: SetNull)
   importBatch ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
 
   @@index([periodId, transformerId])
+  @@index([periodId, feederId])
+  @@index([periodId, substationId])
   @@index([transformerId])
   @@index([subscriberId])
   @@index([staffId])
@@ -352,10 +383,21 @@ model Violation {
 model Appeal {
   id            String  @id @default(cuid())
   periodId      String
-  transformerId String
+  /**
+   * Bog'lanish (malumotlar.md 4.3d): TP "TP Nomi" yoki abonent shartnoma raqami
+   * orqali topilsa - TP, fider va podstansiya; TP topilmasa, lekin ma'sul xodim
+   * shu oyda bitta podstansiyaga biriktirilgan bo'lsa - faqat podstansiya.
+   * Hech biri topilmasa - uchalasi ham null (yozuv baribir saqlanadi).
+   */
+  transformerId String?
+  feederId      String?
+  substationId  String?
   subscriberId  String?
   importBatchId String?
   rowNumber     Int
+  /// Excel qatorining asl ko'rinishi: sarlavha -> qiymat (shablonda yo'q ustunlar ham).
+  /// Platformada ko'rsatilmasa ham fayldagi hech bir ma'lumot yo'qolmaydi.
+  sourceRow     Json?
 
   /// "Murojaat" - murojaat matni.
   text           String
@@ -369,12 +411,16 @@ model Appeal {
   staffId        String?
 
   period      Period       @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  transformer Transformer  @relation(fields: [transformerId], references: [id], onDelete: Cascade)
+  transformer Transformer? @relation(fields: [transformerId], references: [id], onDelete: SetNull)
+  feeder      Feeder?      @relation(fields: [feederId], references: [id], onDelete: SetNull)
+  substation  Substation?  @relation(fields: [substationId], references: [id], onDelete: SetNull)
   subscriber  Subscriber?  @relation(fields: [subscriberId], references: [id], onDelete: SetNull)
   staff       Staff?       @relation(fields: [staffId], references: [id], onDelete: SetNull)
   importBatch ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
 
   @@index([periodId, transformerId])
+  @@index([periodId, feederId])
+  @@index([periodId, substationId])
   @@index([transformerId])
   @@index([subscriberId])
   @@index([staffId])
@@ -402,13 +448,13 @@ model ImportBatch {
   reportDate DateTime? @db.Date
 
   /// Ma'lumot qatorlari soni.
-  totalRows    Int @default(0)
+  totalRows   Int @default(0)
   /// Shu oyda avval bo'lmagan va endi qo'shilgan yozuvlar.
-  createdRows  Int @default(0)
+  createdRows Int @default(0)
   /// Shu oyda avval bor bo'lgan va yangilangan yozuvlar.
-  updatedRows  Int @default(0)
+  updatedRows Int @default(0)
   /// Shu oyda avval bor bo'lgan, yangi faylda yo'q - o'chirilgan yozuvlar.
-  removedRows  Int @default(0)
+  removedRows Int @default(0)
 
   /// Xatolar: [{ row, column, message }]. `status = FAILED` bo'lsa to'ldiriladi.
   errors   Json?
@@ -417,8 +463,8 @@ model ImportBatch {
 
   uploadedById String?
 
-  period       Period? @relation(fields: [periodId], references: [id], onDelete: SetNull)
-  uploadedBy   User?   @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  period     Period? @relation(fields: [periodId], references: [id], onDelete: SetNull)
+  uploadedBy User?   @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
 
   substationSnapshots  SubstationSnapshot[]
   feederSnapshots      FeederSnapshot[]
