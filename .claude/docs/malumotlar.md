@@ -19,7 +19,11 @@ Shablon ustunlari: [`shablonlar.md`](./shablonlar.md). Sxema:
    jadvali. Sahifa foizni o'zi hisoblamaydi: `src/lib/domain/metrics.ts` va
    `src/lib/queries/*` dagi funksiyalarni chaqiradi.
 3. **Qat'iy import.** Faylda bitta xato bo'lsa ham **butun yuklash rad
-   etiladi**, bazaga hech narsa yozilmaydi (foydalanuvchi qarori).
+   etiladi**, bazaga hech narsa yozilmaydi (foydalanuvchi qarori). Xato -
+   faylni o'qib bo'lmaydigan holat (4.4). Fayllar orasidagi nomuvofiqlik
+   (ota obyekt ro'yxatda yo'q, TP sonlari farqi, TP aniqlanmadi) -
+   **ogohlantirish**: haqiqiy ma'lumot baribir to'liq yuklanadi
+   (foydalanuvchi talabi, 2026-09-15).
 4. **Tanlangan oy.** Barcha sahifalar bitta tanlangan hisobot oyini
    ko'rsatadi (6-bo'lim).
 
@@ -89,9 +93,11 @@ Shablon `T` oy `M` uchun yuklansa, `M` oyning `T` yozuvlari **to'liq**
 almashtiriladi: yangi faylda yo'q obyektning `M` oydagi holati o'chiriladi
 (`removedRows`). Obyektning o'zi (`Substation` va h.k.) qoladi.
 
-Almashtirish bog'liq ma'lumotni "osilib" qoldirmasligi shart (xato):
+Almashtirish bog'liq ma'lumotni "osilib" qoldirsa - **ogohlantirish**:
+obyekt va unga bog'langan yozuvlar qoladi, faqat shu oyda uning holati
+(oqim ko'rsatkichlari) bo'lmaydi.
 
-| Yuklanayotgan (birinchi marta yoki qayta) | Yangi faylda bo'lishi shart |
+| Yuklanayotgan (birinchi marta yoki qayta) | Yangi faylda bo'lishi kutiladi |
 |---|---|
 | Podstansiyalar | shu oyda fideri, TP si yoki abonenti bor har bir podstansiya |
 | Fiderlar | shu oyda TP si yoki abonenti bor har bir fider |
@@ -103,16 +109,60 @@ Shablonlarni oy ichida istalgan tartibda, bo'lib-bo'lib yuklash mumkin
 (foydalanuvchi qarori, 2026-09-14: avval Fiderlar va Abonentlar, qolganlari
 keyin). Qoida har bir daraja uchun alohida:
 
-- ota shablon (Podstansiyalar / Fiderlar / Transformatorlar) shu oyga
-  **yuklangan** bo'lsa - fayldagi nom uning ro'yxatida bo'lishi shart (xato);
-- **yuklanmagan** bo'lsa - obyekt fayldagi nom bo'yicha yaratiladi
-  (holatsiz: oqim, quvvat va boshqa ko'rsatkichlarisiz). Masalan, Abonentlar
-  fayli podstansiya, fider va TP obyektlarini yaratadi;
-- ota shablon keyinroq yuklanganda 4.3 jadvali qo'llanadi - shu oyda
-  ishlatilgan obyektlar faylda bo'lishi shart;
-- qoidabuzarlik/murojaat "TP Nomi" si: Transformatorlar yuklangan bo'lsa -
-  uning ro'yxatidan, aks holda shu oy abonentlari bog'langan TP lardan;
-  ikkalasi ham yo'q bo'lsa - xato.
+- obyekt ota shablon ro'yxatida bo'lmasa, u fayldagi nom bo'yicha
+  yaratiladi (holatsiz: oqim, quvvat va boshqa ko'rsatkichlarisiz). Masalan,
+  Abonentlar fayli podstansiya, fider va TP obyektlarini yaratadi;
+- ota shablon shu oyga **yuklangan** va shu ota obyektning bolalarini o'z
+  ichiga olgan bo'lsa (masalan Transformatorlar faylida shu fiderning TP lari
+  bor), lekin nom unda yo'q - **ogohlantirish** ("obyekt nomidan
+  yaratiladi"). Ota shablon boshqa podstansiya/fiderlarni qamrasa - tekshiruv
+  yo'q (qismli yuklash, 5.1);
+- ota shablon keyinroq yuklanganda ham shu qoida: shu oyda ishlatilgan, lekin
+  faylda yo'q obyekt - ogohlantirish, uning holati bo'lmaydi;
+- qoidabuzarlik va murojaatlar - 4.3d.
+
+### 4.3b. Birlashgan fider ("Jo'jaxona/Qiyali")
+
+Abonentlar yoki TP faylida TP ikki fiderdan ta'minlansa, fider `A/B`
+ko'rinishida yoziladi. Fiderlar shu oyga yuklangan bo'lsa, qismlaridan
+**kamida bittasi** ro'yxatda bo'lishi shart (hech biri bo'lmasa - xato);
+ro'yxatda yo'q qismlar ogohlantirishda aytiladi. `A/B` alohida fider obyekti
+bo'lib yaratiladi (holatsiz) - uning TP va abonentlari `A` yoki `B` fider
+sahifasida emas, podstansiya sahifasida ko'rinadi.
+
+### 4.3c. Qatorning asl nusxasi (`sourceRow`)
+
+Har bir Excel qatorining barcha to'ldirilgan kataklari (shablonda yo'q
+ustunlar ham) `sourceRow` JSON ustuniga sarlavha bo'yicha yoziladi:
+fayldagi hech bir ma'lumot yo'qolmaydi (foydalanuvchi talabi, 2026-09-14),
+platformada ko'rsatilmasa ham. Shablonda yo'q ustun - ogohlantirish, xato
+emas. Tozalangan/tuzatilgan qiymatlarning asli `"<Ustun> (manba)"`
+ustunlarida keladi.
+
+### 4.3d. Qoidabuzarlik va murojaatni bog'lash
+
+`Violation` / `Appeal` da `transformerId`, `feederId`, `substationId`,
+`subscriberId` - hammasi ixtiyoriy. Bog'lash qoidasi bitta
+(`src/lib/import/event-links.ts`), tekshirish va saqlash uni birga ishlatadi:
+
+1. "Abonent" shartnoma raqami bo'lsa (shu oy abonentlari, aks holda har
+   qanday oydagi eng so'nggi holati) - abonent va uning TP si.
+2. "TP Nomi" - shu oy TP lari orasida, shu oyda yo'q bo'lsa bazadagi barcha
+   TP lar orasida bitta bo'lsa. "Ma'sul xodim" shu oyda podstansiya ma'sul
+   xodimi bo'lsa, nomzodlar faqat uning podstansiya(lar)idan (bir xil raqamli
+   TP boshqa podstansiyalarda ham bor). Bir nechta nomzoddan abonentning TP si
+   olinadi. "TP Nomi" abonentning TP sidan boshqa TP ni aniq ko'rsatsa -
+   "TP Nomi" olinadi (ogohlantirish).
+3. TP topilmasa - "Ma'sul xodim" aynan bitta podstansiyaning xodimi bo'lsa,
+   faqat shu podstansiya.
+4. Hech biri - yozuv bog'lanmaydi, lekin saqlanadi va tuman sonlariga kiradi.
+
+"TP Nomi" ustuni ixtiyoriy. TP bilan birga uning fideri va podstansiyasi
+ham yoziladi - qamrov filtrlari shu ustunlardan (`eventScopeWhere`).
+Abonentlar, Transformatorlar yoki Podstansiyalar yuklansa, **barcha oylardagi**
+qoidabuzarlik va murojaatlar qayta bog'lanadi (bog'lash boshqa oylar
+abonentlari va TP laridan ham foydalanadi) - shablonlarni istalgan tartibda
+yuklash mumkin.
 
 ### 4.4. Xatolar (yuklashni rad etadi)
 
@@ -130,34 +180,40 @@ Qator darajasida (`{ row, column, message }`, `row` - Excel qator raqami):
 - formula natijasiz;
 - Lat/Long faqat bittasi berilgan yoki diapazondan tashqarida;
 - fayl ichida takroriy kalit (podstansiya nomi; podstansiya+fider;
-  podstansiya+fider+TP; shartnoma raqami);
-- ota obyekt shu oyga **yuklangan** ota ro'yxatida yo'q (fider -> podstansiya,
-  TP -> fider, abonent -> TP, qoidabuzarlik/murojaat -> TP; 4.3a);
-- "TP Nomi" shu oyda bir nechta fiderda uchraydi (noaniq);
-- **abonentlar soni mosligi** (4.5).
+  podstansiya+fider+TP; shartnoma raqami).
 
-### 4.5. TP abonent sonlari = abonentlar ro'yxati
+Fayllar orasidagi bog'liqlik (ota obyekt, TP sonlari, TP aniqlanishi) xato
+emas - 4.6.
 
-Shu oy uchun `SUBSCRIBERS` yuklangan bo'lsa, har bir TP uchun:
+### 4.5. TP abonent sonlari va abonentlar ro'yxati
+
+Shu oy uchun `SUBSCRIBERS` va `TRANSFORMERS` ikkalasi bo'lsa, har bir TP
+uchun solishtiriladi:
 
 ```
 onlineSubscribers  == count(abonent, meterStatus = ONLINE)
 offlineSubscribers == count(abonent, meterStatus != ONLINE)
 ```
 
-Tekshiriladi: `SUBSCRIBERS` yuklanganda (shu oyning TP holatlariga nisbatan)
-va `TRANSFORMERS` qayta yuklanganda (shu oyda abonent yozuvlari bo'lsa).
-Mos kelmasa - xato, xabarda kutilgan va haqiqiy son. Shu qoida tufayli
-abonent sonlari TP jadvalidan ham, abonentlar ro'yxatidan ham bir xil chiqadi.
+Real fayllar turli tizimlardan keladi va sonlar deyarli hech qachon mos
+kelmaydi (Baliqchi, 2026-09: 368 TP dan 331 tasida farq). Shuning uchun mos
+kelmasa - bitta umumlashgan **ogohlantirish** (farqli TP lar soni va
+misollar). Platformada abonent soni ro'yxatdan olinadi (5-bo'lim); TP
+faylidagi sonlar faqat ro'yxat qamramagan podstansiyada ishlatiladi.
 
 ### 4.6. Ogohlantirishlar (rad etmaydi)
 
 - sarlavhadagi oy varaq oyiga mos emas;
 - `Umumiy oqim - Foydali oqim` bilan `Yo'qotish` farqi 1 kWh va 0,5% dan
   katta;
-- "TP Nomi" tumanda bir nechta fiderda uchraydi (Transformatorlar
-  yuklanganda - keyinchalik qoidabuzarlik/murojaatni bog'lab bo'lmaydi);
-- qoidabuzarlik/murojaatdagi abonent nomi shu TP da bir nechta abonentga mos.
+- shablonda yo'q ustun (4.3c);
+- ota ro'yxatida yo'q obyekt nomidan yaratildi; birlashgan fider (4.3a, 4.3b);
+- qayta yuklangan faylda yo'q, lekin shu oyda bolalari bor obyekt (4.3);
+- TP abonent sonlari ro'yxatdan farq qiladi (4.5);
+- "TP Nomi" tumanda bir nechta fiderda uchraydi;
+- qoidabuzarlik/murojaat: "TP Nomi" noaniq yoki abonentning TP sidan farq
+  qiladi, TP aniqlanmagan yozuvlar soni (4.3d); abonent nomi shu TP da bir
+  nechta abonentga mos.
 
 ## 5. Ko'rsatkichlar manbasi (yagona)
 
@@ -170,12 +226,12 @@ fider yoki TP (`Scope`).
 | ... - podstansiya / fider / TP | shu obyektning **o'z** holati | - |
 | Yo'qotish ulushi | `lossPercent(Σ totalKwh, Σ lossKwh)` | foizlar o'rtachasi **olinmaydi** |
 | Podstansiyalar soni | count `SubstationSnapshot` | - |
-| Fiderlar soni | count `FeederSnapshot` | `feeder.substationId` |
-| TP soni | count `TransformerSnapshot` | `transformer.substationId / feederId` |
-| Abonentlar: jami / aloqada / aloqadan chiqqan | Transformatorlar yuklangan oy: Σ `TransformerSnapshot.onlineSubscribers / offlineSubscribers`; yuklanmagan oy: `SubscriberSnapshot` (aloqada = "Aloqada") | TP orqali |
+| Fiderlar soni | count `FeederSnapshot`; podstansiya Fiderlar bilan qamralmagan - null (5.1) | `feeder.substationId` |
+| TP soni | count `TransformerSnapshot`; podstansiya Transformatorlar bilan qamralmagan - null (5.1) | `transformer.substationId / feederId` |
+| Abonentlar: jami / aloqada / aloqadan chiqqan | podstansiya bo'yicha (`subscriberSource`): abonentlar ro'yxati bilan qamralgan - `SubscriberSnapshot` (aloqada = "Aloqada"); aks holda Transformatorlar bilan qamralgan - Σ `TransformerSnapshot.onlineSubscribers / offlineSubscribers`; tuman - podstansiyalar yig'indisi | TP orqali |
 | Abonentlar: turi, 3 holat, qarzdorlik, haqdorlik, qarzdorlar soni (`debtUzs > 0`) | `SubscriberSnapshot` | `transformer.*` |
-| Qoidabuzarliklar: soni, turi, zarar so'm, zarar kWh | `Violation` | `transformer.*` |
-| Murojaatlar: soni, holati | `Appeal` | `transformer.*` |
+| Qoidabuzarliklar: soni, turi, zarar so'm, zarar kWh | `Violation` | yozuvning o'z `substationId / feederId / transformerId` (4.3d) |
+| Murojaatlar: soni, holati | `Appeal` | yozuvning o'z `substationId / feederId / transformerId` (4.3d) |
 | Ma'sul xodim (obyekt kartasi) | shu holatning `staffId` | - |
 | Xodimlar ro'yxati | shu oy holatlari/yozuvlarida uchragan `staffId` lar | - |
 | Ta'mir ishlari | `TransformerSnapshot.currentRepairDate` ("Joriy ta’mir"), `overhaulDate` ("To’la ta’mir") | sana ≤ `Period.reportDate` -> "Bajarilgan", aks holda "Rejalashtirilgan" |
@@ -185,14 +241,34 @@ Muhim:
 - Podstansiya oqimi uning fiderlari yig'indisiga teng bo'lishi **shart
   emas** (liniya yo'qotishlari) - har bir obyekt o'z qiymatini ko'rsatadi,
   yig'indi bilan almashtirilmaydi.
-- Abonent sonlari uchun TP ustunlari ishlatiladi (4.5 qoida ular
-  ro'yxat bilan tengligini kafolatlaydi); Transformatorlar shu oyga
-  yuklanmagan bo'lsa - abonentlar ro'yxati. Abonentlar fayli yuklanmagan
-  bo'lsa, faqat ro'yxatga bog'liq bo'laklar (tur, qarzdorlik) "Abonentlar
-  ro’yxati yuklanmagan" holatida bo'ladi.
+- Abonent sonlari uchun ro'yxat ustun: u abonentlar reestri bilan bir xil
+  son beradi. TP faylidagi sonlar ro'yxatdan farq qiladi (4.5), shuning
+  uchun ular faqat ro'yxat qamramagan podstansiyada ishlatiladi. Ro'yxat
+  qamramagan qamrovda ro'yxatga bog'liq bo'laklar (tur, qarzdorlik)
+  "Abonentlar ro’yxati yuklanmagan" holatida bo'ladi.
 - `lossPercent` `totalKwh <= 0` bo'lsa `null` -> UI da "—".
 - Pul/energiya `Decimal` -> so'rov qatlamida `toNumber()`; mijozga faqat
   `number | string | null` boradi.
+
+### 5.1. Qismli yuklash (qamrov)
+
+Shablon oyga yuklangan bo'lsa ham, u ayrim podstansiyalarnigina qamrashi
+mumkin: real ma'lumot podstansiya guruhlari bo'yicha keladi (2026-09:
+Fiderlar - Chinobod va Qo'shtepasaroy, Transformatorlar - Baliqchi va
+O'rmonbek). Podstansiya shablon `T` bilan **qamralgan** - shu oyda `T` ning
+shu podstansiyaga tegishli kamida bitta qatori bor (`coverageMany`,
+`src/lib/queries/scope.ts`). Tekshiriladigan shablonlar: Podstansiyalar,
+Fiderlar, Transformatorlar, Abonentlar.
+
+- Tuman qamrovida "yuklangan" - oy darajasida (`ImportBatch`).
+- Podstansiya / fider / TP qamrovida `ScopeSummary.uploads` =
+  `coveredUploads`: shablon oyga yuklangan **va** qamrov podstansiyasini
+  qamragan. Qamralmagan bo'lsa sahifa "0 ta" emas, "yuklanmagan" / "—"
+  ko'rsatadi. Ro'yxat qatorlaridagi sonlar ham shu qoida bilan
+  (`listSubstations`, `listFeeders`).
+- Qoidabuzarlik va murojaatlar oy darajasida qoladi: podstansiyada ularning
+  yo'qligi haqiqiy "0".
+- Σ podstansiya qatorlari (null lardan tashqari) = tuman soni.
 
 ## 6. Tanlangan oy (UI)
 

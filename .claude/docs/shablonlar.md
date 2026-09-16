@@ -104,7 +104,7 @@ Birliklar: **oqim va yo'qotish - kWh**, **pul - so'm**, quvvat - kVA.
 
 | Sarlavha | Maydon | Majburiy | Tur |
 |---|---|---|---|
-| TP Nomi | -> `transformerId` | ha | shu oyda **bir ma'noli** topilishi shart |
+| TP Nomi | -> `transformerId` (+ fider, podstansiya) | - | matn; topilmasa yozuv baribir saqlanadi (`malumotlar.md` 4.3d) |
 | Abonent | `subscriberName` (+ `subscriberId`) | ha | matn |
 | Turi (Yuridik/Jismoniy/Aybisiz) | `violatorType` | ha | 3 qiymatdan biri |
 | Sana | `date` | ha | sana |
@@ -117,7 +117,7 @@ Birliklar: **oqim va yo'qotish - kWh**, **pul - so'm**, quvvat - kVA.
 
 | Sarlavha | Maydon | Majburiy | Tur |
 |---|---|---|---|
-| TP Nomi | -> `transformerId` | ha | shu oyda bir ma'noli |
+| TP Nomi | -> `transformerId` (+ fider, podstansiya) | - | matn; topilmasa yozuv baribir saqlanadi (`malumotlar.md` 4.3d) |
 | Murojaat | `text` | ha | matn |
 | Abonent | `subscriberName` (+ `subscriberId`) | ha | matn |
 | Sana | `date` | ha | sana |
