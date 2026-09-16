@@ -10,6 +10,7 @@ import { cn } from "@/lib/ui/cn";
 
 import { escapeHtml, MapCanvas, type MapMarker, type MarkerRenderer, pinMarker } from "./MapCanvas";
 import { MapInfoPanel } from "./MapInfoPanel";
+import { type MarkerObjectKind, markerObjectKind, objectChip } from "./marker-glyphs";
 import { MapSidebar } from "./MapSidebar";
 import type { MapPin, MapViewProps } from "./types";
 
@@ -26,20 +27,42 @@ const PIN_COLOR: Record<Exclude<MapPin["kind"], "current">, string> = {
   subscriber: "var(--color-accent-green)",
 };
 
-/** Bola markeri: rangli nuqta, kerak bo'lsa ustida qora yorliq. */
-function dotMarker(marker: MapMarker, labelled: boolean): string {
-  const color = PIN_COLOR[marker.kind as keyof typeof PIN_COLOR] ?? "var(--color-brand)";
-  const label = escapeHtml(marker.label);
-  const dot =
-    `<div title="${label}" style="width:14px;height:14px;border-radius:9999px;background:${color};` +
-    'border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);"></div>';
-  if (!labelled) return `<div style="transform:translateY(50%);">${dot}</div>`;
+/** Qora yorliq (obyekt nomi). */
+function labelHtml(label: string): string {
   return (
-    '<div style="display:flex;flex-direction:column;align-items:center;transform:translateY(7px);">' +
     '<div style="background:rgba(15,15,20,.88);color:#fff;padding:4px 8px;border-radius:6px;' +
     "font-family:var(--font-geist-sans),system-ui,sans-serif;font-size:11px;font-weight:500;" +
-    `line-height:13px;white-space:nowrap;margin-bottom:4px;">${label}</div>` +
-    dot +
+    `line-height:13px;white-space:nowrap;margin-bottom:4px;">${label}</div>`
+  );
+}
+
+/**
+ * Bola markeri: oq kvadrat ichida obyekt ikonkasi (chap panel bilan bir xil),
+ * kerak bo'lsa ustida qora yorliq. Kvadrat markazi koordinataga to'g'ri keladi.
+ */
+function objectMarker(marker: MapMarker, labelled: boolean): string {
+  const kind = markerObjectKind(marker.kind);
+  const color = PIN_COLOR[marker.kind as keyof typeof PIN_COLOR] ?? "var(--color-brand)";
+  const label = escapeHtml(marker.label);
+  const chip = kind
+    ? `<div title="${label}">${objectChip(kind, { size: 26, radius: 7, glyph: 18, color })}</div>`
+    : "";
+  if (!labelled) return `<div style="transform:translateY(50%);">${chip}</div>`;
+  return (
+    '<div style="display:flex;flex-direction:column;align-items:center;transform:translateY(13px);">' +
+    labelHtml(label) +
+    chip +
+    "</div>"
+  );
+}
+
+/** Tugunning o'z markeri: yorliq va kattaroq qizil ikonka; tumanda - igna. */
+function currentMarker(marker: MapMarker, selected: boolean, kind: MarkerObjectKind | null): string {
+  if (!kind) return pinMarker(marker, selected);
+  return (
+    '<div style="display:flex;flex-direction:column;align-items:center;transform:translateY(20px);">' +
+    labelHtml(escapeHtml(marker.label)) +
+    objectChip(kind, { size: 40, radius: 8, glyph: 24, color: "#ff383c" }) +
     "</div>"
   );
 }
@@ -65,8 +88,9 @@ export function MapScreen({ view, periodSelect }: { view: MapViewProps; periodSe
   }));
   const hrefs = new Map(view.pins.map((pin) => [pin.id, pin.href]));
 
+  const currentKind = markerObjectKind(view.current.icon);
   const renderMarker: MarkerRenderer = (marker, selected) =>
-    marker.kind === "current" ? pinMarker(marker, selected) : dotMarker(marker, labelled);
+    marker.kind === "current" ? currentMarker(marker, selected, currentKind) : objectMarker(marker, labelled);
 
   function handleSelect(id: string) {
     const href = hrefs.get(id);

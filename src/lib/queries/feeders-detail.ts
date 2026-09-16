@@ -8,6 +8,8 @@ import { listTransformers, type TransformerRow } from "./lists";
 import { listRepairs, type RepairList } from "./repairs";
 import {
   amount,
+  coverageMany,
+  coveredUploads,
   getScopeComparison,
   getScopeSeries,
   transformerScopeWhere,
@@ -33,7 +35,7 @@ export interface FeederDashboard {
   /**
    * `series` bilan bir xil tartibda: shu fiderdagi TP holatlari soni
    * (`ScopeSummary.counts.transformers` bilan bir xil ta'rif). Transformatorlar
-   * shu oyga yuklanmagan bo'lsa - null.
+   * fider podstansiyasini shu oyda qamramagan bo'lsa - null.
    */
   transformerCounts: (number | null)[];
   /** Fiderning shu oydagi TP lari (fayl tartibida). */
@@ -55,7 +57,7 @@ export interface FeederDashboard {
  * olmaydi); qolgan barcha so'rovlar `db` orqali.
  */
 export async function getFeederDashboard(
-  feeder: Pick<FeederDetail, "id">,
+  feeder: Pick<FeederDetail, "id" | "substation">,
   period: PeriodInfo,
   db: Db = prisma,
 ): Promise<FeederDashboard> {
@@ -63,10 +65,11 @@ export async function getFeederDashboard(
   const periods = await getPeriodsUntil(period, 12);
   const periodIds = periods.map((item) => item.id);
 
-  const [comparison, series, uploads, countGroups, transformers, repairs] = await Promise.all([
+  const [comparison, series, uploads, coverages, countGroups, transformers, repairs] = await Promise.all([
     getScopeComparison(scope, period, db),
     getScopeSeries(scope, periods, db),
     uploadsMany(periodIds, db),
+    coverageMany(periodIds, db),
     // `getScopeSummary` dagi TP soni bilan bir xil filtr - faqat davrlar bo'yicha guruhlangan.
     db.transformerSnapshot.groupBy({
       by: ["periodId"],
@@ -78,7 +81,7 @@ export async function getFeederDashboard(
   ]);
 
   const transformerCounts = periods.map((item) =>
-    uploads.get(item.id)?.TRANSFORMERS
+    coveredUploads(uploads.get(item.id)!, coverages.get(item.id)!, feeder.substation.id).TRANSFORMERS
       ? (countGroups.find((group) => group.periodId === item.id)?._count._all ?? 0)
       : null,
   );

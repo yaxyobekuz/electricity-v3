@@ -19,13 +19,18 @@ import { contractKey, nameKey } from "@/lib/domain/normalize";
 
 import {
   amount,
+  coveredUploads,
   iso,
+  periodCoverage,
   periodUploads,
+  scopeSubstationId,
+  subscriberSource,
   transformerScopeSql,
-  transformerScopeWhere,
+  eventScopeWhere,
   zeroRecord,
   type Db,
   type EntityRef,
+  type PeriodCoverage,
   type Scope,
 } from "./scope";
 import { join, queryRows, raw, sql, type SqlFragment } from "./sql";
@@ -108,25 +113,48 @@ async function subscriberListAggregates(
   return new Map(rows.map((row) => [row.id, { total: row.total, online: row.online, offline: row.total - row.online }]));
 }
 
+/** TP bo'yicha shu oy abonentlar ro'yxatidan sonlar. */
+async function subscriberTpAggregates(periodId: string, db: Db): Promise<Map<string, SubscriberCounts>> {
+  const groups = await db.subscriberSnapshot.groupBy({
+    by: ["transformerId", "meterStatus"],
+    where: { periodId },
+    _count: { _all: true },
+  });
+  const result = new Map<string, SubscriberCounts>();
+  for (const group of groups) {
+    const entry = result.get(group.transformerId) ?? { total: 0, online: 0, offline: 0 };
+    entry.total += group._count._all;
+    if (group.meterStatus === "ONLINE") entry.online += group._count._all;
+    else entry.offline += group._count._all;
+    result.set(group.transformerId, entry);
+  }
+  return result;
+}
+
 /**
- * Abonent sonlari - `ScopeSummary.subscribers` qoidasi: Transformatorlar
- * yuklangan bo'lsa Σ TP holatlari, aks holda (Abonentlar yuklangan bo'lsa)
- * abonentlar ro'yxati, ikkalasi ham yo'q - null (0 emas).
+ * Abonent sonlari - `ScopeSummary.subscribers` qoidasi, manba obyekt
+ * podstansiyasi bo'yicha (`subscriberSource`): abonentlar ro'yxati, aks holda
+ * Σ TP holatlari, ikkalasi ham yo'q - null (0 emas).
  */
 function subscriberCounts(
   id: string,
+  substationId: string,
   tpAggregates: Map<string, ChildAggregate>,
-  listAggregates: Map<string, SubscriberCounts> | null,
-  uploads: { TRANSFORMERS: boolean; SUBSCRIBERS: boolean },
+  listAggregates: Map<string, SubscriberCounts>,
+  coverage: PeriodCoverage,
 ): SubscriberCounts | null {
-  if (uploads.TRANSFORMERS) {
-    const aggregate = tpAggregates.get(id);
-    const online = aggregate?.online ?? 0;
-    const offline = aggregate?.offline ?? 0;
-    return { total: online + offline, online, offline };
+  switch (subscriberSource(coverage, substationId)) {
+    case "list":
+      return listAggregates.get(id) ?? { total: 0, online: 0, offline: 0 };
+    case "transformers": {
+      const aggregate = tpAggregates.get(id);
+      const online = aggregate?.online ?? 0;
+      const offline = aggregate?.offline ?? 0;
+      return { total: online + offline, online, offline };
+    }
+    default:
+      return null;
   }
-  if (uploads.SUBSCRIBERS && listAggregates) return listAggregates.get(id) ?? { total: 0, online: 0, offline: 0 };
-  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -145,16 +173,16 @@ export interface SubstationRow {
   lng: number | null;
   capacityKva: number | null;
   staff: EntityRef | null;
-  /** Shu oyda holati bor fiderlar; Fiderlar shu oyga yuklanmagan bo'lsa - null. */
+  /** Shu oyda holati bor fiderlar; Fiderlar fayli bu podstansiyani qamramagan bo'lsa - null. */
   feederCount: number | null;
-  /** Shu oyda holati bor TP lar; Transformatorlar yuklanmagan bo'lsa - null. */
+  /** Shu oyda holati bor TP lar; Transformatorlar fayli bu podstansiyani qamramagan bo'lsa - null. */
   transformerCount: number | null;
-  /** Abonentlar: Σ TP holatlari yoki (Transformatorlar yuklanmagan bo'lsa) abonentlar ro'yxati; ikkalasi ham yo'q - null. */
+  /** Abonentlar: abonentlar ro'yxati yoki Σ TP holatlari (`subscriberCounts`); manba yo'q - null. */
   subscribers: SubscriberCounts | null;
 }
 
 export async function listSubstations(periodId: string, db: Db = prisma): Promise<SubstationRow[]> {
-  const [snapshots, feederCounts, transformers, uploads] = await Promise.all([
+  const [snapshots, feederCounts, transformers, coverage] = await Promise.all([
     db.substationSnapshot.findMany({
       where: { periodId },
       orderBy: { rowNumber: "asc" },
@@ -167,9 +195,12 @@ export async function listSubstations(periodId: string, db: Db = prisma): Promis
       WHERE fs."periodId" = ${periodId}
       GROUP BY 1`,
     transformerAggregates(periodId, "substationId", db),
-    periodUploads(periodId, db),
+    periodCoverage(periodId, db),
   ]);
-  const listAggregates = uploads.TRANSFORMERS ? null : await subscriberListAggregates(periodId, "substationId", db);
+  const listAggregates =
+    coverage.SUBSCRIBERS.size > 0
+      ? await subscriberListAggregates(periodId, "substationId", db)
+      : new Map<string, SubscriberCounts>();
   const feeders = new Map(feederCounts.map((row) => [row.id, row.feeders]));
   return snapshots.map((snap) => ({
     id: snap.substationId,
@@ -180,9 +211,11 @@ export async function listSubstations(periodId: string, db: Db = prisma): Promis
     lng: toNumber(snap.longitude),
     capacityKva: toNumber(snap.capacityKva),
     staff: snap.staff,
-    feederCount: uploads.FEEDERS ? (feeders.get(snap.substationId) ?? 0) : null,
-    transformerCount: uploads.TRANSFORMERS ? (transformers.get(snap.substationId)?.transformers ?? 0) : null,
-    subscribers: subscriberCounts(snap.substationId, transformers, listAggregates, uploads),
+    feederCount: coverage.FEEDERS.has(snap.substationId) ? (feeders.get(snap.substationId) ?? 0) : null,
+    transformerCount: coverage.TRANSFORMERS.has(snap.substationId)
+      ? (transformers.get(snap.substationId)?.transformers ?? 0)
+      : null,
+    subscribers: subscriberCounts(snap.substationId, snap.substationId, transformers, listAggregates, coverage),
   }));
 }
 
@@ -201,9 +234,9 @@ export interface FeederRow {
   address: string | null;
   capacityKva: number | null;
   staff: EntityRef | null;
-  /** Shu oyda holati bor TP lar; Transformatorlar yuklanmagan bo'lsa - null. */
+  /** Shu oyda holati bor TP lar; Transformatorlar fayli fider podstansiyasini qamramagan bo'lsa - null. */
   transformerCount: number | null;
-  /** Abonentlar: Σ TP holatlari yoki (Transformatorlar yuklanmagan bo'lsa) abonentlar ro'yxati; ikkalasi ham yo'q - null. */
+  /** Abonentlar: abonentlar ro'yxati yoki Σ TP holatlari (`subscriberCounts`); manba yo'q - null. */
   subscribers: SubscriberCounts | null;
 }
 
@@ -212,7 +245,7 @@ export async function listFeeders(
   filters: { substationId?: string } = {},
   db: Db = prisma,
 ): Promise<FeederRow[]> {
-  const [snapshots, transformers, uploads] = await Promise.all([
+  const [snapshots, transformers, coverage] = await Promise.all([
     db.feederSnapshot.findMany({
       where: { periodId, ...(filters.substationId ? { feeder: { substationId: filters.substationId } } : {}) },
       orderBy: { rowNumber: "asc" },
@@ -222,20 +255,28 @@ export async function listFeeders(
       },
     }),
     transformerAggregates(periodId, "feederId", db),
-    periodUploads(periodId, db),
+    periodCoverage(periodId, db),
   ]);
-  const listAggregates = uploads.TRANSFORMERS ? null : await subscriberListAggregates(periodId, "feederId", db);
-  return snapshots.map((snap) => ({
-    id: snap.feederId,
-    name: snap.feeder.name,
-    substation: snap.feeder.substation,
-    ...energyFields(snap),
-    address: snap.address,
-    capacityKva: toNumber(snap.capacityKva),
-    staff: snap.staff,
-    transformerCount: uploads.TRANSFORMERS ? (transformers.get(snap.feederId)?.transformers ?? 0) : null,
-    subscribers: subscriberCounts(snap.feederId, transformers, listAggregates, uploads),
-  }));
+  const listAggregates =
+    coverage.SUBSCRIBERS.size > 0
+      ? await subscriberListAggregates(periodId, "feederId", db)
+      : new Map<string, SubscriberCounts>();
+  return snapshots.map((snap) => {
+    const substationId = snap.feeder.substation.id;
+    return {
+      id: snap.feederId,
+      name: snap.feeder.name,
+      substation: snap.feeder.substation,
+      ...energyFields(snap),
+      address: snap.address,
+      capacityKva: toNumber(snap.capacityKva),
+      staff: snap.staff,
+      transformerCount: coverage.TRANSFORMERS.has(substationId)
+        ? (transformers.get(snap.feederId)?.transformers ?? 0)
+        : null,
+      subscribers: subscriberCounts(snap.feederId, substationId, transformers, listAggregates, coverage),
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -271,6 +312,11 @@ export async function listTransformers(
   filters: { substationId?: string; feederId?: string } = {},
   db: Db = prisma,
 ): Promise<TransformerRow[]> {
+  const eventsScoped = {
+    periodId,
+    ...(filters.substationId ? { substationId: filters.substationId } : {}),
+    ...(filters.feederId ? { feederId: filters.feederId } : {}),
+  };
   const scoped = {
     periodId,
     ...(filters.substationId || filters.feederId
@@ -282,7 +328,7 @@ export async function listTransformers(
         }
       : {}),
   };
-  const [snapshots, violations, appeals, uploads] = await Promise.all([
+  const [snapshots, violations, appeals, uploads, coverage] = await Promise.all([
     db.transformerSnapshot.findMany({
       where: scoped,
       orderBy: { rowNumber: "asc" },
@@ -297,30 +343,38 @@ export async function listTransformers(
         staff: STAFF_SELECT,
       },
     }),
-    db.violation.groupBy({ by: ["transformerId"], where: scoped, _count: { _all: true } }),
-    db.appeal.groupBy({ by: ["transformerId"], where: scoped, _count: { _all: true } }),
+    db.violation.groupBy({ by: ["transformerId"], where: eventsScoped, _count: { _all: true } }),
+    db.appeal.groupBy({ by: ["transformerId"], where: eventsScoped, _count: { _all: true } }),
     periodUploads(periodId, db),
+    periodCoverage(periodId, db),
   ]);
   const violationCounts = new Map(violations.map((group) => [group.transformerId, group._count._all]));
   const appealCounts = new Map(appeals.map((group) => [group.transformerId, group._count._all]));
-  return snapshots.map((snap) => ({
-    id: snap.transformerId,
-    name: snap.transformer.name,
-    substation: snap.transformer.substation,
-    feeder: snap.transformer.feeder,
-    ...energyFields(snap),
-    onlineSubscribers: snap.onlineSubscribers,
-    offlineSubscribers: snap.offlineSubscribers,
-    address: snap.address,
-    lat: toNumber(snap.latitude),
-    lng: toNumber(snap.longitude),
-    capacityKva: toNumber(snap.capacityKva),
-    currentRepairDate: iso(snap.currentRepairDate),
-    overhaulDate: iso(snap.overhaulDate),
-    staff: snap.staff,
-    violations: uploads.VIOLATIONS ? (violationCounts.get(snap.transformerId) ?? 0) : null,
-    appeals: uploads.APPEALS ? (appealCounts.get(snap.transformerId) ?? 0) : null,
-  }));
+  // Abonent sonlari - `subscriberCounts` qoidasi: TP podstansiyasi abonentlar ro'yxati
+  // bilan qamralgan bo'lsa ro'yxatdan, aks holda TP holatining o'z ustunlari.
+  const listCounts =
+    coverage.SUBSCRIBERS.size > 0 ? await subscriberTpAggregates(periodId, db) : new Map<string, SubscriberCounts>();
+  return snapshots.map((snap) => {
+    const fromList = coverage.SUBSCRIBERS.has(snap.transformer.substation.id);
+    return {
+      id: snap.transformerId,
+      name: snap.transformer.name,
+      substation: snap.transformer.substation,
+      feeder: snap.transformer.feeder,
+      ...energyFields(snap),
+      onlineSubscribers: fromList ? (listCounts.get(snap.transformerId)?.online ?? 0) : snap.onlineSubscribers,
+      offlineSubscribers: fromList ? (listCounts.get(snap.transformerId)?.offline ?? 0) : snap.offlineSubscribers,
+      address: snap.address,
+      lat: toNumber(snap.latitude),
+      lng: toNumber(snap.longitude),
+      capacityKva: toNumber(snap.capacityKva),
+      currentRepairDate: iso(snap.currentRepairDate),
+      overhaulDate: iso(snap.overhaulDate),
+      staff: snap.staff,
+      violations: uploads.VIOLATIONS ? (violationCounts.get(snap.transformerId) ?? 0) : null,
+      appeals: uploads.APPEALS ? (appealCounts.get(snap.transformerId) ?? 0) : null,
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -479,8 +533,10 @@ export async function listSubscribers(
       ? sql`s."debtUzs" DESC, s."fullName" ASC, s.id ASC`
       : sql`s."fullName" ASC, s.id ASC`;
 
-  const [uploads, groups, rows] = await Promise.all([
+  const [uploads, coverage, substationId, groups, rows] = await Promise.all([
     periodUploads(periodId, db),
+    periodCoverage(periodId, db),
+    scopeSubstationId(filters.scope, db),
     // Tur x holat x qarzdor bo'yicha eng ko'pi 12 guruh - barcha sonlar shundan.
     queryRows<{ kind: SubscriberKind; meterStatus: MeterStatus; debtor: boolean; n: number }>(
       db,
@@ -533,7 +589,7 @@ export async function listSubscribers(
   }
 
   return {
-    uploaded: uploads.SUBSCRIBERS,
+    uploaded: coveredUploads(uploads, coverage, substationId).SUBSCRIBERS,
     rows: rows.map((row) => ({
       id: row.id,
       contractNumber: row.contractNumber,
@@ -560,15 +616,7 @@ export async function listSubscribers(
 // Qoidabuzarliklar va murojaatlar
 // ---------------------------------------------------------------------------
 
-/** TP va uning ota obyektlari. */
-const TRANSFORMER_PATH = {
-  select: {
-    id: true,
-    name: true,
-    feeder: { select: { id: true, name: true } },
-    substation: { select: { id: true, name: true } },
-  },
-} as const;
+const REF_SELECT = { select: { id: true, name: true } } as const;
 
 export interface ViolationRow {
   id: string;
@@ -582,9 +630,10 @@ export interface ViolationRow {
   damageUzs: number;
   damageKwh: number;
   staff: EntityRef | null;
-  transformer: EntityRef;
-  feeder: EntityRef;
-  substation: EntityRef;
+  /** TP, fider, podstansiya - aniqlanmagan bo'lsa null (malumotlar.md 4.3d). */
+  transformer: EntityRef | null;
+  feeder: EntityRef | null;
+  substation: EntityRef | null;
   rowNumber: number;
 }
 
@@ -614,9 +663,9 @@ export async function listViolations(
   const [uploads, records] = await Promise.all([
     periodUploads(periodId, db),
     db.violation.findMany({
-      where: { periodId, ...transformerScopeWhere(filters.scope) },
+      where: { periodId, ...eventScopeWhere(filters.scope) },
       orderBy: [{ date: "desc" }, { rowNumber: "asc" }],
-      include: { transformer: TRANSFORMER_PATH, staff: STAFF_SELECT },
+      include: { transformer: REF_SELECT, feeder: REF_SELECT, substation: REF_SELECT, staff: STAFF_SELECT },
     }),
   ]);
 
@@ -628,7 +677,7 @@ export async function listViolations(
   };
   const rows: ViolationRow[] = [];
   for (const record of records) {
-    if (!matchesSearch(key, [record.subscriberName, record.address, record.transformer.name, record.staff?.name])) {
+    if (!matchesSearch(key, [record.subscriberName, record.address, record.transformer?.name, record.staff?.name])) {
       continue;
     }
     totals.byType[record.violatorType] += 1;
@@ -643,9 +692,9 @@ export async function listViolations(
       damageUzs: amount(record.damageUzs),
       damageKwh: amount(record.damageKwh),
       staff: record.staff,
-      transformer: { id: record.transformer.id, name: record.transformer.name },
-      feeder: record.transformer.feeder,
-      substation: record.transformer.substation,
+      transformer: record.transformer,
+      feeder: record.feeder,
+      substation: record.substation,
       rowNumber: record.rowNumber,
     };
     totals.total += 1;
@@ -666,9 +715,10 @@ export interface AppealRow {
   status: AppealStatus;
   address: string | null;
   staff: EntityRef | null;
-  transformer: EntityRef;
-  feeder: EntityRef;
-  substation: EntityRef;
+  /** TP, fider, podstansiya - aniqlanmagan bo'lsa null (malumotlar.md 4.3d). */
+  transformer: EntityRef | null;
+  feeder: EntityRef | null;
+  substation: EntityRef | null;
   rowNumber: number;
 }
 
@@ -693,9 +743,9 @@ export async function listAppeals(
   const [uploads, records] = await Promise.all([
     periodUploads(periodId, db),
     db.appeal.findMany({
-      where: { periodId, ...transformerScopeWhere(filters.scope) },
+      where: { periodId, ...eventScopeWhere(filters.scope) },
       orderBy: [{ date: "desc" }, { rowNumber: "asc" }],
-      include: { transformer: TRANSFORMER_PATH, staff: STAFF_SELECT },
+      include: { transformer: REF_SELECT, feeder: REF_SELECT, substation: REF_SELECT, staff: STAFF_SELECT },
     }),
   ]);
 
@@ -707,7 +757,7 @@ export async function listAppeals(
         record.text,
         record.subscriberName,
         record.address,
-        record.transformer.name,
+        record.transformer?.name,
         record.staff?.name,
       ])
     ) {
@@ -725,9 +775,9 @@ export async function listAppeals(
       status: record.status,
       address: record.address,
       staff: record.staff,
-      transformer: { id: record.transformer.id, name: record.transformer.name },
-      feeder: record.transformer.feeder,
-      substation: record.transformer.substation,
+      transformer: record.transformer,
+      feeder: record.feeder,
+      substation: record.substation,
       rowNumber: record.rowNumber,
     });
   }

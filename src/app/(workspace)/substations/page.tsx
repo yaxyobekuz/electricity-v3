@@ -55,6 +55,7 @@ export default async function SubstationsPage({ searchParams }: PageProps<"/subs
         substations: current.uploads.SUBSTATIONS,
         feeders: current.uploads.FEEDERS,
         transformers: current.uploads.TRANSFORMERS,
+        subscribers: current.uploads.SUBSCRIBERS,
       }}
       summary={{
         counts: current.counts,

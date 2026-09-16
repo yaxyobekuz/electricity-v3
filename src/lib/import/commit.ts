@@ -15,6 +15,14 @@ import {
   type TransformerRow,
   type ViolationRow,
 } from "./templates";
+import {
+  emptyLinkIndex,
+  type EventLinkIndex,
+  loadGlobalLinks,
+  loadMonthLinks,
+  resolveEventLink,
+  transformerRefs,
+} from "./event-links";
 import { errorDetail } from "./issues";
 import type { ImportIssue, ImportResult } from "./types";
 import {
@@ -228,6 +236,7 @@ async function writeSubstations(ctx: WriteContext, rows: SubstationRow[]) {
         importBatchId,
         substationId: need(ids, substationKey(row.name), "Podstansiya"),
         rowNumber: row.row,
+        sourceRow: row.sourceRow as Prisma.InputJsonValue,
         totalKwh: row.totalKwh,
         usefulKwh: row.usefulKwh,
         lossKwh: row.lossKwh,
@@ -256,6 +265,7 @@ async function writeFeeders(ctx: WriteContext, rows: FeederRow[]) {
         importBatchId,
         feederId: need(feeders, feederKey(row.substationName, row.name), "Fider").id,
         rowNumber: row.row,
+        sourceRow: row.sourceRow as Prisma.InputJsonValue,
         totalKwh: row.totalKwh,
         usefulKwh: row.usefulKwh,
         lossKwh: row.lossKwh,
@@ -282,6 +292,7 @@ async function writeTransformers(ctx: WriteContext, rows: TransformerRow[]) {
         importBatchId,
         transformerId: need(transformers, transformerKey(row.substationName, row.feederName, row.name), "TP"),
         rowNumber: row.row,
+        sourceRow: row.sourceRow as Prisma.InputJsonValue,
         totalKwh: row.totalKwh,
         usefulKwh: row.usefulKwh,
         lossKwh: row.lossKwh,
@@ -334,6 +345,7 @@ async function writeSubscribers(ctx: WriteContext, rows: SubscriberRow[]) {
           "TP",
         ),
         rowNumber: row.row,
+        sourceRow: row.sourceRow as Prisma.InputJsonValue,
         fullName: row.fullName,
         kind: row.kind,
         meterStatus: row.meterStatus,
@@ -358,146 +370,175 @@ async function writeSubscribers(ctx: WriteContext, rows: SubscriberRow[]) {
   }
 }
 
-/**
- * 3-bo'lim: abonent nomi shu oyda shu TP abonentlari orasida `nameKey(FISH)`
- * bo'yicha aynan bitta topilsa - `subscriberId`, aks holda null.
+/*
+ * Qoidabuzarlik va murojaatlar: TP / fider / podstansiya / abonent bog'lanishi
+ * `event-links.ts` dagi yagona qoida bilan (malumotlar.md 4.3d). Bog'lanmagan
+ * yozuv ham saqlanadi.
  */
-async function subscriberLinker(tx: Tx, periodId: string) {
-  const rows = await tx.subscriberSnapshot.findMany({
-    where: { periodId },
-    select: { subscriberId: true, transformerId: true, fullName: true },
-  });
-  const byName = new Map<string, string[]>();
-  for (const row of rows) {
-    const key = `${row.transformerId}${KEY_SEP}${nameKey(row.fullName)}`;
-    byName.set(key, [...(byName.get(key) ?? []), row.subscriberId]);
-  }
-  return (transformerId: string, subscriberName: string): string | null => {
-    const matches = byName.get(`${transformerId}${KEY_SEP}${nameKey(subscriberName)}`);
-    return matches && matches.length === 1 ? matches[0] : null;
-  };
+
+interface EventRowInput {
+  transformerName: string | null;
+  subscriberName: string;
+  staffName: string | null;
 }
 
-/**
- * Shu oy TP lari: "TP Nomi" kaliti -> id (tekshiruv bir ma'noliligini
- * kafolatlagan). Transformatorlar shu oyga yuklanmagan bo'lsa - abonentlar
- * bog'langan TP lar (4.4, `validate.ts` dagi `checkEvents` bilan bir xil).
- */
-async function transformersByName(tx: Tx, periodId: string): Promise<Map<string, string[]>> {
-  let rows = await tx.transformerSnapshot.findMany({
-    where: { periodId },
-    select: { transformerId: true, transformer: { select: { nameKey: true } } },
-  });
-  if (rows.length === 0) {
-    rows = await tx.subscriberSnapshot.findMany({
-      where: { periodId },
-      distinct: ["transformerId"],
-      select: { transformerId: true, transformer: { select: { nameKey: true } } },
+interface ResolvedEventLinks {
+  transformerId: string | null;
+  feederId: string | null;
+  substationId: string | null;
+  subscriberId: string | null;
+}
+
+/** `global` - bir necha oyni ketma-ket bog'lashda bir marta yuklangan umumiy qism. */
+async function resolveEvents(
+  tx: Tx,
+  periodId: string,
+  rows: readonly EventRowInput[],
+  global?: Pick<EventLinkIndex, "allContracts" | "allTps">,
+): Promise<ResolvedEventLinks[]> {
+  const index = emptyLinkIndex();
+  if (global) {
+    index.allContracts = global.allContracts;
+    index.allTps = global.allTps;
+  } else {
+    await loadGlobalLinks(tx, index);
+  }
+  await loadMonthLinks(tx, periodId, index);
+  const links = rows.map((row) => resolveEventLink(index, row));
+
+  const tpRefs = await transformerRefs(
+    tx,
+    links.flatMap((link) => (link.tpKey ? [link.tpKey] : [])),
+  );
+  const substations = await substationIds(
+    tx,
+    links.flatMap((link) => (link.substationKey ? [link.substationKey] : [])),
+  );
+  const subscribers = new Map<string, string>();
+  const contracts = [...new Set(links.flatMap((link) => (link.contractKey ? [link.contractKey] : [])))];
+  for (const chunk of chunked(contracts, LOOKUP_CHUNK)) {
+    const found = await tx.subscriber.findMany({
+      where: { contractKey: { in: chunk } },
+      select: { id: true, contractKey: true },
     });
+    for (const item of found) subscribers.set(item.contractKey, item.id);
   }
-  const result = new Map<string, string[]>();
-  for (const row of rows) {
-    const key = row.transformer.nameKey;
-    result.set(key, [...(result.get(key) ?? []), row.transformerId]);
-  }
-  return result;
-}
 
-function uniqueTransformer(byName: Map<string, string[]>, name: string): string {
-  const ids = byName.get(nameKey(name)) ?? [];
-  if (ids.length !== 1) throw new Error(`TP bir ma’noli topilmadi: ${name}`);
-  return ids[0];
+  return links.map((link) => {
+    const tp = link.tpKey ? tpRefs.get(link.tpKey) : undefined;
+    return {
+      transformerId: tp?.id ?? null,
+      feederId: tp?.feederId ?? null,
+      substationId: tp?.substationId ?? (link.substationKey ? (substations.get(link.substationKey) ?? null) : null),
+      subscriberId: link.contractKey ? (subscribers.get(link.contractKey) ?? null) : null,
+    };
+  });
 }
 
 async function writeViolations(ctx: WriteContext, rows: ViolationRow[]) {
   const { tx, periodId, importBatchId } = ctx;
-  const byName = await transformersByName(tx, periodId);
-  const link = await subscriberLinker(tx, periodId);
+  const links = await resolveEvents(tx, periodId, rows);
 
   await tx.violation.deleteMany({ where: { periodId } });
-  for (const chunk of chunked(rows, INSERT_CHUNK)) {
+  for (const [chunkIndex, chunk] of chunked(rows, INSERT_CHUNK).entries()) {
     await tx.violation.createMany({
-      data: chunk.map((row) => {
-        const transformerId = uniqueTransformer(byName, row.transformerName);
-        return {
-          periodId,
-          importBatchId,
-          transformerId,
-          subscriberId: link(transformerId, row.subscriberName),
-          rowNumber: row.row,
-          subscriberName: row.subscriberName,
-          violatorType: row.violatorType,
-          date: row.date,
-          address: row.address,
-          damageUzs: row.damageUzs,
-          damageKwh: row.damageKwh,
-          staffId: staffId(ctx, row.staffName),
-        };
-      }),
+      data: chunk.map((row, i) => ({
+        periodId,
+        importBatchId,
+        ...links[chunkIndex * INSERT_CHUNK + i],
+        rowNumber: row.row,
+        sourceRow: row.sourceRow as Prisma.InputJsonValue,
+        subscriberName: row.subscriberName,
+        violatorType: row.violatorType,
+        date: row.date,
+        address: row.address,
+        damageUzs: row.damageUzs,
+        damageKwh: row.damageKwh,
+        staffId: staffId(ctx, row.staffName),
+      })),
     });
   }
 }
 
 async function writeAppeals(ctx: WriteContext, rows: AppealRow[]) {
   const { tx, periodId, importBatchId } = ctx;
-  const byName = await transformersByName(tx, periodId);
-  const link = await subscriberLinker(tx, periodId);
+  const links = await resolveEvents(tx, periodId, rows);
 
   await tx.appeal.deleteMany({ where: { periodId } });
-  for (const chunk of chunked(rows, INSERT_CHUNK)) {
+  for (const [chunkIndex, chunk] of chunked(rows, INSERT_CHUNK).entries()) {
     await tx.appeal.createMany({
-      data: chunk.map((row) => {
-        const transformerId = uniqueTransformer(byName, row.transformerName);
-        return {
-          periodId,
-          importBatchId,
-          transformerId,
-          subscriberId: link(transformerId, row.subscriberName),
-          rowNumber: row.row,
-          text: row.text,
-          subscriberName: row.subscriberName,
-          date: row.date,
-          address: row.address,
-          status: row.status,
-          staffId: staffId(ctx, row.staffName),
-        };
-      }),
+      data: chunk.map((row, i) => ({
+        periodId,
+        importBatchId,
+        ...links[chunkIndex * INSERT_CHUNK + i],
+        rowNumber: row.row,
+        sourceRow: row.sourceRow as Prisma.InputJsonValue,
+        text: row.text,
+        subscriberName: row.subscriberName,
+        date: row.date,
+        address: row.address,
+        status: row.status,
+        staffId: staffId(ctx, row.staffName),
+      })),
     });
   }
 }
 
+/** Qatorning asl nusxasidagi "TP Nomi" (yozuvda alohida ustun yo'q). */
+function sourceTpName(sourceRow: Prisma.JsonValue): string | null {
+  if (!sourceRow || typeof sourceRow !== "object" || Array.isArray(sourceRow)) return null;
+  const value = (sourceRow as Record<string, unknown>)["TP Nomi"];
+  return value == null || value === "" ? null : String(value);
+}
+
 /**
- * Abonentlar qayta yuklanib, qoidabuzarlik/murojaatlar yuklanmagan bo'lsa -
- * mavjud yozuvlarning abonent bog'lanishi yangi ro'yxat bo'yicha qayta
- * hisoblanadi.
+ * Mavjud yozuvlarning bog'lanishi yangi obyekt ma'lumoti (Abonentlar,
+ * Transformatorlar, Podstansiyalar) bo'yicha qayta hisoblanadi.
  */
-async function relinkEvents(tx: Tx, periodId: string, kind: "violations" | "appeals") {
-  const link = await subscriberLinker(tx, periodId);
+async function relinkEvents(
+  tx: Tx,
+  periodId: string,
+  kind: "violations" | "appeals",
+  global: Pick<EventLinkIndex, "allContracts" | "allTps">,
+) {
+  const select = {
+    id: true,
+    subscriberName: true,
+    sourceRow: true,
+    staff: { select: { name: true } },
+    transformerId: true,
+    feederId: true,
+    substationId: true,
+    subscriberId: true,
+  } as const;
   const rows =
     kind === "violations"
-      ? await tx.violation.findMany({
-          where: { periodId },
-          select: { id: true, transformerId: true, subscriberName: true, subscriberId: true },
-        })
-      : await tx.appeal.findMany({
-          where: { periodId },
-          select: { id: true, transformerId: true, subscriberName: true, subscriberId: true },
-        });
+      ? await tx.violation.findMany({ where: { periodId }, select })
+      : await tx.appeal.findMany({ where: { periodId }, select });
+  if (rows.length === 0) return;
 
-  const changes = new Map<string | null, string[]>();
-  for (const row of rows) {
-    const target = link(row.transformerId, row.subscriberName);
-    if (target === row.subscriberId) continue;
-    changes.set(target, [...(changes.get(target) ?? []), row.id]);
-  }
-  for (const [subscriberId, ids] of changes) {
-    for (const chunk of chunked(ids, LOOKUP_CHUNK)) {
-      if (kind === "violations") {
-        await tx.violation.updateMany({ where: { id: { in: chunk } }, data: { subscriberId } });
-      } else {
-        await tx.appeal.updateMany({ where: { id: { in: chunk } }, data: { subscriberId } });
-      }
+  const links = await resolveEvents(
+    tx,
+    periodId,
+    rows.map((row) => ({
+      transformerName: sourceTpName(row.sourceRow),
+      subscriberName: row.subscriberName,
+      staffName: row.staff?.name ?? null,
+    })),
+    global,
+  );
+  for (const [i, row] of rows.entries()) {
+    const link = links[i];
+    if (
+      link.transformerId === row.transformerId &&
+      link.feederId === row.feederId &&
+      link.substationId === row.substationId &&
+      link.subscriberId === row.subscriberId
+    ) {
+      continue;
     }
+    if (kind === "violations") await tx.violation.update({ where: { id: row.id }, data: link });
+    else await tx.appeal.update({ where: { id: row.id }, data: link });
   }
 }
 
@@ -599,14 +640,26 @@ async function writeSubmission(
     written.set(key, (written.get(key) ?? new Set()).add(type));
   }
 
-  for (const [key, types] of written) {
-    const periodId = periodIds.get(key)!;
-    if (types.has("SUBSCRIBERS")) {
-      if (!types.has("VIOLATIONS")) await relinkEvents(tx, periodId, "violations");
-      if (!types.has("APPEALS")) await relinkEvents(tx, periodId, "appeals");
+  // Bog'lash boshqa oylar abonentlari va TP laridan ham foydalanadi (4.3d): obyekt
+  // ma'lumoti yozilsa, BARCHA oylardagi yozuvlar qayta bog'lanadi - shu yuklashda
+  // qayta yozilgan qoidabuzarlik/murojaatlardan tashqari (ular allaqachon yangi).
+  const hierarchyWritten = [...written.values()].some(
+    (types) => types.has("SUBSCRIBERS") || types.has("TRANSFORMERS") || types.has("SUBSTATIONS"),
+  );
+  if (hierarchyWritten) {
+    const global = emptyLinkIndex();
+    await loadGlobalLinks(tx, global);
+    const periods = await tx.period.findMany({ select: { id: true, month: true } });
+    for (const period of periods) {
+      const types = written.get(monthKey(period.month));
+      if (!types?.has("VIOLATIONS")) await relinkEvents(tx, period.id, "violations", global);
+      if (!types?.has("APPEALS")) await relinkEvents(tx, period.id, "appeals", global);
     }
+  }
+
+  for (const key of written.keys()) {
     const fresh = files.filter((file) => monthKey(file.month!) === key);
-    await refreshReportDate(tx, periodId, fresh);
+    await refreshReportDate(tx, periodIds.get(key)!, fresh);
   }
 
   return batchIds;

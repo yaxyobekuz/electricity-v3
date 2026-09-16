@@ -3,7 +3,8 @@
 import { Expand, Info, MapPinOff } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { MapCanvas, type MapMarker, type MarkerRenderer } from "@/components/map/MapCanvas";
+import { escapeHtml, MapCanvas, type MapMarker, type MarkerRenderer } from "@/components/map/MapCanvas";
+import { markerObjectKind, objectChip } from "@/components/map/marker-glyphs";
 import { Card, CardBody, CardFooterLink, CardHeader } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { IconPill } from "@/components/ui/IconPill";
@@ -17,49 +18,14 @@ const DISTRICT_CENTER = {
 };
 const DISTRICT_ZOOM = 11;
 
-/** `lucide-react/factory` ning path'lari - renderer JSX emas, HTML matn qaytaradi. */
-const FACTORY_PATHS = [
-  "M12 16h.01",
-  "M16 16h.01",
-  "M3 19a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5a.5.5 0 0 0-.769-.422l-4.462 2.844A.5.5 0 0 1 15 10.5v-2a.5.5 0 0 0-.769-.422L9.77 10.922A.5.5 0 0 1 9 10.5V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2z",
-  "M8 16h.01",
-];
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-/** Maketdagi 1.5px absolyut chiziq: viewBox 24 bo'lgani uchun 36/size. */
-function factorySvg(size: number, color: string): string {
-  return (
-    `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" ` +
-    `stroke-width="${36 / size}" stroke-linecap="round" stroke-linejoin="round" ` +
-    'style="display:block">' +
-    FACTORY_PATHS.map((d) => `<path d="${d}"/>`).join("") +
-    "</svg>"
-  );
-}
-
-function chip(size: number, radius: number, glyph: number, color: string): string {
-  return (
-    `<div style="width:${size}px;height:${size}px;display:flex;align-items:center;` +
-    `justify-content:center;border-radius:${radius}px;background:#ffffff;` +
-    'box-shadow:0 2px 6px rgba(0,0,0,.18);">' +
-    factorySvg(glyph, color) +
-    "</div>"
-  );
-}
-
 /**
- * Maketdagi marker: oq yumaloq kvadrat (26px) ichida transformator glifi.
- * Tanlangani kattaroq (40px) va tepasida qora yorliq + strelka.
+ * Maketdagi marker: oq yumaloq kvadrat (26px) ichida obyekt glifi - chap
+ * paneldagi ikonka (kartalardagi markerlar TP, `kind: "tp"`). Tanlangani
+ * kattaroq (40px) va tepasida qora yorliq + strelka.
  */
 const chipMarker: MarkerRenderer = (marker, selected) => {
-  if (!selected) return chip(26, 7, 18, "#333333");
+  const kind = markerObjectKind(marker.kind) ?? "transformer";
+  if (!selected) return objectChip(kind, { size: 26, radius: 7, glyph: 18, color: "#333333" });
 
   return (
     '<div style="display:flex;flex-direction:column;align-items:center;">' +
@@ -70,7 +36,7 @@ const chipMarker: MarkerRenderer = (marker, selected) => {
     "</div>" +
     '<svg width="12" height="6" viewBox="0 0 12 6" style="display:block">' +
     '<path d="M0 0L6 6L12 0H0Z" fill="#0F0F14" fill-opacity="0.88"/></svg>' +
-    `<div style="margin-top:11px">${chip(40, 8, 24, "#ff383c")}</div>` +
+    `<div style="margin-top:11px">${objectChip(kind, { size: 40, radius: 8, glyph: 24, color: "#ff383c" })}</div>` +
     "</div>"
   );
 };

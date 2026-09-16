@@ -106,9 +106,10 @@ function exactLinks(
 interface SearchableRow {
   id: string;
   staff: EntityRef | null;
-  transformer: EntityRef;
-  feeder: EntityRef;
-  substation: EntityRef;
+  /** Qoidabuzarlik/murojaat TP ga bog'lanmagan bo'lishi mumkin (malumotlar.md 4.3d). */
+  transformer: EntityRef | null;
+  feeder: EntityRef | null;
+  substation: EntityRef | null;
 }
 
 function placementOf(row: SearchableRow): Placement {
@@ -116,9 +117,9 @@ function placementOf(row: SearchableRow): Placement {
     staffId: row.staff?.id ?? null,
     count: 1,
     id: row.id,
-    transformer: row.transformer.id,
-    feeder: row.feeder.id,
-    substation: row.substation.id,
+    transformer: row.transformer?.id,
+    feeder: row.feeder?.id,
+    substation: row.substation?.id,
   };
 }
 
@@ -272,14 +273,14 @@ export async function listStaffLinks(periodId: string, db: Db = prisma): Promise
   const violationSearch = searchLinks(violations.rows, "/violations", (row) => [
     row.subscriberName,
     row.address,
-    row.transformer.name,
+    row.transformer?.name,
     row.staff?.name,
   ]);
   const appealSearch = searchLinks(appeals.rows, "/appeals", (row) => [
     row.text,
     row.subscriberName,
     row.address,
-    row.transformer.name,
+    row.transformer?.name,
     row.staff?.name,
   ]);
 

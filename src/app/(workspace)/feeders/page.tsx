@@ -142,7 +142,11 @@ export default async function FeedersPage({ searchParams }: PageProps<"/feeders"
       chips={[...chips.values()]}
       activeSubstationId={resolved.status === "found" ? resolved.substationId : null}
       filter={resolved.status === "found" ? resolved.filter : unknown ? "unknown" : null}
-      uploads={{ feeders: current.uploads.FEEDERS, transformers: current.uploads.TRANSFORMERS }}
+      uploads={{
+        feeders: current.uploads.FEEDERS,
+        transformers: current.uploads.TRANSFORMERS,
+        subscribers: current.uploads.SUBSCRIBERS,
+      }}
       summary={{
         scope: summaryScope.kind,
         counts: unknown

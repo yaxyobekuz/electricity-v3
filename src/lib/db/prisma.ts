@@ -32,11 +32,11 @@ const createPrismaClient = () =>
 // globalThis'da saqlaymiz. Kalit nomi klient sozlamasi o'zgarganda
 // almashtiriladi - aks holda ishlab turgan dev server eski klientni ishlataveradi.
 const globalForPrisma = globalThis as unknown as {
-  prismaClient?: ReturnType<typeof createPrismaClient>;
+  prismaClientEventLinks?: ReturnType<typeof createPrismaClient>;
 };
 
-export const prisma = globalForPrisma.prismaClient ?? createPrismaClient();
+export const prisma = globalForPrisma.prismaClientEventLinks ?? createPrismaClient();
 
 if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prismaClient = prisma;
+  globalForPrisma.prismaClientEventLinks = prisma;
 }

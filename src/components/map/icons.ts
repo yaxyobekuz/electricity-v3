@@ -6,8 +6,8 @@ import {
   Map as MapIcon,
   MessagesSquare,
   PiggyBank,
-  User,
   UserRound,
+  Users,
   Wifi,
   WifiOff,
   Workflow,
@@ -20,14 +20,15 @@ import type { MapIconKey } from "./types";
 /**
  * Serverdan matn kalit keladi (komponentni serializatsiya qilib bo'lmaydi) -
  * ikonka shu jadval orqali mijozda tanlanadi. Obyekt ikonkalari chap panel
- * bilan bir xil (`shell/nav.ts`: fider - workflow, TP - circuit-board).
+ * bilan bir xil (`shell/nav.ts`: fider - workflow, TP - circuit-board,
+ * abonent - users). Xarita markerlari: `marker-glyphs.ts`.
  */
 export const MAP_ICONS: Record<MapIconKey, GlyphIcon> = {
   district: MapIcon,
   substation: Factory,
   feeder: Workflow,
   transformer: CircuitBoard,
-  subscriber: User,
+  subscriber: Users,
   online: Wifi,
   offline: WifiOff,
   debt: Banknote,

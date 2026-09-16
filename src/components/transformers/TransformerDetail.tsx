@@ -95,8 +95,10 @@ function deltaLine(
 ): Pick<KpiItem, "deltaIcon" | "deltaText" | "deltaTone"> {
   const change = delta(current, previous);
   if (!change) return {};
-  // Decimal(…, 2) yig'indilari farqidagi suzuvchi nuqta qoldig'i "o'zgarmagan" hisoblanadi.
-  if (Math.abs(change.diff) < 0.005) return { deltaIcon: Minus, deltaText: "O’zgarmagan", deltaTone: "neutral" };
+  // Ko'rsatilgan aniqlikda solishtiriladi (fider sahifasidagi kabi): "0 kWh ko’p" chiqmasin.
+  if (formatDiff(Math.abs(change.diff)) === formatDiff(0)) {
+    return { deltaIcon: Minus, deltaText: "O’zgarmagan", deltaTone: "neutral" };
+  }
   const up = change.diff > 0;
   const tone: KpiTone = kind === "neutral" ? "neutral" : up ? "bad" : "good";
   return {

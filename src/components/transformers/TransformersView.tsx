@@ -135,13 +135,20 @@ export function TransformersView({
     </PageHeader>
   );
 
-  // Transformatorlar fayli shu oyga yuklanmagan - "0 ta" emas, ma'lumot yo'q.
+  // Transformatorlar fayli shu oyga (yoki shu qamrov podstansiyasi uchun) yuklanmagan -
+  // "0 ta" emas, ma'lumot yo'q.
   if (transformers == null) {
     return (
       <div className="flex h-full min-h-0 flex-col gap-2">
         {header}
         <div className="min-h-0 flex-1">
-          <EmptyState title={`${period.label} oyi uchun Transformatorlar yuklanmagan`} />
+          <EmptyState
+            title={
+              scope.kind === "district"
+                ? `${period.label} oyi uchun Transformatorlar yuklanmagan`
+                : `${period.label} oyi uchun ${scope.substation.name} podstansiyasi transformatorlari yuklanmagan`
+            }
+          />
         </div>
       </div>
     );

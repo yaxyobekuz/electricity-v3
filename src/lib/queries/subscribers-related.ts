@@ -24,7 +24,8 @@ export interface SubscriberViolationRow {
   damageUzs: number;
   damageKwh: number;
   address: string | null;
-  transformer: EntityRef;
+  /** TP aniqlanmagan bo'lsa null (malumotlar.md 4.3d). */
+  transformer: EntityRef | null;
   staff: EntityRef | null;
 }
 
@@ -35,7 +36,8 @@ export interface SubscriberAppealRow {
   text: string;
   status: AppealStatus;
   address: string | null;
-  transformer: EntityRef;
+  /** TP aniqlanmagan bo'lsa null (malumotlar.md 4.3d). */
+  transformer: EntityRef | null;
   staff: EntityRef | null;
 }
 

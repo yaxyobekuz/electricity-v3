@@ -34,9 +34,17 @@ import {
    Qator tiplari (bitta Excel qatori, tekshirilgan qiymatlar)
    --------------------------------------------------------------------------- */
 
+/** Excel qatorining asl ko'rinishi: sarlavha matni -> qiymat (sana - ISO matn). */
+export type SourceRow = Record<string, string | number | boolean>;
+
 interface BaseRow {
   /** Excel qator raqami. */
   row: number;
+  /**
+   * Qatordagi BARCHA to'ldirilgan kataklar, shablonda yo'q ustunlar ham
+   * (`sourceRow` ustuniga yoziladi - platformada ko'rsatilmasa ham saqlanadi).
+   */
+  sourceRow: SourceRow;
 }
 
 export interface SubstationRow extends BaseRow {
@@ -107,7 +115,8 @@ export interface SubscriberRow extends BaseRow {
 }
 
 export interface ViolationRow extends BaseRow {
-  transformerName: string;
+  /** "TP Nomi" - bo'sh bo'lishi mumkin (TP abonent orqali aniqlanadi, 4.3d). */
+  transformerName: string | null;
   subscriberName: string;
   violatorType: ViolatorType;
   date: Date;
@@ -118,7 +127,8 @@ export interface ViolationRow extends BaseRow {
 }
 
 export interface AppealRow extends BaseRow {
-  transformerName: string;
+  /** "TP Nomi" - bo'sh bo'lishi mumkin (TP abonent orqali aniqlanadi, 4.3d). */
+  transformerName: string | null;
   text: string;
   subscriberName: string;
   date: Date;
@@ -362,7 +372,7 @@ export const TEMPLATES: Record<TemplateType, TemplateSpec> = {
   VIOLATIONS: {
     type: "VIOLATIONS",
     columns: [
-      col("transformerName", "TP Nomi", true, TEXT),
+      col("transformerName", "TP Nomi", false, TEXT),
       col("subscriberName", "Abonent", true, TEXT),
       col("violatorType", "Turi (Yuridik/Jismoniy/Aybisiz)", true, { kind: "enum", spec: VIOLATOR_TYPE }, [
         "Turi",
@@ -381,7 +391,7 @@ export const TEMPLATES: Record<TemplateType, TemplateSpec> = {
   APPEALS: {
     type: "APPEALS",
     columns: [
-      col("transformerName", "TP Nomi", true, TEXT),
+      col("transformerName", "TP Nomi", false, TEXT),
       col("text", "Murojaat", true, TEXT),
       col("subscriberName", "Abonent", true, TEXT),
       col("date", "Sana", true, DATE),

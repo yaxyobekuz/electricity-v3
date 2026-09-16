@@ -32,11 +32,11 @@ export interface SubstationListItem {
   usefulKwh: number;
   lossKwh: number;
   lossPercent: number | null;
-  /** Fiderlar shu oyga yuklanmagan bo'lsa - null. */
+  /** Fiderlar fayli bu podstansiyani qamramagan bo'lsa - null. */
   feederCount: number | null;
-  /** Transformatorlar shu oyga yuklanmagan bo'lsa - null. */
+  /** Transformatorlar fayli bu podstansiyani qamramagan bo'lsa - null. */
   transformerCount: number | null;
-  /** Σ TP holatlaridagi abonentlar; Transformatorlar yuklanmagan bo'lsa - null. */
+  /** Abonentlar ro'yxati yoki Σ TP holatlari (`subscriberCounts`); manba yo'q - null. */
   subscriberCount: number | null;
   capacityKva: number | null;
   staffName: string | null;
@@ -108,7 +108,7 @@ export function SubstationsView({
   /** `?q=` qiymati. */
   initialQuery: string;
   rows: readonly SubstationListItem[];
-  uploads: { substations: boolean; feeders: boolean; transformers: boolean };
+  uploads: { substations: boolean; feeders: boolean; transformers: boolean; subscribers: boolean };
   summary: SubstationsSummary;
 }) {
   const [query, setQuery] = useSearchQuery(initialQuery);
@@ -122,10 +122,12 @@ export function SubstationsView({
     () =>
       BASE_COLUMNS.filter((column) => {
         if (column.key === "feeders") return uploads.feeders;
-        if (column.key === "transformers" || column.key === "subscribers") return uploads.transformers;
+        if (column.key === "transformers") return uploads.transformers;
+        // Abonent soni ro'yxatdan yoki TP holatlaridan (`subscriberCounts`).
+        if (column.key === "subscribers") return uploads.transformers || uploads.subscribers;
         return true;
       }),
-    [uploads.feeders, uploads.transformers],
+    [uploads.feeders, uploads.transformers, uploads.subscribers],
   );
 
   const missing = [

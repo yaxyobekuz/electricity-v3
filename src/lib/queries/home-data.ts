@@ -271,8 +271,8 @@ function trendOf(
 ): HomeTrend | null {
   const change = delta(current, previous);
   if (!change) return null;
-  // Decimal(…, 2) yig'indilari farqidagi suzuvchi nuqta qoldig'i "o'zgarmagan" hisoblanadi.
-  if (Math.abs(change.diff) < 0.005) return { text: "O’zgarmagan", direction: "flat", tone: "neutral" };
+  // Ko'rsatilgan aniqlikda solishtiriladi (fider sahifasidagi kabi): "0 kWh ga ko’p" chiqmasin.
+  if (kwhText(Math.abs(change.diff)) === kwhText(0)) return { text: "O’zgarmagan", direction: "flat", tone: "neutral" };
   const up = change.diff > 0;
   return {
     text: `${kwhText(Math.abs(change.diff))} ga ${up ? "ko’p" : "kam"}`,

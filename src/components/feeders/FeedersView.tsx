@@ -37,9 +37,9 @@ export interface FeederListItem {
   usefulKwh: number;
   lossKwh: number;
   lossPercent: number | null;
-  /** Transformatorlar shu oyga yuklanmagan bo'lsa - null. */
+  /** Transformatorlar fayli fider podstansiyasini qamramagan bo'lsa - null. */
   transformerCount: number | null;
-  /** Σ TP holatlaridagi abonentlar; Transformatorlar yuklanmagan bo'lsa - null. */
+  /** Abonentlar ro'yxati yoki Σ TP holatlari (`subscriberCounts`); manba yo'q - null. */
   subscriberCount: number | null;
   capacityKva: number | null;
   staffName: string | null;
@@ -180,7 +180,7 @@ export function FeedersView({
   activeSubstationId: string | null;
   /** Faol filtr; `"unknown"` - `?scope=` dagi obyekt topilmadi. */
   filter: FeederFilter | "unknown" | null;
-  uploads: { feeders: boolean; transformers: boolean };
+  uploads: { feeders: boolean; transformers: boolean; subscribers: boolean };
   summary: FeedersSummary;
 }) {
   const [query, onQueryChange] = useSearchQuery(initialQuery);
@@ -195,11 +195,13 @@ export function FeedersView({
 
   const columns = useMemo(
     () =>
-      BASE_COLUMNS.filter(
-        (column) =>
-          uploads.transformers || (column.key !== "transformers" && column.key !== "subscribers"),
-      ),
-    [uploads.transformers],
+      BASE_COLUMNS.filter((column) => {
+        if (column.key === "transformers") return uploads.transformers;
+        // Abonent soni ro'yxatdan yoki TP holatlaridan (`subscriberCounts`).
+        if (column.key === "subscribers") return uploads.transformers || uploads.subscribers;
+        return true;
+      }),
+    [uploads.transformers, uploads.subscribers],
   );
 
   const { counts } = summary;
@@ -321,7 +323,11 @@ export function FeedersView({
           <EmptyState
             variant="inline"
             title="Fiderlar yuklanmagan"
-            description={`${periodLabel} uchun Fiderlar fayli yuklanmagan.`}
+            description={
+              summary.scope === "district"
+                ? `${periodLabel} uchun Fiderlar fayli yuklanmagan.`
+                : `${periodLabel} uchun bu podstansiyaning fiderlari yuklanmagan.`
+            }
           />
         )}
       </Card>

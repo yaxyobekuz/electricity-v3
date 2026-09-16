@@ -142,7 +142,7 @@ function toGroups(results: SearchResults, q: string): SearchHitGroup[] {
         title: row.subscriberName,
         subtitle: join([
           VIOLATOR_TYPE_LABEL[row.violatorType],
-          row.transformer.name,
+          row.transformer?.name ?? row.substation?.name,
           formatDate(row.date),
           `zarar ${money(row.damageUzs)}`,
           row.address,
@@ -161,7 +161,7 @@ function toGroups(results: SearchResults, q: string): SearchHitGroup[] {
         title: row.text,
         subtitle: join([
           row.subscriberName,
-          row.transformer.name,
+          row.transformer?.name ?? row.substation?.name,
           formatDate(row.date),
           APPEAL_STATUS_LABEL[row.status],
           ...matchedExtras(key, row.address, row.staff?.name ?? null),

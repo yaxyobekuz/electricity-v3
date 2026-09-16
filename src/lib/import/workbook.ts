@@ -15,6 +15,7 @@ import {
   columnMatches,
   headerKey,
   readField,
+  type SourceRow,
   TEMPLATES,
 } from "./templates";
 
@@ -429,7 +430,11 @@ function setupSheet(
   }
 
   for (const text of detection.unknownHeaders) {
-    result.warnings.add(headerRow, text, `Noma’lum ustun e’tiborga olinmadi: “${text}”`);
+    result.warnings.add(
+      headerRow,
+      text,
+      `Shablonda yo’q ustun: “${text}” - qiymatlari faqat qatorning asl nusxasida (manba) saqlanadi`,
+    );
   }
 
   // Sarlavhadan oldingi birinchi oy nomi ("Abonentlar Sentabr Holatiga Ko'ra").
@@ -444,7 +449,7 @@ function setupSheet(
     }
   }
 
-  const read = createRowHandler(result, spec.columns, detection.columns, context);
+  const read = createRowHandler(result, spec.columns, detection.columns, headerTexts, context);
   for (const row of early) {
     if (row.number > headerRow) read(row);
   }
@@ -456,10 +461,42 @@ function setupSheet(
   };
 }
 
+/** Excel ustun harfi: 1 -> "A", 27 -> "AA". */
+function columnLetter(colNumber: number): string {
+  let letters = "";
+  for (let n = colNumber; n > 0; n = Math.floor((n - 1) / 26)) {
+    letters = String.fromCharCode(65 + ((n - 1) % 26)) + letters;
+  }
+  return letters;
+}
+
+/**
+ * Qatorning asl nusxasi: har bir to'ldirilgan katak sarlavha matni bo'yicha
+ * (sarlavhasiz ustun - "Ustun F"). Qiymat o'qilmasa (masalan natijasiz
+ * formula) - katakning matn ko'rinishi.
+ */
+function sourceRowOf(row: ExcelJS.Row, headerTexts: Map<number, string>): SourceRow {
+  const source: SourceRow = {};
+  row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
+    if (cell.isMerged && cell.master !== cell) return;
+    const header = headerTexts.get(colNumber)?.replace(/\s+/g, " ").trim() || `Ustun ${columnLetter(colNumber)}`;
+    const read = plainValue(cell.value);
+    let value: string | number | boolean | null;
+    if (read.ok) {
+      value = read.value instanceof Date ? read.value.toISOString() : read.value;
+    } else {
+      value = cellText(cell.value) || null;
+    }
+    if (value != null) source[header] = value;
+  });
+  return source;
+}
+
 function createRowHandler(
   result: ParsedFile,
   columns: readonly ColumnSpec[],
   positions: Map<ColumnSpec, number>,
+  headerTexts: Map<number, string>,
   context: { date1904: boolean },
 ): RowHandler {
   const mapped = [...positions];
@@ -482,7 +519,7 @@ function createRowHandler(
     if (!filled) return;
 
     result.totalRows += 1;
-    const data: Record<string, unknown> = { row: rowNumber };
+    const data: Record<string, unknown> = { row: rowNumber, sourceRow: sourceRowOf(row, headerTexts) };
     let valid = true;
 
     for (const column of columns) {

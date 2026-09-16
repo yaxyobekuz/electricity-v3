@@ -22,7 +22,7 @@ import { lossPercent, toNumber } from "@/lib/domain/metrics";
 import { monthKey, monthLabel, monthShort } from "@/lib/format";
 import type { PeriodInfo } from "@/lib/period";
 
-import { sql, type SqlFragment } from "./sql";
+import { join, queryRows, sql, type SqlFragment } from "./sql";
 
 /*
  * Qamrov (tuman / podstansiya / fider / TP) bo'yicha yig'ma ko'rsatkichlar.
@@ -102,6 +102,28 @@ export function transformerScopeWhere(scope: Scope | undefined): {
 }
 
 /**
+ * Qoidabuzarlik va murojaatlar uchun qamrov filtri. Ular TP ga bog'lanmagan
+ * bo'lishi mumkin (malumotlar.md 4.3d), shuning uchun podstansiya va fider
+ * yozuvning o'z ustunlaridan olinadi - TP orqali emas.
+ */
+export function eventScopeWhere(scope: Scope | undefined): {
+  transformerId?: string;
+  feederId?: string;
+  substationId?: string;
+} {
+  switch (scope?.kind) {
+    case "substation":
+      return { substationId: scope.id };
+    case "feeder":
+      return { feederId: scope.id };
+    case "transformer":
+      return { transformerId: scope.id };
+    default:
+      return {};
+  }
+}
+
+/**
  * Xuddi shu filtr xom SQL uchun. So'rovda `transformers` jadvali `t`
  * nomi bilan ulangan bo'lishi shart.
  */
@@ -160,6 +182,94 @@ export function periodUploads(periodId: string, db: Db = prisma): Promise<Record
   return cachedUploads(periodId, db);
 }
 
+/*
+ * Qismli yuklash (malumotlar.md 5.1). Shablon oyga yuklangan bo'lsa ham, u
+ * faqat ayrim podstansiyalarni qamrashi mumkin (masalan Transformatorlar fayli
+ * faqat Baliqchi va O'rmonbek uchun). Podstansiya shablon bilan "qamralgan" -
+ * shu oyda shu shablonning shu podstansiyaga tegishli kamida bitta qatori bor.
+ * Qamralmagan podstansiya, uning fider va TP lari uchun shablon "yuklanmagan":
+ * son "0" emas, "ma'lumot yo'q". Qoidabuzarlik va murojaatlar oy darajasida
+ * qoladi - podstansiyada ularning yo'qligi haqiqiy "0".
+ */
+
+/** Podstansiya bo'yicha qamrovi tekshiriladigan shablonlar (obyekt ierarxiyasi). */
+const COVERAGE_TEMPLATES = ["SUBSTATIONS", "FEEDERS", "TRANSFORMERS", "SUBSCRIBERS"] as const;
+type CoverageTemplate = (typeof COVERAGE_TEMPLATES)[number];
+
+/** Shablon -> shu oyda shu shablon qatorlari bor podstansiyalar id lari. */
+export type PeriodCoverage = Record<CoverageTemplate, ReadonlySet<string>>;
+
+/** `IN (...)` uchun parametrlar ro'yxati. */
+const idList = (ids: readonly string[]) => join(ids.map((id) => sql`${id}`), ", ");
+
+/** Bir nechta davr uchun qamrov - bitta so'rov. */
+export async function coverageMany(periodIds: readonly string[], db: Db = prisma): Promise<Map<string, PeriodCoverage>> {
+  const sets = new Map<string, Record<CoverageTemplate, Set<string>>>();
+  for (const periodId of periodIds) {
+    sets.set(periodId, { SUBSTATIONS: new Set(), FEEDERS: new Set(), TRANSFORMERS: new Set(), SUBSCRIBERS: new Set() });
+  }
+  if (periodIds.length === 0) return sets;
+  const rows = await queryRows<{ periodId: string; substationId: string } & Record<CoverageTemplate, boolean>>(
+    db,
+    sql`
+    SELECT p.id AS "periodId", s.id AS "substationId",
+      EXISTS (SELECT 1 FROM substation_snapshots x
+              WHERE x."periodId" = p.id AND x."substationId" = s.id) AS "SUBSTATIONS",
+      EXISTS (SELECT 1 FROM feeder_snapshots x JOIN feeders f ON f.id = x."feederId"
+              WHERE x."periodId" = p.id AND f."substationId" = s.id) AS "FEEDERS",
+      EXISTS (SELECT 1 FROM transformer_snapshots x JOIN transformers t ON t.id = x."transformerId"
+              WHERE x."periodId" = p.id AND t."substationId" = s.id) AS "TRANSFORMERS",
+      EXISTS (SELECT 1 FROM subscriber_snapshots x JOIN transformers t ON t.id = x."transformerId"
+              WHERE x."periodId" = p.id AND t."substationId" = s.id) AS "SUBSCRIBERS"
+    FROM periods p CROSS JOIN substations s
+    WHERE p.id IN (${idList(periodIds)})`,
+  );
+  for (const row of rows) {
+    const coverage = sets.get(row.periodId);
+    if (!coverage) continue;
+    for (const template of COVERAGE_TEMPLATES) if (row[template]) coverage[template].add(row.substationId);
+  }
+  return sets;
+}
+
+const cachedCoverage = cache(
+  async (periodId: string, db: Db): Promise<PeriodCoverage> => (await coverageMany([periodId], db)).get(periodId)!,
+);
+
+/** Shu oy qamrovi (so'rov davomida keshlanadi). */
+export function periodCoverage(periodId: string, db: Db = prisma): Promise<PeriodCoverage> {
+  return cachedCoverage(periodId, db);
+}
+
+/**
+ * Qamrov uchun "yuklangan": tuman - oy darajasi; podstansiya / fider / TP -
+ * shablon oyga yuklangan VA qamrov podstansiyasi shu shablon bilan qamralgan.
+ * `substationId = null` - tuman.
+ */
+export function coveredUploads(
+  uploads: Record<TemplateType, boolean>,
+  coverage: PeriodCoverage,
+  substationId: string | null,
+): Record<TemplateType, boolean> {
+  if (substationId == null) return uploads;
+  const result = { ...uploads };
+  for (const template of COVERAGE_TEMPLATES) {
+    result[template] = uploads[template] && coverage[template].has(substationId);
+  }
+  return result;
+}
+
+/**
+ * Abonent sonlari manbasi podstansiya bo'yicha: abonentlar ro'yxati bilan
+ * qamralgan bo'lsa - ro'yxat, aks holda Transformatorlar bilan qamralgan
+ * bo'lsa - TP holatlaridagi sonlar, ikkalasi ham yo'q - null.
+ */
+export function subscriberSource(coverage: PeriodCoverage, substationId: string): "list" | "transformers" | null {
+  if (coverage.SUBSCRIBERS.has(substationId)) return "list";
+  if (coverage.TRANSFORMERS.has(substationId)) return "transformers";
+  return null;
+}
+
 /** Bir oy oldingi davr (`month - 1`); bazada bo'lmasa - null. */
 export async function previousPeriodOf(period: PeriodInfo, db: Db = prisma): Promise<PeriodInfo | null> {
   const month = new Date(period.month);
@@ -186,7 +296,9 @@ export interface EnergySummary {
 export interface ScopeSummary {
   /**
    * Shu oyga qaysi shablonlar yuklangan. Oyga 1..6 ta fayl yuklanishi mumkin:
-   * yuklanmagan shablonning soni "0" emas, "ma'lumot yo'q".
+   * yuklanmagan shablonning soni "0" emas, "ma'lumot yo'q". Podstansiya /
+   * fider / TP qamrovida - `coveredUploads` (shablon qamrov podstansiyasini
+   * ham qamragan bo'lishi kerak).
    */
   uploads: Record<TemplateType, boolean>;
   /** Tuman - Σ podstansiya holatlari; qolganlari - obyektning o'z holati. Holat yo'q - null. */
@@ -195,15 +307,17 @@ export interface ScopeSummary {
    * Shu oyda holati bor obyektlar soni. Qamrov obyektining o'zi va uning
    * ota obyektlari ham sanaladi (fider qamrovida: podstansiya 0/1, fider 0/1,
    * TP - shu fiderdagilar). Tegishli shablon (Podstansiyalar / Fiderlar /
-   * Transformatorlar) shu oyga yuklanmagan bo'lsa - null.
+   * Transformatorlar) shu qamrovda yuklanmagan (`uploads`) bo'lsa - null.
    */
   counts: { substations: number | null; feeders: number | null; transformers: number | null };
   /**
-   * Abonentlar soni: Transformatorlar shu oyga yuklangan bo'lsa - Σ TP
-   * holatlaridagi "Aloqadagi" / "Aloqadan chiqqan" (4.5 qoida ular abonentlar
-   * ro'yxatiga tengligini kafolatlaydi); yuklanmagan, lekin Abonentlar
-   * yuklangan bo'lsa - abonentlar ro'yxatidan (aloqada = "Aloqada", qolganlari -
-   * aloqadan chiqqan). Ikkalasi ham yo'q - null.
+   * Abonentlar soni (malumotlar.md 5-bo'lim), manba podstansiya bo'yicha
+   * (`subscriberSource`): abonentlar ro'yxati bilan qamralgan podstansiyada -
+   * ro'yxatdan (aloqada = "Aloqada", qolganlari - aloqadan chiqqan); aks holda
+   * Transformatorlar bilan qamralgan bo'lsa - TP holatlaridagi "Aloqadagi" /
+   * "Aloqadan chiqqan". Tuman - podstansiyalar bo'yicha yig'indi. Manba yo'q -
+   * null. Real fayllarda TP jadvalidagi son ro'yxatdan farq qilishi mumkin -
+   * barcha sahifalarda bir xil son chiqishi uchun manba bitta.
    */
   subscribers: { total: number; online: number; offline: number } | null;
   /** Abonentlar ro'yxatidan (`SubscriberSnapshot`). */
@@ -263,6 +377,16 @@ async function resolveScope(scope: Scope, db: Db): Promise<ScopeParents | null> 
       return row ? { substationId: row.substationId, feederId: row.feederId, transformerId: row.id } : null;
     }
   }
+}
+
+/**
+ * Qamrov obyektining podstansiyasi (`coveredUploads` uchun): tuman yoki
+ * qamrovsiz - null; obyekt topilmasa - "" (hech bir shablon uni qamramaydi).
+ */
+export async function scopeSubstationId(scope: Scope | undefined, db: Db = prisma): Promise<string | null> {
+  if (!scope || scope.kind === "district") return null;
+  if (scope.kind === "substation") return scope.id;
+  return (await resolveScope(scope, db))?.substationId ?? "";
 }
 
 function energyOf(
@@ -345,40 +469,95 @@ async function scopeCounts(
   return { substations, feeders, transformers };
 }
 
+/** TP holatlaridagi abonent sonlari - podstansiya bo'yicha (qamrov filtri bilan). */
+async function transformerSubscriberRows(
+  periodIds: readonly string[],
+  scope: Scope,
+  db: Db,
+): Promise<{ periodId: string; substationId: string; online: number; offline: number }[]> {
+  if (periodIds.length === 0) return [];
+  return queryRows(
+    db,
+    sql`
+    SELECT ts."periodId", t."substationId",
+           COALESCE(SUM(ts."onlineSubscribers"), 0)::int AS online,
+           COALESCE(SUM(ts."offlineSubscribers"), 0)::int AS offline
+    FROM transformer_snapshots ts
+    JOIN transformers t ON t.id = ts."transformerId"
+    WHERE ts."periodId" IN (${idList(periodIds)}) AND ${transformerScopeSql(scope)}
+    GROUP BY 1, 2`,
+  );
+}
+
+/**
+ * `ScopeSummary.subscribers` qoidasi: ro'yxat qismi (ro'yxat qatorlari faqat
+ * ro'yxat qamragan podstansiyalarda bo'ladi) + ro'yxat qamramagan
+ * podstansiyalardagi TP holatlari. Qamrov podstansiyasida (tumanda - birorta
+ * podstansiyada) manba yo'q - null.
+ */
+function subscriberTotals(
+  coverage: PeriodCoverage,
+  substationId: string | null,
+  list: { total: number; online: number },
+  transformerRows: readonly { substationId: string; online: number; offline: number }[],
+): { total: number; online: number; offline: number } | null {
+  const hasSource =
+    substationId == null
+      ? coverage.SUBSCRIBERS.size > 0 || coverage.TRANSFORMERS.size > 0
+      : subscriberSource(coverage, substationId) !== null;
+  if (!hasSource) return null;
+  let online = list.online;
+  let offline = list.total - list.online;
+  for (const row of transformerRows) {
+    if (coverage.SUBSCRIBERS.has(row.substationId)) continue;
+    online += row.online;
+    offline += row.offline;
+  }
+  return { total: online + offline, online, offline };
+}
+
 async function computeScopeSummary(periodId: string, scope: Scope, db: Db): Promise<ScopeSummary> {
   const scoped = { periodId, ...transformerScopeWhere(scope) };
-  const [parents, energy, uploads, onlineOffline, subscriberGroups, debtors, violationGroups, appealGroups] =
-    await Promise.all([
-      resolveScope(scope, db),
-      scopeEnergy(periodId, scope, db),
-      periodUploads(periodId, db),
-      db.transformerSnapshot.aggregate({
-        where: scoped,
-        _sum: { onlineSubscribers: true, offlineSubscribers: true },
-      }),
-      db.subscriberSnapshot.groupBy({
-        by: ["kind", "meterStatus"],
-        where: scoped,
-        _count: { _all: true },
-        _sum: { debtUzs: true, creditUzs: true },
-      }),
-      db.subscriberSnapshot.count({ where: { ...scoped, debtUzs: { gt: 0 } } }),
-      db.violation.groupBy({
-        by: ["violatorType"],
-        where: scoped,
-        _count: { _all: true },
-        _sum: { damageUzs: true, damageKwh: true },
-      }),
-      db.appeal.groupBy({
-        by: ["status"],
-        where: scoped,
-        _count: { _all: true },
-      }),
-    ]);
+  const eventsScoped = { periodId, ...eventScopeWhere(scope) };
+  const [
+    parents,
+    energy,
+    monthUploads,
+    coverage,
+    tpSubscribers,
+    subscriberGroups,
+    debtors,
+    violationGroups,
+    appealGroups,
+  ] = await Promise.all([
+    resolveScope(scope, db),
+    scopeEnergy(periodId, scope, db),
+    periodUploads(periodId, db),
+    periodCoverage(periodId, db),
+    transformerSubscriberRows([periodId], scope, db),
+    db.subscriberSnapshot.groupBy({
+      by: ["kind", "meterStatus"],
+      where: scoped,
+      _count: { _all: true },
+      _sum: { debtUzs: true, creditUzs: true },
+    }),
+    db.subscriberSnapshot.count({ where: { ...scoped, debtUzs: { gt: 0 } } }),
+    db.violation.groupBy({
+      by: ["violatorType"],
+      where: eventsScoped,
+      _count: { _all: true },
+      _sum: { damageUzs: true, damageKwh: true },
+    }),
+    db.appeal.groupBy({
+      by: ["status"],
+      where: eventsScoped,
+      _count: { _all: true },
+    }),
+  ]);
+  // Obyekt topilmagan qamrov - hech bir shablon uni qamramaydi.
+  const substationId = scope.kind === "district" ? null : (parents?.substationId ?? "");
+  const uploads = coveredUploads(monthUploads, coverage, substationId);
   const counts = await scopeCounts(periodId, scope, parents, uploads, db);
-
-  const online = onlineOffline._sum.onlineSubscribers ?? 0;
-  const offline = onlineOffline._sum.offlineSubscribers ?? 0;
 
   const subscriberList: ScopeSummary["subscriberList"] = {
     uploaded: uploads.SUBSCRIBERS,
@@ -427,12 +606,12 @@ async function computeScopeSummary(periodId: string, scope: Scope, db: Db): Prom
     appeals.byStatus[group.status] += group._count._all;
   }
 
-  const listOnline = subscriberList.byStatus.ONLINE;
-  const subscribers = uploads.TRANSFORMERS
-    ? { total: online + offline, online, offline }
-    : uploads.SUBSCRIBERS
-      ? { total: subscriberList.total, online: listOnline, offline: subscriberList.total - listOnline }
-      : null;
+  const subscribers = subscriberTotals(
+    coverage,
+    substationId,
+    { total: subscriberList.total, online: subscriberList.byStatus.ONLINE },
+    tpSubscribers,
+  );
 
   return {
     uploads,
@@ -476,12 +655,12 @@ export interface ScopeSeriesPoint {
   lossKwh: number | null;
   lossPercent: number | null;
   /**
-   * Abonentlar soni - `ScopeSummary.subscribers.total` bilan bir xil qoida:
-   * Transformatorlar yuklangan bo'lsa Σ TP holatlari, aks holda abonentlar
-   * ro'yxati; ikkalasi ham yo'q - null.
+   * Abonentlar soni - `ScopeSummary.subscribers.total` bilan bir xil qoida
+   * (`subscriberTotals`: podstansiya bo'yicha ro'yxat yoki TP holatlari); manba
+   * yo'q - null.
    */
   subscribers: number | null;
-  /** Abonentlar ro'yxati shu oyga yuklanmagan bo'lsa - null. */
+  /** Abonentlar ro'yxati qamrovda yo'q (`ScopeSummary.subscriberList.uploaded`) - null. */
   debtUzs: number | null;
   /** Qoidabuzarliklar shu oyga yuklanmagan bo'lsa - null. */
   violations: number | null;
@@ -544,41 +723,50 @@ export async function getScopeSeries(
   if (periods.length === 0) return [];
   const periodIds = periods.map((period) => period.id);
   const scoped = { periodId: { in: periodIds }, ...transformerScopeWhere(scope) };
+  const eventsScoped = { periodId: { in: periodIds }, ...eventScopeWhere(scope) };
 
-  const [energy, uploads, subscriberGroups, debtGroups, violationGroups, appealGroups] = await Promise.all([
-    seriesEnergy(periodIds, scope, db),
-    uploadsMany(periodIds, db),
-    db.transformerSnapshot.groupBy({
-      by: ["periodId"],
-      where: scoped,
-      _sum: { onlineSubscribers: true, offlineSubscribers: true },
-    }),
-    db.subscriberSnapshot.groupBy({
-      by: ["periodId"],
-      where: scoped,
-      _count: { _all: true },
-      _sum: { debtUzs: true },
-    }),
-    db.violation.groupBy({
-      by: ["periodId"],
-      where: scoped,
-      _count: { _all: true },
-      _sum: { damageUzs: true },
-    }),
-    db.appeal.groupBy({
-      by: ["periodId"],
-      where: scoped,
-      _count: { _all: true },
-    }),
-  ]);
+  const [energy, parents, uploads, coverages, tpSubscribers, listGroups, violationGroups, appealGroups] =
+    await Promise.all([
+      seriesEnergy(periodIds, scope, db),
+      resolveScope(scope, db),
+      uploadsMany(periodIds, db),
+      coverageMany(periodIds, db),
+      transformerSubscriberRows(periodIds, scope, db),
+      db.subscriberSnapshot.groupBy({
+        by: ["periodId"],
+        where: scoped,
+        _count: { _all: true },
+        _sum: { debtUzs: true },
+      }),
+      db.violation.groupBy({
+        by: ["periodId"],
+        where: eventsScoped,
+        _count: { _all: true },
+        _sum: { damageUzs: true },
+      }),
+      db.appeal.groupBy({
+        by: ["periodId"],
+        where: eventsScoped,
+        _count: { _all: true },
+      }),
+    ]);
+  // `computeScopeSummary` bilan bir xil: obyekt topilmagan qamrovni hech bir shablon qamramaydi.
+  const substationId = scope.kind === "district" ? null : (parents?.substationId ?? "");
 
   return periods.map((period) => {
     const point = energy.get(period.id) ?? null;
-    const uploaded = uploads.get(period.id)!;
-    const subscribers = subscriberGroups.find((group) => group.periodId === period.id);
-    const debt = debtGroups.find((group) => group.periodId === period.id);
+    const coverage = coverages.get(period.id)!;
+    const uploaded = coveredUploads(uploads.get(period.id)!, coverage, substationId);
+    const list = listGroups.find((group) => group.periodId === period.id);
     const violation = violationGroups.find((group) => group.periodId === period.id);
     const appeal = appealGroups.find((group) => group.periodId === period.id);
+    // Faqat jami kerak - ro'yxatning aloqada / aloqadan chiqqan bo'linishi ahamiyatsiz.
+    const subscribers = subscriberTotals(
+      coverage,
+      substationId,
+      { total: list?._count._all ?? 0, online: 0 },
+      tpSubscribers.filter((row) => row.periodId === period.id),
+    );
     return {
       periodId: period.id,
       key: period.key,
@@ -589,12 +777,8 @@ export async function getScopeSeries(
       usefulKwh: point?.usefulKwh ?? null,
       lossKwh: point?.lossKwh ?? null,
       lossPercent: point?.lossPercent ?? null,
-      subscribers: uploaded.TRANSFORMERS
-        ? (subscribers?._sum.onlineSubscribers ?? 0) + (subscribers?._sum.offlineSubscribers ?? 0)
-        : uploaded.SUBSCRIBERS
-          ? (debt?._count._all ?? 0)
-          : null,
-      debtUzs: uploaded.SUBSCRIBERS ? amount(debt?._sum.debtUzs) : null,
+      subscribers: subscribers?.total ?? null,
+      debtUzs: uploaded.SUBSCRIBERS ? amount(list?._sum.debtUzs) : null,
       violations: uploaded.VIOLATIONS ? (violation?._count._all ?? 0) : null,
       damageUzs: uploaded.VIOLATIONS ? amount(violation?._sum.damageUzs) : null,
       appeals: uploaded.APPEALS ? (appeal?._count._all ?? 0) : null,

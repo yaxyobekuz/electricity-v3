@@ -26,25 +26,34 @@ interface Ref {
   name: string;
 }
 
-/** TP nomi (havola) va ostida fider · podstansiya. */
+/**
+ * TP nomi (havola) va ostida fider · podstansiya. Yozuv TP ga bog'lanmagan
+ * bo'lishi mumkin (malumotlar.md 4.3d) - unda faqat ma'lum ota obyektlar.
+ */
 export function TransformerCell({
   transformer,
   feeder,
   substation,
 }: {
-  transformer: Ref;
-  feeder: Ref;
-  substation?: Ref;
+  transformer: Ref | null;
+  feeder: Ref | null;
+  substation?: Ref | null;
 }) {
-  const parents = substation ? `${feeder.name} · ${substation.name}` : feeder.name;
+  const parents = [feeder?.name, substation?.name].filter(Boolean).join(" · ");
   return (
     <span className={cn("flex min-w-0 flex-col items-start leading-4", CELL_GUTTER)}>
-      <Link href={`/transformers/${transformer.id}`} className={cn(LINK, "max-w-full")}>
-        {transformer.name}
-      </Link>
-      <span className="max-w-full truncate text-[10px] leading-3.5 text-ink-soft" title={parents}>
-        {parents}
-      </span>
+      {transformer ? (
+        <Link href={`/transformers/${transformer.id}`} className={cn(LINK, "max-w-full")}>
+          {transformer.name}
+        </Link>
+      ) : (
+        <span className="max-w-full truncate text-ink-soft">TP aniqlanmagan</span>
+      )}
+      {parents && (
+        <span className="max-w-full truncate text-[10px] leading-3.5 text-ink-soft" title={parents}>
+          {parents}
+        </span>
+      )}
     </span>
   );
 }

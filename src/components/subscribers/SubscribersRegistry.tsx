@@ -358,7 +358,11 @@ export function SubscribersRegistry({
         <EmptyState
           variant="inline"
           title="Abonentlar ro’yxati yuklanmagan"
-          description={`${periodLabel} oyi uchun abonentlar shabloni hali yuklanmagan.`}
+          description={
+            scope
+              ? `${periodLabel} oyi uchun bu qamrovning abonentlar ro’yxati yuklanmagan.`
+              : `${periodLabel} oyi uchun abonentlar shabloni hali yuklanmagan.`
+          }
         />
       ) : (
         <>
