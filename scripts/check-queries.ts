@@ -130,7 +130,17 @@ interface MonthSpec {
   feeders: Record<string, { energy: Energy; staff?: "A" | "B" }>;
   transformers: Record<
     string,
-    { energy: Energy; staff?: "A" | "B"; current?: Date; overhaul?: Date; subscribers: SubscriberSpec[] }
+    {
+      energy: Energy;
+      staff?: "A" | "B";
+      current?: Date;
+      overhaul?: Date;
+      subscribers: SubscriberSpec[];
+      /** false - TP holati yozilmaydi (TP faqat abonentlar ro'yxatida). */
+      snapshot?: false;
+      /** TP holatidagi [aloqada, aloqadan chiqqan] - berilmasa abonentlardan (4.5). */
+      counts?: [online: number, offline: number];
+    }
   >;
   violations: { tp: string; name: string; type: ViolatorType; uzs: number; kwh: number; staff?: "A" | "B"; subscriber?: string }[];
   appeals: { tp: string; name: string; status: AppealStatus; staff?: "A" | "B" }[];
@@ -277,6 +287,28 @@ const MONTHS: MonthSpec[] = [
     violations: [],
     appeals: [],
   },
+  {
+    // Qismli yuklash (malumotlar.md 5.1): Fiderlar faqat S1 ni, Transformatorlar faqat S2 ni,
+    // abonentlar ro'yxati faqat S1 ni qamraydi.
+    month: 6,
+    reportDay: 12,
+    uploads: ["SUBSTATIONS", "FEEDERS", "TRANSFORMERS", "SUBSCRIBERS"],
+    substations: { S1: { energy: [9000, 8000, 1000] }, S2: { energy: [3000, 2500, 500] } },
+    feeders: { F1: { energy: [5000, 4500, 500] } },
+    transformers: {
+      T1: {
+        energy: [0, 0, 0],
+        snapshot: false,
+        subscribers: [
+          { contract: "C8", name: "Olim Sobirov", kind: "LEGAL", status: "ONLINE", debt: 300, credit: 0, reading: 40 },
+          { contract: "C9", name: "Zuhra Nazarova", kind: "HOUSEHOLD", status: "NOT_RESPONDING", debt: 0, credit: 0, reading: 7 },
+        ],
+      },
+      T4: { energy: [2600, 2100, 500], counts: [5, 2], subscribers: [] },
+    },
+    violations: [],
+    appeals: [],
+  },
 ];
 
 interface Seeded {
@@ -357,23 +389,26 @@ async function seed(tx: Db): Promise<Seeded> {
     }
     for (const [key, item] of Object.entries(spec.transformers)) {
       const [totalKwh, usefulKwh, lossKwh] = item.energy;
-      // 4.5 qoida: TP sonlari = abonentlar ro'yxati.
+      // 4.5 qoida: TP sonlari = abonentlar ro'yxati (`counts` berilmasa).
       const online = item.subscribers.filter((sub) => sub.status === "ONLINE").length;
-      await tx.transformerSnapshot.create({
-        data: {
-          periodId: period.id,
-          transformerId: ids.transformers[key],
-          rowNumber: row++,
-          totalKwh,
-          usefulKwh,
-          lossKwh,
-          onlineSubscribers: online,
-          offlineSubscribers: item.subscribers.length - online,
-          currentRepairDate: item.current ?? null,
-          overhaulDate: item.overhaul ?? null,
-          staffId: staffId(item.staff),
-        },
-      });
+      const [onlineSubscribers, offlineSubscribers] = item.counts ?? [online, item.subscribers.length - online];
+      if (item.snapshot !== false) {
+        await tx.transformerSnapshot.create({
+          data: {
+            periodId: period.id,
+            transformerId: ids.transformers[key],
+            rowNumber: row++,
+            totalKwh,
+            usefulKwh,
+            lossKwh,
+            onlineSubscribers,
+            offlineSubscribers,
+            currentRepairDate: item.current ?? null,
+            overhaulDate: item.overhaul ?? null,
+            staffId: staffId(item.staff),
+          },
+        });
+      }
       for (const sub of item.subscribers) {
         const contractKey = `${sub.contract}${TAG}`.replace(/\s+/g, "").toUpperCase();
         if (!ids.subscribers[sub.contract]) {
@@ -409,7 +444,10 @@ async function seed(tx: Db): Promise<Seeded> {
       await tx.violation.create({
         data: {
           periodId: period.id,
+          // Import kabi: TP bilan birga fider va podstansiya ham yoziladi (malumotlar.md 4.3d).
           transformerId: ids.transformers[item.tp],
+          feederId: ids.feeders[FEEDER_OF[item.tp]],
+          substationId: ids.substations[SUBSTATION_OF[FEEDER_OF[item.tp]]],
           subscriberId: item.subscriber ? ids.subscribers[item.subscriber] : null,
           rowNumber: row++,
           subscriberName: item.name,
@@ -426,6 +464,8 @@ async function seed(tx: Db): Promise<Seeded> {
         data: {
           periodId: period.id,
           transformerId: ids.transformers[item.tp],
+          feederId: ids.feeders[FEEDER_OF[item.tp]],
+          substationId: ids.substations[SUBSTATION_OF[FEEDER_OF[item.tp]]],
           rowNumber: row++,
           text: `Murojaat ${item.name}`,
           subscriberName: item.name,
@@ -505,7 +545,7 @@ async function checkSummaryAgainstLists(tx: Db, periodId: string, scope: Scope, 
 
 async function run(tx: Db) {
   const ids = await seed(tx);
-  const [p1, p2, p3] = ids.periods.map(toPeriodInfo);
+  const [p1, p2, p3, p4] = ids.periods.map(toPeriodInfo);
   const S = (key: string): Scope => ({ kind: "substation", id: ids.substations[key] });
   const F = (key: string): Scope => ({ kind: "feeder", id: ids.feeders[key] });
   const T = (key: string): Scope => ({ kind: "transformer", id: ids.transformers[key] });
@@ -670,6 +710,103 @@ async function run(tx: Db) {
       null,
       sumOf(Object.values(MONTHS[1].transformers), (item) => item.subscribers.length),
     ]);
+  }
+
+  // --- Qismli yuklash (P4): shablon faqat ayrim podstansiyalarni qamraydi ------------
+  {
+    const summary = await getScopeSummary(p4.id, district, tx);
+    expectEqual("P4 tuman: uploads oy darajasida", summary.uploads, uploadsOf(MONTHS[3]));
+    expectEqual("P4 tuman: sonlar", summary.counts, { substations: 2, feeders: 1, transformers: 1 });
+    expectEqual("P4 tuman: abonentlar = S1 ro'yxati + S2 TP holati", summary.subscribers, { total: 9, online: 6, offline: 3 });
+    expectEqual("P4 tuman: ro'yxat faqat S1", [summary.subscriberList.uploaded, summary.subscriberList.total], [true, 2]);
+
+    const coverageOf = (item: ScopeSummary) => [item.uploads.FEEDERS, item.uploads.TRANSFORMERS, item.uploads.SUBSCRIBERS];
+    const s1 = await getScopeSummary(p4.id, S("S1"), tx);
+    const s2 = await getScopeSummary(p4.id, S("S2"), tx);
+    expectEqual("P4 S1: qamrov (fider, TP, ro'yxat)", coverageOf(s1), [true, false, true]);
+    expectEqual("P4 S2: qamrov (fider, TP, ro'yxat)", coverageOf(s2), [false, true, false]);
+    expectEqual("P4 S1: sonlar", [s1.counts, s1.subscribers], [
+      { substations: 1, feeders: 1, transformers: null },
+      { total: 2, online: 1, offline: 1 },
+    ]);
+    expectEqual("P4 S2: sonlar", [s2.counts, s2.subscribers], [
+      { substations: 1, feeders: null, transformers: 1 },
+      { total: 7, online: 5, offline: 2 },
+    ]);
+    expectEqual("P4 S2: ro'yxat qamramagan", [s2.subscriberList.uploaded, s2.subscriberList.total], [false, 0]);
+
+    const substations = await listSubstations(p4.id, tx);
+    expectEqual(
+      "P4 podstansiyalar ro'yxati = qamrov xulosasi",
+      substations.map((row) => [row.id, row.feederCount, row.transformerCount, row.subscribers]),
+      [
+        [ids.substations.S1, s1.counts.feeders, s1.counts.transformers, s1.subscribers],
+        [ids.substations.S2, s2.counts.feeders, s2.counts.transformers, s2.subscribers],
+      ],
+    );
+    expectEqual(
+      "P4 podstansiyalar abonentlari yig'indisi = tuman",
+      sumOf(substations, (row) => row.subscribers?.total ?? 0),
+      summary.subscribers?.total,
+    );
+
+    const f1 = await getScopeSummary(p4.id, F("F1"), tx);
+    const feeders = await listFeeders(p4.id, {}, tx);
+    expectEqual(
+      "P4 F1 qatori = xulosa",
+      feeders.map((row) => [row.id, row.transformerCount, row.subscribers]),
+      [[ids.feeders.F1, f1.counts.transformers, f1.subscribers]],
+    );
+    expectEqual("P4 F1: TP null, abonentlar ro'yxatdan", [f1.counts.transformers, f1.subscribers?.total], [null, 2]);
+    const f3 = await getScopeSummary(p4.id, F("F3"), tx);
+    expectEqual("P4 F3: fider holati yo'q, abonentlar TP holatidan", [f3.energy, f3.uploads.FEEDERS, f3.subscribers?.total], [
+      null,
+      false,
+      7,
+    ]);
+
+    const t4 = await getScopeSummary(p4.id, T("T4"), tx);
+    const transformers = await listTransformers(p4.id, {}, tx);
+    expectEqual(
+      "P4 TP qatori: ro'yxat qamramagan - TP holatidagi sonlar",
+      transformers.map((row) => [row.id, row.onlineSubscribers, row.offlineSubscribers]),
+      [[ids.transformers.T4, 5, 2]],
+    );
+    expectEqual("P4 T4 xulosa = qator", [t4.subscribers, t4.counts], [
+      { total: 7, online: 5, offline: 2 },
+      { substations: 1, feeders: null, transformers: 1 },
+    ]);
+
+    expectEqual(
+      "P4 abonentlar ro'yxati: yuklangan qamrov bo'yicha (tuman, S1, S2, T4)",
+      [
+        (await listSubscribers(p4.id, { take: 10 }, tx)).uploaded,
+        (await listSubscribers(p4.id, { scope: S("S1"), take: 10 }, tx)).uploaded,
+        (await listSubscribers(p4.id, { scope: S("S2"), take: 10 }, tx)).uploaded,
+        (await listSubscribers(p4.id, { scope: T("T4"), take: 10 }, tx)).uploaded,
+      ],
+      [true, true, false, false],
+    );
+
+    const series = await getScopeSeries(district, [p3, p4], tx);
+    expectEqual("P4 dinamika: tuman abonentlari va qarzdorlik", series.map((point) => [point.subscribers, point.debtUzs]), [
+      [null, null],
+      [9, 300],
+    ]);
+    for (const [label, scope] of [
+      ["S1", S("S1")],
+      ["S2", S("S2")],
+      ["F1", F("F1")],
+      ["F3", F("F3")],
+      ["T4", T("T4")],
+    ] as const) {
+      const [point] = await getScopeSeries(scope, [p4], tx);
+      const scoped = await getScopeSummary(p4.id, scope, tx);
+      expectEqual(`P4 dinamika ${label} = xulosa`, [point.subscribers, point.debtUzs], [
+        scoped.subscribers?.total ?? null,
+        scoped.subscriberList.uploaded ? scoped.subscriberList.debtUzs : null,
+      ]);
+    }
   }
 
   // --- Abonentlar ro'yxati: filtrlar, chiplar, qidiruv, sahifalash -----------
@@ -922,10 +1059,10 @@ async function run(tx: Db) {
   // --- Noma'lum qamrov --------------------------------------------------------------
   {
     const missing = await getScopeSummary(p2.id, { kind: "feeder", id: "missing-id" }, tx);
-    expectEqual("noma'lum qamrov: bo'sh", [missing.energy, missing.counts, missing.subscribers?.total], [
+    expectEqual("noma'lum qamrov: bo'sh, sonlar null", [missing.energy, missing.counts, missing.subscribers], [
       null,
-      { substations: 0, feeders: 0, transformers: 0 },
-      0,
+      { substations: null, feeders: null, transformers: null },
+      null,
     ]);
   }
 
