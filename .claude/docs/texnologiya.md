@@ -33,6 +33,11 @@ npm run db:reset     # bazani tozalab qayta qurish
 # namunaviy (TEST) Excel fayllar: .samples/2026-07..09 va .samples/invalid/
 npx tsx scripts/sample-data.ts
 
+# baliqchi/ va chinobod/ dagi haqiqiy xom fayllar -> converted/ (tozalangan/<manba>/,
+# oylik/2026-MM/ - ikkala manba bitta faylda, "Nomlar va tuzatishlar.xlsx");
+# oylik/ dagi fayllar import-files.ts bilan yuklanadi (har oy bitta submission)
+npx tsx scripts/convert-data.ts
+
 # fayllarni import kodi orqali tekshirish / saqlash (/imports sahifasi bilan bir xil)
 npx tsx --conditions=react-server scripts/import-files.ts [--commit] [--json] <fayl.xlsx...>
 
