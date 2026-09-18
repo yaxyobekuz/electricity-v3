@@ -54,9 +54,12 @@ export const listPeriods = cache(async (): Promise<PeriodInfo[]> => {
  * Bazada davr yo'q bo'lsa - null (sahifa "Ma’lumot hali yuklanmagan" ko'rsatadi).
  */
 export const getSelectedPeriod = cache(async (): Promise<PeriodInfo | null> => {
+  // Cookie bazadan OLDIN o'qiladi: aks holda bo'sh bazada build qilinganda
+  // sahifa `cookies()` ga yetmay statik prerender bo'lib qoladi, ma'lumot
+  // yuklangach esa qayta chizishda `cookies()` chaqirilib 500 qaytaradi.
+  const store = await cookies();
   const periods = await listPeriods();
   if (periods.length === 0) return null;
-  const store = await cookies();
   const wanted = store.get(PERIOD_COOKIE)?.value;
   return periods.find((period) => period.key === wanted) ?? periods[0];
 });
