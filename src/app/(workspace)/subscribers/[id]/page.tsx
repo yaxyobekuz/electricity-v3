@@ -5,7 +5,12 @@ import { SubscriberDetail } from "@/components/subscribers/SubscriberDetail";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getPreviousPeriod, getSelectedPeriod } from "@/lib/period";
 import { getSubscriber, getSubscriberHistory } from "@/lib/queries/entities";
-import { getSubscriberRelated } from "@/lib/queries/subscribers-related";
+import { getSubscriberPhotos } from "@/lib/queries/subscriber-photos";
+import {
+  getSubscriberEventSeries,
+  getSubscriberRelated,
+  getSubscriberSource,
+} from "@/lib/queries/subscribers-related";
 
 /** Dinamika: tanlangan oy va undan oldingi eng ko'pi 12 oy (`malumotlar.md` 2-bo'lim). */
 const HISTORY_LIMIT = 12;
@@ -26,15 +31,21 @@ export default async function Page({ params }: PageProps<"/subscribers/[id]">) {
   const subscriber = await getSubscriber(id, period.id);
   if (!subscriber) notFound();
 
-  const [history, related, previousPeriod] = await Promise.all([
+  const [history, related, previousPeriod, photos, source] = await Promise.all([
     getSubscriberHistory(id),
     subscriber.snapshot ? getSubscriberRelated(id, period.id) : Promise.resolve(null),
     getPreviousPeriod(period),
+    getSubscriberPhotos(id),
+    subscriber.snapshot ? getSubscriberSource(id, period.id) : Promise.resolve(null),
   ]);
 
   // Tanlangan oydan keyingi oylar ko'rsatilmaydi - sahifa shu oy "holatiga".
   const points = history.filter((point) => point.key <= period.key).slice(-HISTORY_LIMIT);
   const previous = previousPeriod ? (points.find((point) => point.key === previousPeriod.key) ?? null) : null;
+  const events = await getSubscriberEventSeries(
+    id,
+    points.map((point) => point.periodId),
+  );
 
   return (
     <SubscriberDetail
@@ -43,6 +54,9 @@ export default async function Page({ params }: PageProps<"/subscribers/[id]">) {
       history={points}
       previous={previous}
       related={related}
+      photos={photos}
+      source={source}
+      events={events}
     />
   );
 }

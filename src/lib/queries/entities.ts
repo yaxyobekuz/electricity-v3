@@ -5,7 +5,7 @@ import { cache } from "react";
 import type { MeterStatus, SubscriberKind } from "@/generated/prisma";
 import { prisma } from "@/lib/db/prisma";
 import { lossPercent, toNumber } from "@/lib/domain/metrics";
-import { monthKey, monthLabel, monthShort } from "@/lib/format";
+import { maskIdentifier, monthKey, monthLabel, monthShort } from "@/lib/format";
 
 import { amount, iso, type Db, type EntityRef } from "./scope";
 
@@ -219,12 +219,19 @@ export interface SubscriberDetail {
   substation: EntityRef;
   /** Qaysi oy holatidan olingani ("2026-09"). */
   sourcePeriodKey: string;
-  /** Tanlangan oydagi holat. Passport va PINFL hech qachon qaytarilmaydi. */
+  /**
+   * Tanlangan oydagi holat. Passport va PINFL faqat qisman yashirilgan
+   * ko'rinishda (`maskIdentifier`) - to'liq qiymat bazadan tashqariga chiqmaydi.
+   */
   snapshot: {
     fullName: string;
     kind: SubscriberKind;
     meterStatus: MeterStatus;
     staff: EntityRef | null;
+    /** "AB*****67" yoki manbadagi yashirilgan ko'rinish ("AB*"). */
+    maskedPassport: string | null;
+    /** "3***********67". */
+    maskedPinfl: string | null;
     address: string | null;
     lat: number | null;
     lng: number | null;
@@ -283,12 +290,14 @@ export const getSubscriber = cache(
       db.subscriber.findUnique({ where: { id }, select: { id: true, contractNumber: true } }),
       db.subscriberSnapshot.findUnique({
         where: { periodId_subscriberId: { periodId, subscriberId: id } },
-        // Shaxsiy maydonlar (passport, pinfl) ataylab tanlanmaydi.
+        // Shaxsiy maydonlar (passport, pinfl) quyida yashirilib qaytadi.
         select: {
           ...HEADER_SELECT,
           kind: true,
           meterStatus: true,
           staff: STAFF_SELECT,
+          passport: true,
+          pinfl: true,
           address: true,
           latitude: true,
           longitude: true,
@@ -325,6 +334,8 @@ export const getSubscriber = cache(
             kind: current.kind,
             meterStatus: current.meterStatus,
             staff: current.staff,
+            maskedPassport: maskIdentifier(current.passport, 2, 2),
+            maskedPinfl: maskIdentifier(current.pinfl, 1, 2),
             address: current.address,
             lat: toNumber(current.latitude),
             lng: toNumber(current.longitude),
