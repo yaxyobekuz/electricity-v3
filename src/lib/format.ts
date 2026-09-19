@@ -164,6 +164,17 @@ export function formatDateTime(value: DateInput): string {
   return `${formatDate(local)} ${hh}:${mm}`;
 }
 
+/**
+ * Vaqtli qiymatning (`lastReadingAt`) sanasi - Toshkent vaqti bilan,
+ * `formatDateTime` bilan bir xil kun. Faqat sana ustunlari (`DATE`) uchun
+ * `formatDate` ishlatiladi.
+ */
+export function formatLocalDate(value: DateInput): string {
+  const date = toDate(value);
+  if (!date) return EMPTY;
+  return formatDate(new Date(date.getTime() + TASHKENT_OFFSET_MS));
+}
+
 /** "Sentabr 2026" */
 export function monthLabel(value: DateInput): string {
   const date = toDate(value);
@@ -202,4 +213,48 @@ export function parseMonthKey(key: string | null | undefined): Date | null {
 /** Oydagi kunlar soni. */
 export function daysInMonth(value: Date): number {
   return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth() + 1, 0)).getUTCDate();
+}
+
+/** "5 yil 11 oy", "8 oy", "1 oydan kam" - `monthsBetween` natijasi. */
+export function durationText(months: number | null | undefined): string {
+  if (!isNumber(months) || months < 0) return EMPTY;
+  if (months === 0) return "1 oydan kam";
+  const years = Math.floor(months / 12);
+  const rest = months % 12;
+  if (years === 0) return `${rest} oy`;
+  return rest === 0 ? `${years} yil` : `${years} yil ${rest} oy`;
+}
+
+/** Shundan ko'p kunlik farq oy va yillarda yoziladi ("2 092 kun" o'rniga "5 yil 8 oy"). */
+const DAYS_AS_MONTHS_FROM = 60;
+
+/**
+ * Hisobot sanasiga nisbatan: "12 kun oldin", "5 yil 8 oy oldin", "hisobot
+ * kuni". `days` - `daysBetween`, `months` - `monthsBetween` natijasi.
+ */
+export function daysBeforeReport(days: number | null | undefined, months?: number | null): string {
+  if (!isNumber(days)) return EMPTY;
+  if (days < 0) return "hisobot sanasidan keyin";
+  if (days === 0) return "hisobot kuni";
+  if (days >= DAYS_AS_MONTHS_FROM && isNumber(months)) return `${durationText(months)} oldin`;
+  return `${num(days)} kun oldin`;
+}
+
+/* ---------------------------------------------------------------------------
+   Shaxsiy ma'lumot
+   --------------------------------------------------------------------------- */
+
+/**
+ * Shaxsiy raqamni qisman yashiradi (foydalanuvchi qarori, 2026-09-19):
+ * `maskIdentifier("AB1234567", 2, 2)` -> "AB*****67". Manbada allaqachon
+ * yashirilgan qiymat ("AB*") o'zgarishsiz qaytadi. To'liq qiymat faqat
+ * bazada - bu funksiya serverda, qiymat sahifaga yuborilishidan oldin chaqiriladi.
+ */
+export function maskIdentifier(value: string | null | undefined, keepStart: number, keepEnd: number): string | null {
+  const clean = value?.trim();
+  if (!clean) return null;
+  if (clean.includes("*")) return clean;
+  if (clean.length <= keepStart + keepEnd) return "*".repeat(clean.length);
+  const end = clean.length - keepEnd;
+  return clean.slice(0, keepStart) + "*".repeat(end - keepStart) + clean.slice(end);
 }

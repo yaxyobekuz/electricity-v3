@@ -60,3 +60,37 @@ export function fractions(values: readonly number[]): number[] {
   if (max <= 0) return values.map(() => 0);
   return values.map((value) => Math.max(0, value) / max);
 }
+
+/*
+ * Sana taqqoslash (malumotlar.md 1-bo'lim: hisoblangan qiymat). Sanalar UTC
+ * maydonlaridan o'qiladi - `format.ts` dagi kabi: vaqt qismi va soat
+ * mintaqasi kunni surmasin.
+ */
+
+type DateInput = Date | string | null | undefined;
+
+function utcParts(value: DateInput): { year: number; month: number; day: number } | null {
+  if (value == null) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return { year: date.getUTCFullYear(), month: date.getUTCMonth(), day: date.getUTCDate() };
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** `from` sanasidan `to` sanasigacha kunlar (manfiy - `from` keyin); sana yo'q - null. */
+export function daysBetween(from: DateInput, to: DateInput): number | null {
+  const a = utcParts(from);
+  const b = utcParts(to);
+  if (!a || !b) return null;
+  return Math.round((Date.UTC(b.year, b.month, b.day) - Date.UTC(a.year, a.month, a.day)) / DAY_MS);
+}
+
+/** `from` dan `to` gacha to'liq kalendar oylar; sana yo'q yoki `to` oldinroq - null. */
+export function monthsBetween(from: DateInput, to: DateInput): number | null {
+  const a = utcParts(from);
+  const b = utcParts(to);
+  if (!a || !b) return null;
+  const months = (b.year - a.year) * 12 + (b.month - a.month) - (b.day < a.day ? 1 : 0);
+  return months < 0 ? null : months;
+}
