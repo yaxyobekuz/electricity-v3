@@ -148,17 +148,21 @@ ustunlarida keladi.
 1. "Abonent" shartnoma raqami bo'lsa (shu oy abonentlari, aks holda har
    qanday oydagi eng so'nggi holati) - abonent va uning TP si.
 2. "TP Nomi" - shu oy TP lari orasida, shu oyda yo'q bo'lsa bazadagi barcha
-   TP lar orasida bitta bo'lsa. "Ma'sul xodim" shu oyda podstansiya ma'sul
-   xodimi bo'lsa, nomzodlar faqat uning podstansiya(lar)idan (bir xil raqamli
-   TP boshqa podstansiyalarda ham bor). Bir nechta nomzoddan abonentning TP si
-   olinadi. "TP Nomi" abonentning TP sidan boshqa TP ni aniq ko'rsatsa -
-   "TP Nomi" olinadi (ogohlantirish).
-3. TP topilmasa - "Ma'sul xodim" aynan bitta podstansiyaning xodimi bo'lsa,
-   faqat shu podstansiya.
+   TP lar orasida bitta bo'lsa. Ixtiyoriy "Podstansiya" / "Fider" ustunlari
+   berilsa, nomzodlar faqat shu podstansiya / fiderdan (bir xil raqamli TP
+   boshqa podstansiyalarda ham bor). Berilmasa va "Ma'sul xodim" shu oyda
+   podstansiya ma'sul xodimi bo'lsa - nomzodlar faqat uning
+   podstansiya(lar)idan. Bir nechta nomzoddan abonentning TP si olinadi.
+   "TP Nomi" abonentning TP sidan boshqa TP ni aniq ko'rsatsa - "TP Nomi"
+   olinadi (ogohlantirish).
+3. TP topilmasa - "Podstansiya" / "Fider" bazada bo'lsa, shu fider (va uning
+   podstansiyasi) yoki faqat podstansiya; ular berilmagan bo'lsa -
+   "Ma'sul xodim" aynan bitta podstansiyaning xodimi bo'lsa, shu podstansiya.
 4. Hech biri - yozuv bog'lanmaydi, lekin saqlanadi va tuman sonlariga kiradi.
 
-"TP Nomi" ustuni ixtiyoriy. TP bilan birga uning fideri va podstansiyasi
-ham yoziladi - qamrov filtrlari shu ustunlardan (`eventScopeWhere`).
+"Podstansiya", "Fider" va "TP Nomi" ustunlari ixtiyoriy. TP bilan birga
+uning fideri va podstansiyasi ham yoziladi - qamrov filtrlari shu
+ustunlardan (`eventScopeWhere`).
 Abonentlar, Transformatorlar yoki Podstansiyalar yuklansa, **barcha oylardagi**
 qoidabuzarlik va murojaatlar qayta bog'lanadi (bog'lash boshqa oylar
 abonentlari va TP laridan ham foydalanadi) - shablonlarni istalgan tartibda

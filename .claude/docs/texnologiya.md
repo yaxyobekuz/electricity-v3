@@ -34,7 +34,8 @@ npm run db:reset     # bazani tozalab qayta qurish
 npx tsx scripts/sample-data.ts
 
 # baliqchi/ va chinobod/ dagi haqiqiy xom fayllar -> converted/ (tozalangan/<manba>/,
-# oylik/2026-MM/ - ikkala manba bitta faylda, "Nomlar va tuzatishlar.xlsx");
+# oylik/2026-MM/ - ikkala manba bitta faylda, "Nomlar va tuzatishlar.xlsx",
+# "Eslatmalar.xlsx" - hali kutilayotgan ma'lumotlar fayl va qatorlari bilan);
 # oylik/ dagi fayllar import-files.ts bilan yuklanadi (har oy bitta submission)
 npx tsx scripts/convert-data.ts
 
