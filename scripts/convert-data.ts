@@ -18,7 +18,8 @@
  *                   yuklab bo'lmaydi;
  *   oylik/2026-MM/  platformaga yuklanadigan oylik fayllar (ikkala manba birga:
  *                   import oyning shu shablondagi hamma yozuvini almashtiradi);
- *   Nomlar va tuzatishlar.xlsx - asl yozuv -> yakuniy nom va har bir tuzatish.
+ *   Nomlar va tuzatishlar.xlsx - asl yozuv -> yakuniy nom va har bir tuzatish;
+ *   Eslatmalar.xlsx - hali kutilayotgan ma'lumotlar (fayl va qatorlari bilan).
  *
  * Qoidalar:
  *   - kirill yozuvi lotinga o'giriladi; podstansiya, fider, TP, xodim va MFY
@@ -33,6 +34,15 @@
  *   - 7 oylik oqimlar yanvar–iyulga teng bo'linadi; qoidabuzarlik va
  *     murojaatlar o'z sanasi oyiga tushadi; aynan bir xil yozuvlar
  *     birlashtiriladi.
+ *
+ * Foydalanuvchi qarorlari (2026-09-19):
+ *   - abonentlar reestri (13–14 sentabr holati) yanvar–sentabrning har oyiga;
+ *   - davr faylida yo'q, lekin boshqa davrda yoki reestrda bor obyekt - oqimi
+ *     0 qator (ma'lumot kelguncha), "Eslatmalar.xlsx" ga yoziladi;
+ *   - Baliqchi podstansiyasi fiderlari oqimi = shu oydagi TP lari yig'indisi;
+ *   - "0-test" va "TEST" hisoblagichlar - "Biriktirilmagan" fider / TP;
+ *   - qoidabuzarlik va murojaatga "Podstansiya" / "Fider" (murojaat yo'lidan
+ *     yoki TP shu manbada bitta joyda bo'lsa).
  */
 
 import { existsSync } from "node:fs";
@@ -128,10 +138,6 @@ interface Source {
   layout: "folders" | "sheets";
   /** Sarlavhasiz, lekin ma'lumot bo'lmagan ustunlar: shablon -> ustun raqami -> sabab. */
   ignoredColumns?: Partial<Record<TemplateType, Record<number, string>>>;
-  /** Transformatorlar faylidagi "Manzil" TP ga tegishli emas (dalil bilan) - olinmaydi. */
-  transformerAddressReason?: string;
-  /** 7 oylik qoidabuzarliklardagi "TP Nomi" qatorga tegishli emas (dalil bilan) - olinmaydi. */
-  violationTp7oyReason?: string;
 }
 
 const SOURCES: readonly Source[] = [
@@ -145,10 +151,6 @@ const SOURCES: readonly Source[] = [
         16: "Sarlavhasiz yordamchi son (7 va 3 - varaqlarni hisoblashda ishlatilgan bo'luvchi), TP ma'lumoti emas",
       },
     },
-    transformerAddressReason:
-      "Manzil ustuni TP ga mos emas - Podstansiya ustuni bilan birga siljigan: TP abonentlarining MFY si bilan mosligi 7/230 (tasodifiy 8,6), TP koordinatasiga eng yaqin MFY 6/214",
-    violationTp7oyReason:
-      "7 oylik varaqda TP Nomi manzil va abonentga mos emas (TP da shu MFY abonenti bor: 50/320, tasodifiy 38) - TP bog'lanmaydi",
   },
 ];
 
@@ -235,6 +237,8 @@ const COLUMNS: Record<TemplateType, Column[]> = {
     col("meterInstalled", "Hisoblagich o’rnatilingan sana", "date"),
   ],
   VIOLATIONS: [
+    SUBSTATION,
+    col("feeder", "Fider"),
     col("tp", "TP Nomi"),
     col("subscriber", "Abonent"),
     col("type", "Turi (Yuridik/Jismoniy/Aybisiz)"),
@@ -245,6 +249,8 @@ const COLUMNS: Record<TemplateType, Column[]> = {
     STAFF,
   ],
   APPEALS: [
+    SUBSTATION,
+    col("feeder", "Fider"),
     col("tp", "TP Nomi"),
     col("text", "Murojaat"),
     col("subscriber", "Abonent"),
@@ -892,23 +898,30 @@ interface Origin {
   row: number;
 }
 
+/** "Eslatmalar.xlsx" yozuvi: qatorda nima yetishmaydi va qanday ma'lumot kutilmoqda. */
+interface Note {
+  topic: string;
+  need: string;
+}
+
 interface OutRow {
   source: SourceId;
   origins: Origin[];
   values: Record<string, OutValue>;
   /** Qo'shimcha (shablonda yo'q) ustunlar: sarlavha -> qiymat. */
   extra: Record<string, OutValue>;
+  /** Kutilayotgan ma'lumot (oylik faylda "Eslatma" ustuni va "Eslatmalar.xlsx"). */
+  notes?: Note[];
   /** Hodisalar: takrorni topish kaliti, saralash uchun "yyyy-mm-dd hh:mm:ss" va oyi. */
   eventKey?: string;
   stamp?: string;
   month?: number;
-  /** Oylik faylga kirmaydi (sababi) - faqat "tozalangan/" da qoladi. */
-  excluded?: string;
 }
 
 class RowContext {
   readonly values: Record<string, OutValue> = {};
   readonly extra: Record<string, OutValue> = {};
+  readonly notes: Note[] = [];
 
   constructor(
     readonly sheet: SourceSheet,
@@ -984,6 +997,7 @@ class RowContext {
     if (typeof cell.value === "string" && /^\s*\d+([.,]\d+)?\s*(kv|кв)\s*$/i.test(cell.value)) {
       this.keepOriginal("kva", cell.value);
       this.fix("kva", cell.value, "(bo'sh)", "Kuchlanish (kV) yozilgan, quvvat (kVA) emas - olinmadi");
+      this.note("Quvvati (KVA) o'rnida kuchlanish (kV) yozilgan - bo'sh qoldirildi", "Quvvat (kVA) qiymati");
       return null;
     }
     return this.number("kva");
@@ -1071,6 +1085,7 @@ class RowContext {
         ? "Faqat bittasi berilgan (Lat va Long birga bo'lishi shart) - koordinata olinmadi"
         : `Andijon viloyatidan tashqarida - koordinata olinmadi (${REGION_REASON})`;
     logFix(this.file, this.row.row, column, "noto'g'ri koordinata", "(bo'sh)", reason);
+    this.note("Koordinata Andijon viloyatidan tashqarida yoki to'liq emas - bo'sh qoldirildi", "To'g'ri koordinata (Lat, Long)");
   }
 
   /**
@@ -1108,14 +1123,23 @@ class RowContext {
     return difference;
   }
 
+  note(topic: string, need: string): void {
+    this.notes.push({ topic, need });
+  }
+
   out(): OutRow {
     return {
       source: this.sheet.ref.source.id,
       origins: [{ file: this.file, row: this.row.row }],
       values: this.values,
       extra: this.extra,
+      ...(this.notes.length > 0 ? { notes: this.notes } : {}),
     };
   }
+}
+
+function addNote(row: OutRow, topic: string, need: string): void {
+  row.notes = [...(row.notes ?? []), { topic, need }];
 }
 
 const round6 = (value: number) => Math.round(value * 1e6) / 1e6;
@@ -1148,9 +1172,9 @@ const DATE_FIXES: Record<string, Record<number, { value: string; reason: string 
 const TP_FIXES: Record<string, Record<number, { value: string; reason: string }>> = {
   "chinobod/Elektr Murojaatlar.xlsx [7 oy]": {
     12: {
-      value: "166",
+      value: "44",
       reason:
-        "44166 nomli TP yo'q - Xaqulobod TP 44 va 166 qo'shilib yozilgan; murojaat manzili Omonariq MFY: TP 166 abonentlari 98/101 Omonariq, TP 44 abonentlari 246/261 Daryo bo'yi",
+        "44166 nomli TP yo'q - Xaqulobod TP 44 va 166 qo'shilib yozilgan; foydalanuvchi TP 44 ni tasdiqladi (2026-09-19)",
     },
   },
 };
@@ -1216,7 +1240,6 @@ function cleanFeeders(sheet: SourceSheet): OutRow[] {
 }
 
 function cleanTransformers(sheet: SourceSheet): OutRow[] {
-  const addressReason = sheet.ref.source.transformerAddressReason;
   return sheet.rows.map((row) => {
     const ctx = new RowContext(sheet, row);
     substation(ctx, "substation");
@@ -1225,16 +1248,9 @@ function cleanTransformers(sheet: SourceSheet): OutRow[] {
     flows(ctx);
     ctx.values.online = ctx.integer("online");
     ctx.values.offline = ctx.integer("offline");
-    const address = ctx.cell("address");
-    if (addressReason) {
-      ctx.values.address = null;
-      if (address.value != null) {
-        ctx.keepOriginal("address", address.text);
-        ctx.fix("address", "TP manzili", "(bo'sh)", addressReason);
-      }
-    } else {
-      shortAddress(ctx);
-    }
+    // Chinobod TP manzili abonentlar MFY siga kam mos keladi - foydalanuvchi qarori
+    // (2026-09-19): fayldagidek olinadi.
+    shortAddress(ctx);
     ctx.location();
     ctx.values.kva = ctx.capacity();
     ctx.values.currentRepair = ctx.date("currentRepair");
@@ -1243,6 +1259,11 @@ function cleanTransformers(sheet: SourceSheet): OutRow[] {
     return ctx.out();
   });
 }
+
+/** Tarmoqdagi joyi hali berilmagan abonentlar uchun fider va TP nomi. */
+const UNASSIGNED = "Biriktirilmagan";
+/** "0-test" hisoblagichlar podstansiyasi (foydalanuvchi qarori, 2026-09-19). */
+const TEST_SUBSTATION = "Chinobod";
 
 function cleanSubscribers(sheet: SourceSheet): OutRow[] {
   const kinds = Object.values(SUBSCRIBER_KIND_LABEL);
@@ -1269,13 +1290,35 @@ function cleanSubscribers(sheet: SourceSheet): OutRow[] {
     const isTest = fold(rawSubstation.replace(/^\d+-/, "")) === "test";
 
     if (isTest) {
-      ctx.values.substation = latinText(rawSubstation);
-      ctx.values.feeder = ctx.text("feeder");
-      ctx.values.tp = ctx.text("tp");
+      // Foydalanuvchi qarori (2026-09-19): podstansiya Chinobod, fider va TP keyin
+      // beriladi - shungacha "Biriktirilmagan" (import TP ni majburiy talab qiladi).
+      const original = (["substation", "feeder", "tp"] as const).map((field) => ctx.cell(field).text ?? "(bo'sh)");
+      (["substation", "feeder", "tp"] as const).forEach((field, index) => ctx.keepOriginal(field, original[index]));
+      ctx.values.substation = TEST_SUBSTATION;
+      ctx.values.feeder = UNASSIGNED;
+      ctx.values.tp = UNASSIGNED;
+      ctx.fix(
+        "substation",
+        original.join(" / "),
+        `${TEST_SUBSTATION} / ${UNASSIGNED} / ${UNASSIGNED}`,
+        "Hisoblagich tarmoqqa biriktirilmagan (\"0-test\") - foydalanuvchi qarori: podstansiya Chinobod, fider va TP keyin beriladi",
+      );
+      ctx.note(`Hisoblagich tarmoqqa biriktirilmagan ("0-test") - ${TEST_SUBSTATION} / ${UNASSIGNED} TP ga yozildi`, "Abonentning fider va TP si");
     } else {
       substation(ctx, "substation");
       ctx.values.feeder = ctx.text("feeder", feederName, "Fider");
       ctx.values.tp = ctx.text("tp", (text) => tpName(coded ? text.trim().replace(/^\d+-/, "") : text), "TP");
+      if (ctx.values.tp === "TEST") {
+        ctx.keepOriginal("tp", ctx.cell("tp").text);
+        ctx.values.tp = UNASSIGNED;
+        ctx.fix(
+          "tp",
+          "TEST",
+          UNASSIGNED,
+          "TP sifatida \"TEST\" yozilgan - foydalanuvchi qarori: shu fider ostidagi \"Biriktirilmagan\" TP ga, to'g'ri TP keyin beriladi",
+        );
+        ctx.note(`TP sifatida "TEST" yozilgan - shu fiderning "${UNASSIGNED}" TP siga yozildi`, "Abonentning haqiqiy TP si");
+      }
     }
     ctx.values.kind = ctx.text("kind", (text) => enumValue(text, kinds));
     staff(ctx);
@@ -1295,13 +1338,7 @@ function cleanSubscribers(sheet: SourceSheet): OutRow[] {
     ctx.values.passport = ctx.text("passport");
     ctx.values.pinfl = ctx.text("pinfl");
     ctx.values.meterInstalled = ctx.date("meterInstalled");
-    const result = ctx.out();
-    if (isTest) {
-      result.excluded =
-        "Hisoblagich tarmoqqa biriktirilmagan (podstansiya, fider va TP \"0-test\") - joyini o'ylab topib bo'lmaydi, importga kiritilmadi";
-      logFix(ctx.file, row.row, "(butun qator)", "0-test / 0-test / 0-test", "(oylik faylga kiritilmadi)", result.excluded);
-    }
-    return result;
+    return ctx.out();
   });
 }
 
@@ -1353,6 +1390,7 @@ function guardForeignTp(ctx: RowContext, names: TpNames): void {
     "(bo'sh)",
     "Bu manbaning Transformatorlar fayllarida yo'q, boshqa manbada shu raqamli TP bor - boshqa hududdagi TP ga noto'g'ri bog'lanmasligi uchun olinmadi",
   );
+  ctx.note(`TP ${tp} shu hududning Transformatorlar fayllarida yo'q - TP bo'sh qoldirildi`, "TP qaysi podstansiya va fiderda ekani");
   ctx.values.tp = null;
 }
 
@@ -1361,22 +1399,19 @@ function cleanViolations(sheet: SourceSheet, tpNames: TpNames): OutRow[] {
   const rows = eventRows(sheet, ["subscriber", "type", "date"]);
 
   // Baliqchi 7 oylik: "TP Nomi" - tartib raqami (har doim qator raqami − 2).
+  // Chinobod 7 oylik TP lari manzilga kam mos keladi - foydalanuvchi qarori
+  // (2026-09-19): fayldagidek olinadi.
   const tpCells = rows.filter((row) => row.cells.has("tp"));
   const serial = tpCells.length > 0 && tpCells.every((row) => row.cells.get("tp")?.value === row.row - 2);
-  const unrelated = sheet.ref.period?.key === "7oy" ? sheet.ref.source.violationTp7oyReason : undefined;
 
   return rows.map((row) => {
     const ctx = new RowContext(sheet, row);
     const tp = ctx.cell("tp");
-    if (serial || unrelated) {
+    if (serial) {
       ctx.values.tp = null;
       if (tp.value != null) {
         ctx.keepOriginal("tp", tp.value);
-        if (serial) {
-          ctx.fix("tp", "tartib raqami", "(bo'sh)", "\"TP Nomi\" ustunida TP emas, qator tartib raqami (qator − 2) - TP abonent orqali aniqlanadi");
-        } else {
-          ctx.fix("tp", "TP raqami", "(bo'sh)", unrelated as string);
-        }
+        ctx.fix("tp", "tartib raqami", "(bo'sh)", "\"TP Nomi\" ustunida TP emas, qator tartib raqami (qator − 2) - TP abonent orqali aniqlanadi");
       }
     } else if (tp.value != null && fold(String(tp.value)) === "test") {
       ctx.values.tp = null;
@@ -1470,6 +1505,7 @@ function cleanAppeals(sheet: SourceSheet, tpIndex: TpIndex, tpNames: TpNames, co
         ctx.values.tp = null;
         ctx.keepOriginal("tp", raw);
         ctx.fix("tp", raw, "(bo'sh)", "TP raqami emas (\"Yangi\") - TP bog'lanmaydi");
+        ctx.note("TP o'rnida \"Yangi\" yozilgan - TP bo'sh qoldirildi", "TP raqami");
       } else {
         ctx.values.tp = ctx.text("tp", (text) => tpName(text), "TP");
         guardForeignTp(ctx, tpNames);
@@ -1507,10 +1543,14 @@ function appealTp(ctx: RowContext, raw: string, route: RegExpExecArray, tpIndex:
   if (!substationValue || !feederValue) ctx.fail("tp", `ulanish yo'li tanilmadi: "${raw}"`);
   logName("Podstansiya", route[1], substationValue, ctx.file);
   logName("Fider", route[3], feederValue, ctx.file);
+  // Ulanish yo'lidagi podstansiya va fider - shablonning "Podstansiya" / "Fider" ustunlariga.
+  ctx.values.substation = substationValue;
+  ctx.values.feeder = feederValue;
 
   const rest = route[4];
-  const empty = (reason: string) => {
+  const empty = (reason: string, need?: string) => {
     ctx.fix("tp", "ulanish yo'li", "(bo'sh)", reason);
+    if (need) ctx.note(reason, need);
     return null;
   };
   if (/yakin\s+tayanch/i.test(rest)) return empty("Ulanish nuqtasi TP emas - 10 kV liniya tayanchi");
@@ -1523,14 +1563,57 @@ function appealTp(ctx: RowContext, raw: string, route: RegExpExecArray, tpIndex:
   if (fixed) ctx.fix("tp", `TP ${number[1]}`, `TP ${fixed.value}`, fixed.reason);
   const places = tpIndex.get(name) ?? [];
   if (places.length === 0) {
-    return empty(`TP ${name} (${substationValue} / ${feederValue}) Transformatorlar faylida yo'q - TP bog'lanmaydi`);
+    return empty(`TP ${name} (${substationValue} / ${feederValue}) Transformatorlar faylida yo'q - TP bog'lanmaydi`, "TP ning Transformatorlar fayli qatori yoki to'g'ri TP raqami");
   }
   if (!places.some((place) => place.feeder === feederValue)) {
     const where = places.map((place) => `${place.substation} / ${place.feeder}`).join("; ");
-    return empty(`TP ${name} Transformatorlar faylida boshqa fiderda (${where}), murojaatda ${feederValue} - TP bog'lanmaydi`);
+    return empty(`TP ${name} Transformatorlar faylida boshqa fiderda (${where}), murojaatda ${feederValue} - TP bog'lanmaydi`, "TP qaysi fiderda ekani");
   }
   logName("TP", `${number[1]} (murojaat yo'li)`, name, ctx.file);
   return name;
+}
+
+/**
+ * Hodisaning "Podstansiya" / "Fider" ustunlari (shablonda ixtiyoriy): murojaat
+ * yo'lida yozilgan bo'lsa - o'sha (fider boshqa podstansiyada bo'lsa -
+ * to'g'rilanadi); aks holda "TP Nomi" shu manbaning Transformatorlar
+ * fayllarida bitta joyda bo'lsa - o'sha joy, bir nechta fiderda, lekin bitta
+ * podstansiyada bo'lsa - faqat podstansiya. Import bir xil raqamli TP lar
+ * orasidan shu joydagisini tanlaydi.
+ */
+function fillEventPlaces(
+  type: (typeof EVENT_TEMPLATES)[number],
+  rows: readonly OutRow[],
+  tpIndex: TpIndex,
+  feederMap: ReadonlyMap<string, string>,
+  registryTps: ReadonlySet<string>,
+): void {
+  const column = `${headerOf(type, "substation")} / ${headerOf(type, "feeder")}`;
+  for (const row of rows) {
+    const { file, row: rowNumber } = row.origins[0];
+    const tp = row.values.tp;
+    if (typeof tp === "string" && !tpIndex.has(tp) && !registryTps.has(tp)) {
+      addNote(row, `TP ${tp} shu hududning Transformatorlar fayllarida ham, abonentlar reestrida ham yo'q - TP ga bog'lanmaydi`, "To'g'ri TP raqami");
+    }
+    if (row.values.substation == null && typeof tp === "string") {
+      const places = tpIndex.get(tp) ?? [];
+      const substations = [...new Set(places.map((place) => place.substation))];
+      if (places.length === 1) {
+        row.values.substation = places[0].substation;
+        row.values.feeder = places[0].feeder;
+        logFix(file, rowNumber, column, "(bo'sh)", `${places[0].substation} / ${places[0].feeder}`, `TP ${tp} shu manbaning Transformatorlar fayllarida bitta joyda`);
+      } else if (substations.length === 1) {
+        row.values.substation = substations[0];
+        logFix(file, rowNumber, column, "(bo'sh)", substations[0], `TP ${tp} shu manbada bitta podstansiyaning ${places.length} ta fiderida - faqat podstansiya`);
+      }
+    }
+    const feeder = row.values.feeder;
+    const target = typeof feeder === "string" ? feederMap.get(feeder) : undefined;
+    if (target && target !== row.values.substation) {
+      logFix(file, rowNumber, column, `${String(row.values.substation)} / ${String(feeder)}`, `${target} / ${String(feeder)}`, `Fider ${String(feeder)} Fiderlar fayli va abonentlar reestrida faqat ${target} ostida`);
+      row.values.substation = target;
+    }
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -1590,7 +1673,6 @@ function feederSubstations(feeders: readonly OutRow[], subscribers: readonly Out
   const collect = (rows: readonly OutRow[], nameField: string) => {
     const map = new Map<string, Set<string>>();
     for (const row of rows) {
-      if (row.excluded) continue;
       const feeder = String(row.values[nameField]);
       const set = map.get(feeder) ?? new Set<string>();
       set.add(String(row.values.substation));
@@ -1639,7 +1721,6 @@ function relocateFeeders(subscribers: OutRow[], transformers: readonly OutRow[])
   const tpsOf = (rows: readonly OutRow[], tpField: string) => {
     const map = new Map<string, Set<string>>();
     for (const row of rows) {
-      if (row.excluded) continue;
       const key = `${String(row.values.substation)}|${String(row.values.feeder)}`;
       const set = map.get(key) ?? new Set<string>();
       set.add(String(row.values[tpField]));
@@ -1669,7 +1750,6 @@ function relocateFeeders(subscribers: OutRow[], transformers: readonly OutRow[])
 
   const header = headerOf("SUBSCRIBERS", "substation");
   for (const row of subscribers) {
-    if (row.excluded) continue;
     const key = `${String(row.values.substation)}|${String(row.values.feeder)}`;
     const move = moves.get(key);
     if (!move) continue;
@@ -1708,7 +1788,7 @@ const FAR_METERS = 3000;
  * Har bir TP bitta joyda: reestrdagi abonentning fideri (va podstansiyasi) shu
  * manbaning Transformatorlar faylidagi TP joyi bilan bir xil qilinadi (TP nomi
  * faylda bitta joyda bo'lsa). Faqat fideri TP faylida bor qatorlar (Baliqchi
- * reestridagi Chinobod/Muqum kabi fayli yo'q fiderlarga tegilmaydi); "TEST" TP
+ * reestridagi Chinobod/Muqum kabi fayli yo'q fiderlarga tegilmaydi); "Biriktirilmagan" TP
  * ga tegilmaydi. Istisno: ko'chiriladigan guruh (bir xil TP va asl joy) TP
  * koordinatasidan 3 km dan va TP ning o'z abonentlaridan 3 barobardan uzoq
  * bo'lsa - bu raqami bir xil boshqa TP: ko'chirilmaydi, jurnalga yoziladi.
@@ -1724,7 +1804,7 @@ function locateSubscriberTps(subscribers: OutRow[], transformers: readonly OutRo
   const tpFeeders = new Set(transformers.map((row) => String(row.values.feeder)));
   const groups = new Map<string, OutRow[]>();
   for (const row of subscribers) {
-    if (row.excluded || row.values.tp === "TEST" || !tpFeeders.has(String(row.values.feeder))) continue;
+    if (row.values.tp === UNASSIGNED || !tpFeeders.has(String(row.values.feeder))) continue;
     const list = groups.get(String(row.values.tp)) ?? [];
     list.push(row);
     groups.set(String(row.values.tp), list);
@@ -1932,6 +2012,147 @@ function periodLabelOf(file: string): string {
 }
 
 /* ---------------------------------------------------------------------------
+   Yetishmagan qatorlar (foydalanuvchi qarorlari, 2026-09-19): ma'lumot
+   kelguncha oqim 0, har biri "Eslatmalar.xlsx" da
+   --------------------------------------------------------------------------- */
+
+const ZERO_FLOWS = { total: 0, useful: 0, loss: 0 } as const;
+
+/**
+ * Shu manbaning boshqa davr faylida bor, shu davr faylida yo'q obyekt (Baliqchi
+ * sentabr TP lari, avgust fiderlari): oqimi 0 qator, nomi va boshqa
+ * ma'lumotlari eng yaqin (avval oldingi) davrdagi qatoridan.
+ */
+function missingPeriodRows(
+  type: TemplateType,
+  byPeriod: ReadonlyMap<PeriodKey, readonly OutRow[]>,
+): Map<PeriodKey, OutRow[]> {
+  const order = PERIODS.map((period) => period.key).filter((key) => byPeriod.has(key));
+  const keysOf = new Map(order.map((key) => [key, new Set((byPeriod.get(key) ?? []).map((row) => monthKey(type, row)))]));
+  const result = new Map<PeriodKey, OutRow[]>();
+  for (const [index, key] of order.entries()) {
+    const present = keysOf.get(key) ?? new Set();
+    for (const otherKey of [...order.slice(0, index).reverse(), ...order.slice(index + 1)]) {
+      for (const ref of byPeriod.get(otherKey) ?? []) {
+        const rowKey = monthKey(type, ref);
+        if (present.has(rowKey)) continue;
+        present.add(rowKey);
+        const values: Record<string, OutValue> = { ...ref.values, ...ZERO_FLOWS };
+        if (type === "TRANSFORMERS") {
+          values.online = null;
+          values.offline = null;
+        }
+        const rows = result.get(key) ?? [];
+        rows.push({
+          source: ref.source,
+          origins: ref.origins,
+          values,
+          extra: {},
+          notes: [
+            {
+              topic: `${periodOf(key).titlePeriod} faylida yo'q - oqim 0 (nomi va boshqa ma'lumotlari ${ref.origins[0].file} dan)`,
+              need: `${periodOf(key).titlePeriod} uchun ${TEMPLATE_LABEL[type]} fayli qatori`,
+            },
+          ],
+        });
+        result.set(key, rows);
+      }
+    }
+  }
+  return result;
+}
+
+/**
+ * Oyning boshqa fayli tayanadigan, lekin o'z faylida yo'q obyekt (faqat
+ * reestrdagi TP va fiderlar - Muqum, Olimbek, Alpomish, "Biriktirilmagan";
+ * Oltinko'l podstansiyasi): oqimi 0 qator, faqat nomi bilan.
+ */
+function completeHierarchy(byType: Map<TemplateType, OutRow[]>): void {
+  const subscribers = byType.get("SUBSCRIBERS") ?? [];
+  const add = (type: TemplateType, candidates: readonly { ref: OutRow; values: Record<string, OutValue> }[]) => {
+    const rows = byType.get(type) ?? [];
+    const present = new Set(rows.map((row) => monthKey(type, row)));
+    for (const { ref, values } of candidates) {
+      const row: OutRow = { source: ref.source, origins: [ref.origins[0]], values: { ...values, ...ZERO_FLOWS }, extra: {} };
+      const key = monthKey(type, row);
+      if (present.has(key)) continue;
+      present.add(key);
+      const unassigned = values.name === UNASSIGNED;
+      row.notes = [
+        unassigned
+          ? { topic: `Vaqtinchalik "${UNASSIGNED}" ${type === "FEEDERS" ? "fider" : "TP"} - abonentlarning joyi hali berilmagan`, need: "Abonentlarning haqiqiy fider va TP si" }
+          : {
+              topic: `${TEMPLATE_LABEL[type]} faylida yo'q, faqat ${type === "TRANSFORMERS" ? "abonentlar reestrida" : "reestr yoki quyi fayllarda"} bor - oqim 0`,
+              need: `${TEMPLATE_LABEL[type]} fayli qatori (oqimlar)`,
+            },
+      ];
+      rows.push(row);
+    }
+    byType.set(type, rows);
+  };
+
+  add(
+    "TRANSFORMERS",
+    subscribers.map((ref) => ({
+      ref,
+      values: { substation: ref.values.substation, feeder: ref.values.feeder, name: ref.values.tp },
+    })),
+  );
+  add(
+    "FEEDERS",
+    [...(byType.get("TRANSFORMERS") ?? []), ...subscribers].map((ref) => ({
+      ref,
+      values: { substation: ref.values.substation, name: ref.values.feeder },
+    })),
+  );
+  add(
+    "SUBSTATIONS",
+    [...(byType.get("FEEDERS") ?? []), ...(byType.get("TRANSFORMERS") ?? []), ...subscribers].map((ref) => ({
+      ref,
+      values: { name: ref.values.substation },
+    })),
+  );
+}
+
+/**
+ * Baliqchi podstansiyasi fiderlari: Fiderlar faylidagi oqim TP lari
+ * yig'indisidan 100–300 barobar kichik - foydalanuvchi qarori (2026-09-19):
+ * oqim = shu oydagi TP lari yig'indisi (TP si yo'q fiderda fayl qiymati qoladi).
+ */
+const FEEDERS_FROM_TPS = new Set(["Baliqchi"]);
+
+function feederFlowsFromTps(byType: Map<TemplateType, OutRow[]>): void {
+  const sums = new Map<string, Record<(typeof FLOW_FIELDS)[number], number>>();
+  for (const tp of byType.get("TRANSFORMERS") ?? []) {
+    const key = monthKey("FEEDERS", { ...tp, values: { substation: tp.values.substation, name: tp.values.feeder } });
+    const sum = sums.get(`${key}`) ?? { total: 0, useful: 0, loss: 0 };
+    for (const field of FLOW_FIELDS) sum[field] += Number(tp.values[field] ?? 0);
+    sums.set(`${key}`, sum);
+  }
+  for (const feeder of byType.get("FEEDERS") ?? []) {
+    if (!FEEDERS_FROM_TPS.has(String(feeder.values.substation))) continue;
+    const sum = sums.get(`${monthKey("FEEDERS", feeder)}`);
+    if (!sum) continue;
+    const extra = { ...feeder.extra };
+    for (const field of FLOW_FIELDS) {
+      extra[`${headerOf("FEEDERS", field)} (fider faylida)`] = feeder.values[field];
+    }
+    feeder.extra = extra;
+    feeder.values = { ...feeder.values, ...Object.fromEntries(FLOW_FIELDS.map((field) => [field, round6(sum[field])])) };
+    // Faylda yo'q fider ("oqim 0" eslatmasi) ham endi TP lari yig'indisi.
+    const missing = feeder.notes?.some((note) => note.topic.includes("oqim 0")) ?? false;
+    feeder.notes = feeder.notes?.filter((note) => !note.topic.includes("oqim 0"));
+    addNote(
+      feeder,
+      missing
+        ? "Fider shu oyning Fiderlar faylida yo'q - oqim shu oydagi TP lari yig'indisi"
+        : "Fider oqimi - shu oydagi TP lari yig'indisi (Fiderlar faylidagi qiymat TP laridan 100–300 barobar kichik, \"(fider faylida)\" ustunida)",
+      "Fiderning to'g'ri oqim qiymatlari",
+    );
+  }
+}
+
+/* ---------------------------------------------------------------------------
    Excel yozish
    --------------------------------------------------------------------------- */
 
@@ -1947,6 +2168,8 @@ const NUMBER_FORMAT: Record<FieldKind, string | undefined> = {
 const WIDTH: Record<FieldKind, number> = { text: 22, amount: 18, reading: 18, count: 14, coordinate: 16, date: 14 };
 
 const ORIGIN_HEADER = "Manba (fayl, qator)";
+/** Kutilayotgan ma'lumot (`OutRow.notes`) - "Eslatmalar.xlsx" bilan bir xil matn. */
+const NOTE_HEADER = "Eslatma";
 
 const TITLE_STYLE: Partial<ExcelJS.Style> = {
   font: { name: "Arial", size: 16, bold: true, color: { argb: "FF00FF00" } },
@@ -1990,7 +2213,7 @@ interface WriteOptions {
 
 async function writeTemplate(file: string, type: TemplateType, rows: readonly OutRow[], options: WriteOptions) {
   const columns = COLUMNS[type];
-  const extras = extraHeaders(type, rows);
+  const extras = [...extraHeaders(type, rows), ...(rows.some((row) => row.notes?.length) ? [NOTE_HEADER] : [])];
   const headers = [...columns.map((column) => column.header), ...extras, ...(options.withOrigin ? [ORIGIN_HEADER] : [])];
 
   const workbook = new ExcelJS.Workbook();
@@ -2027,7 +2250,7 @@ async function writeTemplate(file: string, type: TemplateType, rows: readonly Ou
       record[`c${index}`] = value === "" || value == null ? undefined : value;
     });
     extras.forEach((header, index) => {
-      const value = row.extra[header];
+      const value = header === NOTE_HEADER ? row.notes?.map((note) => note.topic).join("; ") : row.extra[header];
       record[`c${columns.length + index}`] = value == null || value === "" ? undefined : value;
     });
     if (options.withOrigin) record[`c${headers.length - 1}`] = originText(row.origins);
@@ -2063,20 +2286,29 @@ interface MonthFileInfo {
   source: string;
 }
 
+/** Sarlavhali oddiy jadval varag'i (jurnal va eslatmalar uchun). */
+function addTable(
+  workbook: ExcelJS.Workbook,
+  name: string,
+  headers: readonly [string, number][],
+  data: readonly (string | number)[][],
+): void {
+  const sheet = workbook.addWorksheet(name, { views: [{ state: "frozen", xSplit: 0, ySplit: 1 }] });
+  sheet.columns = headers.map(([, width], index) => ({ key: `c${index}`, width, style: { alignment: { wrapText: true, vertical: "top" } } }));
+  const header = sheet.getRow(1);
+  headers.forEach(([text], index) => {
+    header.getCell(index + 1).value = text;
+    header.getCell(index + 1).style = HEADER_STYLE;
+  });
+  header.height = 30;
+  for (const row of data) sheet.addRow(Object.fromEntries(row.map((value, index) => [`c${index}`, value])));
+  sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: headers.length } };
+}
+
 async function writeJournal(file: string, monthFiles: readonly MonthFileInfo[]) {
   const workbook = new ExcelJS.Workbook();
-  const table = (name: string, headers: readonly [string, number][], data: readonly (string | number)[][]) => {
-    const sheet = workbook.addWorksheet(name, { views: [{ state: "frozen", xSplit: 0, ySplit: 1 }] });
-    sheet.columns = headers.map(([, width], index) => ({ key: `c${index}`, width }));
-    const header = sheet.getRow(1);
-    headers.forEach(([text], index) => {
-      header.getCell(index + 1).value = text;
-      header.getCell(index + 1).style = HEADER_STYLE;
-    });
-    header.height = 30;
-    for (const row of data) sheet.addRow(Object.fromEntries(row.map((value, index) => [`c${index}`, value])));
-    sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: headers.length } };
-  };
+  const table = (name: string, headers: readonly [string, number][], data: readonly (string | number)[][]) =>
+    addTable(workbook, name, headers, data);
 
   const kindOrder = ["Podstansiya", "Fider", "TP", "Xodim", "Manzil"];
   const nameRows = [...names.values()]
@@ -2133,6 +2365,169 @@ async function writeJournal(file: string, monthFiles: readonly MonthFileInfo[]) 
 }
 
 /* ---------------------------------------------------------------------------
+   Eslatmalar fayli: kutilayotgan ma'lumotlar (foydalanuvchi so'rovi, 2026-09-19)
+   --------------------------------------------------------------------------- */
+
+/** Qatorga emas, manbaning umumiy xususiyatiga tegishli eslatmalar. */
+const GENERAL_NOTES: readonly (readonly [topic: string, files: string, state: string, need: string])[] = [
+  [
+    "O'rmonbek fiderlari, yanvar–iyul",
+    "baliqchi/7 oylik/Elektr Fiderlar.xlsx 3–8-qatorlar; converted/oylik/2026-01…07/Elektr Fiderlar.xlsx",
+    "7 oylik fayldagi qiymatlar avgust fayli bilan aynan bir xil; foydalanuvchi qarori bilan 7 ga bo'lingan - fider TP laridan ~7 barobar kichik chiqadi",
+    "O'rmonbek fiderlarining haqiqiy 7 oylik (yoki oylik) qiymatlari",
+  ],
+  [
+    "Baliqchi va O'rmonbek TP lari: avgust va sentabr",
+    "baliqchi/Avgust/Elektr Transformatorlar.xlsx; baliqchi/Sentabr 10 kunlik/Elektr Transformatorlar.xlsx",
+    "Avgust TP qiymatlari = 7 oylik ÷ 7, sentabr (O'rmonbek) = avgust; fayldagidek olingan",
+    "Avgust va sentabr (1–10) uchun haqiqiy TP oqimlari",
+  ],
+  [
+    "To'rt tol fideri, sentabr",
+    "baliqchi/Sentabr 10 kunlik/Elektr Fiderlar.xlsx 3-qator; converted/oylik/2026-09/Elektr Fiderlar.xlsx",
+    "262 272 kWh - avgustning o'zi (boshqa O'rmonbek fiderlari avgust ÷ 7); fayldagidek olingan",
+    "To'rt tol fiderining sentabr (1–10) qiymati",
+  ],
+  [
+    "Chinobod hududi oqimlari",
+    "chinobod/Elektr Podstansiyalar.xlsx, Elektr Fiderlar.xlsx, Elektr Transformatorlar.xlsx",
+    "Yo'qotish hamma joyda 16%, sentabr = avgust ÷ 3, TP oqimlari podstansiya jamisining taqsimoti - o'lchov emas, hisoblangan ko'rinadi; fayldagidek olingan",
+    "O'lchangan oqim qiymatlari (bo'lsa)",
+  ],
+  [
+    "Abonentlar reestri barcha oylarda",
+    "baliqchi/Elektr Abonentlar.xlsx; chinobod/Elektr Abonentlar.xlsx; converted/oylik/2026-01…09/Elektr Abonentlar.xlsx",
+    "13–14 sentabr holatidagi reestr yanvar–sentabrning har oyiga nusxalangan (qarzdorlik, ko'rsatkich, holat - sentabr holati)",
+    "Har oyning o'z reestri (bo'lsa)",
+  ],
+  [
+    "Sentabr hisobot sanasi",
+    "converted/oylik/2026-09/* (varaq nomi \"10-sentabr, 2026\")",
+    "Sentabr davri 10-sentabrgacha deb olingan; abonentlar reestri esa 13–14 sentabr holati",
+    "Tasdiq: sentabr hisobot sanasi",
+  ],
+  [
+    "Baliqchi reestridagi Chinobod podstansiyasi",
+    "baliqchi/Elektr Abonentlar.xlsx (Muqum, Olimbek fiderlari)",
+    "Chinobod manbasidagi Chinobod podstansiyasi bilan bitta obyekt deb olingan; Muqum, Olimbek, Bo'zchi fiderlari faqat reestrda (oqim 0)",
+    "Tasdiq va shu fiderlarning oqimlari",
+  ],
+  [
+    "Jasorat fideri ikki podstansiyada",
+    "baliqchi/7 oylik/Elektr Fiderlar.xlsx 4 va 18-qatorlar",
+    "O'rmonbek / Jasorat va Baliqchi / Jasorat alohida fider deb olingan; reestrdagi Baliqchi / Jasorat abonentlari TP lari bo'yicha O'rmonbek / Jasorat ga o'tkazilgan",
+    "Tasdiq: ikkita alohida fidermi",
+  ],
+  [
+    "Baliqchi murojaatlarida \"Abonent\"",
+    "baliqchi/7 oylik/Elektr Murojaatlar.xlsx; baliqchi/Avgust/Elektr Murojaatlar.xlsx",
+    "\"Abonent\" ustunida ko'pincha telefon raqami - shartnoma raqami emas, murojaat abonentga bog'lanmaydi",
+    "Murojaatchining shartnoma raqami yoki FISH",
+  ],
+  [
+    "Reestr va TP fayli farqi",
+    "Nomlar va tuzatishlar.xlsx, \"Tuzatishlar\" varag'i, \"Podstansiya / Fider\" ustuni",
+    "Abonentlar TP si turgan fiderga ko'chirilgan; TP dan 3 km dan uzoq guruhlar ko'chirilmagan (raqami bir xil boshqa TP deb hisoblangan)",
+    "Ko'chirilmagan abonentlarning to'g'ri TP si",
+  ],
+];
+
+/** [1..7] -> "2026-01 – 2026-07"; [8] -> "2026-08". */
+function monthsLabel(months: readonly number[]): string {
+  const sorted = [...new Set(months)].sort((a, b) => a - b);
+  const parts: string[] = [];
+  for (let index = 0; index < sorted.length; index++) {
+    const start = sorted[index];
+    while (index + 1 < sorted.length && sorted[index + 1] === sorted[index] + 1) index++;
+    parts.push(start === sorted[index] ? monthFolder(start) : `${monthFolder(start)} – ${monthFolder(sorted[index])}`);
+  }
+  return parts.join(", ");
+}
+
+const TYPE_ORDER: readonly TemplateType[] = ["SUBSTATIONS", "FEEDERS", "TRANSFORMERS", "SUBSCRIBERS", "VIOLATIONS", "APPEALS"];
+
+async function writeNotes(file: string, monthly: ReadonlyMap<number, ReadonlyMap<TemplateType, readonly OutRow[]>>) {
+  interface Group extends Note {
+    type: TemplateType;
+    rows: number[];
+    months: number[];
+    origins: Set<string>;
+  }
+  // Bir xil eslatma, fayl va qatorlar - oylar bitta yozuvda.
+  const groups = new Map<string, Group>();
+  for (const month of [...monthly.keys()].sort((a, b) => a - b)) {
+    for (const [type, rows] of monthly.get(month) ?? []) {
+      const byNote = new Map<string, { note: Note; rows: number[]; origins: Set<string> }>();
+      rows.forEach((row, index) => {
+        for (const note of row.notes ?? []) {
+          const key = `${note.topic}${note.need}`;
+          const entry = byNote.get(key) ?? { note, rows: [], origins: new Set<string>() };
+          entry.rows.push(HEADER_ROW + 1 + index);
+          for (const origin of row.origins) entry.origins.add(origin.file);
+          byNote.set(key, entry);
+        }
+      });
+      for (const [key, entry] of byNote) {
+        const groupKey = `${key}${type}${rowRanges(entry.rows)}`;
+        const group = groups.get(groupKey) ?? { ...entry.note, type, rows: entry.rows, months: [], origins: new Set<string>() };
+        group.months.push(month);
+        for (const origin of entry.origins) group.origins.add(origin);
+        groups.set(groupKey, group);
+      }
+    }
+  }
+
+  const sorted = [...groups.values()].sort(
+    (a, b) =>
+      TYPE_ORDER.indexOf(a.type) - TYPE_ORDER.indexOf(b.type) ||
+      a.topic.localeCompare(b.topic, "uz") ||
+      a.months[0] - b.months[0],
+  );
+  const workbook = new ExcelJS.Workbook();
+  addTable(
+    workbook,
+    "Qatorlar bo'yicha",
+    [
+      ["№", 6],
+      ["Mavzu (holat)", 70],
+      ["Oy", 22],
+      ["Fayl (converted/oylik/<oy>/)", 30],
+      ["Qatorlar soni", 12],
+      ["Qatorlar", 50],
+      ["Manba fayl(lar)", 60],
+      ["Kerakli ma'lumot", 44],
+    ],
+    sorted.map((group, index) => {
+      const origins = [...group.origins].sort();
+      return [
+        index + 1,
+        group.topic,
+        monthsLabel(group.months),
+        TEMPLATE_FILE_NAME[group.type],
+        group.rows.length,
+        rowRanges(group.rows),
+        origins.length > 4 ? `${origins.slice(0, 4).join("; ")}; ... (${origins.length} ta)` : origins.join("; "),
+        group.need,
+      ];
+    }),
+  );
+  addTable(
+    workbook,
+    "Umumiy",
+    [
+      ["№", 6],
+      ["Mavzu", 40],
+      ["Fayllar", 60],
+      ["Hozirgi holat", 80],
+      ["Kerakli ma'lumot", 44],
+    ],
+    GENERAL_NOTES.map((note, index) => [index + 1, ...note]),
+  );
+  await workbook.xlsx.writeFile(file);
+  return sorted.length;
+}
+
+/* ---------------------------------------------------------------------------
    Asosiy oqim
    --------------------------------------------------------------------------- */
 
@@ -2164,6 +2559,7 @@ async function main() {
 
   const cleaned = new Map<SourceId, Cleaned>();
   const registries = new Map<SourceId, OutRow[]>();
+  const feederMaps = new Map<SourceId, Map<string, string>>();
   const refs = new Map<string, SheetRef>();
   const refKey = (source: SourceId, type: TemplateType, period: PeriodKey) => `${source}|${type}|${period}`;
 
@@ -2203,6 +2599,7 @@ async function main() {
     fillFromReference(tpByPeriod.get("sentabr") ?? [], august);
     const feeders = [...(byType.get("FEEDERS")?.values() ?? [])].flat();
     const map = feederSubstations(feeders, registry);
+    feederMaps.set(source.id, map);
     for (const rows of tpByPeriod.values()) applyFeederSubstations(rows, map);
     const allTps = [...tpByPeriod.values()].flat();
     relocateFeeders(registry, allTps);
@@ -2220,6 +2617,7 @@ async function main() {
   for (const source of SOURCES) {
     const byType = cleaned.get(source.id) as Cleaned;
     const tpIndex = buildTpIndex([...(byType.get("TRANSFORMERS")?.values() ?? [])].flat());
+    const registryTps = new Set((registries.get(source.id) ?? []).map((row) => String(row.values.tp)));
     const tpNames: TpNames = {
       own: tpNamesOf(source.id),
       other: new Set(SOURCES.filter((item) => item.id !== source.id).flatMap((item) => [...tpNamesOf(item.id)])),
@@ -2232,6 +2630,7 @@ async function main() {
         const sheet = await readSource(ref, type);
         const rows =
           type === "VIOLATIONS" ? cleanViolations(sheet, tpNames) : cleanAppeals(sheet, tpIndex, tpNames, allContracts);
+        fillEventPlaces(type, rows, tpIndex, feederMaps.get(source.id) ?? new Map(), registryTps);
         const byPeriod = byType.get(type) ?? new Map<PeriodKey, OutRow[]>();
         byPeriod.set(period.key, rows);
         byType.set(type, byPeriod);
@@ -2276,9 +2675,16 @@ async function main() {
   for (const source of SOURCES) {
     const byType = cleaned.get(source.id) as Cleaned;
     for (const type of FLOW_TEMPLATES) {
-      for (const [periodKey, rows] of byType.get(type) ?? []) {
+      const byPeriod = byType.get(type) ?? new Map<PeriodKey, OutRow[]>();
+      // Boshqa davr faylida bor, shu davrda yo'q obyekt - oqimi 0 (2- va 3-savol, 2026-09-19).
+      const missing = missingPeriodRows(type, byPeriod);
+      for (const [periodKey, fileRows] of byPeriod) {
         const period = periodOf(periodKey);
-        const label = refs.get(refKey(source.id, type, periodKey))?.label ?? source.id;
+        const added = missing.get(periodKey) ?? [];
+        const rows = [...fileRows, ...added];
+        const label =
+          (refs.get(refKey(source.id, type, periodKey))?.label ?? source.id) +
+          (added.length > 0 ? ` + ${added.length} ta qator oqimi 0 (shu davr faylida yo'q)` : "");
         if (period.months.length === 1) {
           put(period.months[0], type, rows, label);
         } else {
@@ -2315,7 +2721,7 @@ async function main() {
     }
   }
 
-  const subscribers = SOURCES.flatMap((source) => registries.get(source.id) ?? []).filter((row) => !row.excluded);
+  const subscribers = SOURCES.flatMap((source) => registries.get(source.id) ?? []);
   disambiguateContracts(subscribers);
   // Bitta hisoblagich raqami ikki xil shartnomada - manbadagidek qoldiriladi, jurnalga yoziladi.
   const bySerial = new Map<string, OutRow[]>();
@@ -2336,7 +2742,58 @@ async function main() {
       );
     }
   }
-  for (const source of SOURCES) put(9, "SUBSCRIBERS", subscribers.filter((row) => row.source === source.id), `${source.id}/${TEMPLATE_FILE_NAME.SUBSCRIBERS}`);
+
+  // Yuridik abonentlar qarzdorligi butun reestrda bo'sh (Chinobod).
+  for (const source of SOURCES) {
+    const legal = subscribers.filter((row) => row.source === source.id && row.values.kind === SUBSCRIBER_KIND_LABEL.LEGAL);
+    if (legal.length === 0 || legal.some((row) => row.values.debt != null)) continue;
+    for (const row of legal) {
+      addNote(row, `Yuridik abonent qarzdorligi bo'sh (${source.id} reestridagi barcha ${legal.length} ta yuridik abonentda)`, "Yuridik abonentlar qarzdorligi");
+    }
+  }
+
+  // Qoidabuzarlik "Abonent" raqami: reestrda yo'q yoki TP si reestrdagidan boshqa.
+  const byContract = new Map(subscribers.map((row) => [contractKey(String(row.values.contract)), row]));
+  for (const byType of monthly.values()) {
+    for (const row of byType.get("VIOLATIONS") ?? []) {
+      const subscriber = String(row.values.subscriber ?? "");
+      if (!/^\d+$/.test(subscriber)) continue;
+      const owner = byContract.get(contractKey(subscriber));
+      if (!owner) {
+        addNote(row, "\"Abonent\" dagi raqam reestrdagi shartnomalar orasida yo'q (\"0\", \"000001\", \"150006\" va boshqalar) - abonentga bog'lanmaydi", "To'g'ri shartnoma raqami");
+      } else if (row.values.tp != null && nameKey(String(row.values.tp)) !== nameKey(String(owner.values.tp))) {
+        row.extra["TP (reestrda)"] = `${String(owner.values.substation)} / ${String(owner.values.feeder)} / ${String(owner.values.tp)}`;
+        addNote(row, "\"TP Nomi\" abonentning reestrdagi TP sidan farq qiladi (\"TP (reestrda)\" ustuni) - fayldagi TP olindi", "Qaysi TP to'g'ri");
+      }
+    }
+  }
+
+  // Reestr (13–14 sentabr holati) har bir oyga (4-savol, 2026-09-19).
+  const allMonths = [...new Set(PERIODS.flatMap((period) => period.months))].sort((a, b) => a - b);
+  for (const month of allMonths) {
+    for (const source of SOURCES) {
+      put(
+        month,
+        "SUBSCRIBERS",
+        subscribers.filter((row) => row.source === source.id),
+        `${source.id}/${TEMPLATE_FILE_NAME.SUBSCRIBERS} (13–14 sentabr holati)`,
+      );
+    }
+  }
+
+  // Oyning boshqa fayllari tayanadigan obyektlar (oqimi 0) va Baliqchi fiderlari = TP lari yig'indisi.
+  for (const [month, byType] of monthly) {
+    const before = new Map(FLOW_TEMPLATES.map((type) => [type, byType.get(type)?.length ?? 0]));
+    completeHierarchy(byType);
+    feederFlowsFromTps(byType);
+    for (const type of FLOW_TEMPLATES) {
+      const added = (byType.get(type)?.length ?? 0) - (before.get(type) ?? 0);
+      if (added > 0) {
+        const key = `${month}|${type}`;
+        monthSources.set(key, (monthSources.get(key) ?? new Set<string>()).add(`+ ${added} ta qator oqimi 0 (reestr yoki quyi faylda bor, bu faylda yo'q)`));
+      }
+    }
+  }
 
   // 7. Oylik fayllar: kalitlar noyobligi tekshiriladi.
   const monthFiles: MonthFileInfo[] = [];
@@ -2369,6 +2826,7 @@ async function main() {
   }
 
   await writeJournal(path.join(OUTPUT_DIR, "Nomlar va tuzatishlar.xlsx"), monthFiles);
+  const noteCount = await writeNotes(path.join(OUTPUT_DIR, "Eslatmalar.xlsx"), monthly);
 
   // 8. Hisobot uchun: manbalararo to'qnashuvlar.
   const contractSources = new Map<string, SourceId>();
@@ -2394,7 +2852,7 @@ async function main() {
   }
   console.log(`\nBoshqa manba shartnomasiga to'g'ri kelgan hodisa "Abonent" lari: ${foreign.length}`);
   console.log(`Bir nechta fiderda uchraydigan TP nomlari: ${[...tpPlaces.values()].filter((set) => set.size > 1).length}`);
-  console.log(`Nomlar: ${names.size} ta yozuv, tuzatishlar: ${fixes.size} ta guruh`);
+  console.log(`Nomlar: ${names.size} ta yozuv, tuzatishlar: ${fixes.size} ta guruh, eslatmalar: ${noteCount} ta`);
 }
 
 main().catch((error: unknown) => {
