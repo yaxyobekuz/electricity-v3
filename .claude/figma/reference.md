@@ -1,5 +1,10 @@
 # Figma'dan olingan aniq qiymatlar (Feeder detail, node 4029:930)
 
+> 2026-09-19 dan bu maket hech bir sahifada ishlatilmaydi: fider va TP
+> sahifalari bosh sahifa maketiga (`HomeView`, `.claude/figma/home/`) o'tdi,
+> faqat shu maketga xos kartalar o'chirildi (git tarixida bor). Umumiy
+> uslub, jadval va sarlavha tugmalari qiymatlari hali ham amal qiladi.
+
 > Figma MCP kvotasi tugagani uchun maket **mahalliy nusxadan** o'qiladi.
 > Bu yerdagi qiymatlar `get_design_context` chiqishidan aynan ko'chirilgan.
 

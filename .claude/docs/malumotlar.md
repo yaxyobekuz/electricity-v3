@@ -14,7 +14,9 @@ Shablon ustunlari: [`shablonlar.md`](./shablonlar.md). Sxema:
    ustunidan yoki undan hisoblangan (yig'indi, son, ulush, oylar farqi,
    sana taqqoslash). O'ylab topilgan, tasodifiy yoki "maketdagi" qiymat
    yo'q. Manbasi yo'q karta/ustun **olib tashlanadi** (bo'sh holat bilan
-   niqoblanmaydi).
+   niqoblanmaydi). **Yagona istisno** (foydalanuvchi qarori, 2026-09-19):
+   abonent va hisoblagich rasmlari abonent sahifasidan qo'lda yuklanadi
+   (5.2).
 2. **Bitta ko'rsatkich - bitta manba - bitta funksiya.** Pastdagi 5-bo'lim
    jadvali. Sahifa foizni o'zi hisoblamaydi: `src/lib/domain/metrics.ts` va
    `src/lib/queries/*` dagi funksiyalarni chaqiradi.
@@ -240,6 +242,10 @@ fider yoki TP (`Scope`).
 | Xodimlar ro'yxati | shu oy holatlari/yozuvlarida uchragan `staffId` lar | - |
 | Ta'mir ishlari | `TransformerSnapshot.currentRepairDate` ("Joriy ta’mir"), `overhaulDate` ("To’la ta’mir") | sana ≤ `Period.reportDate` -> "Bajarilgan", aks holda "Rejalashtirilgan" |
 | "O'tgan oy" | xuddi shu funksiya, `month - 1` davri | yo'q bo'lsa - ko'rsatilmaydi |
+| Abonent: xizmat / shartnoma muddati, to'lovdan beri | sana va `Period.reportDate` farqi (`daysBetween`, `monthsBetween`) | - |
+| Abonent: passport, PINFL | `SubscriberSnapshot`, faqat qisman yashirilgan (`maskIdentifier`: "AB*****67", "3***********67"; manbada yashirilgan "AB*" - o'zgarishsiz). To'liq qiymat bazadan chiqmaydi | - |
+| Abonent: fayldagi asl yozuv | `sourceRow` dagi `"<Ustun> (manba)"`, "Manba (fayl, qator)", "Eslatma" - yopiq ro'yxat (`getSubscriberSource`), shaxsiy ustunlarsiz | - |
+| Abonent / hisoblagich rasmi | `SubscriberPhoto` - qo'lda yuklangan (5.2) | abonent bo'yicha, oyga bog'liq emas |
 
 Muhim:
 - Podstansiya oqimi uning fiderlari yig'indisiga teng bo'lishi **shart
@@ -274,6 +280,24 @@ Fiderlar, Transformatorlar, Abonentlar.
   yo'qligi haqiqiy "0".
 - Σ podstansiya qatorlari (null lardan tashqari) = tuman soni.
 
+### 5.2. Abonent rasmlari (qo'lda yuklanadi)
+
+Platformada Excel shablonidan kelmaydigan **yagona** ma'lumot (foydalanuvchi
+qarori, 2026-09-19; shablon va real fayllarda rasm ham, rasm havolasi ham
+yo'q).
+
+- Ikki tur: abonent rasmi (`SUBSCRIBER`) va hisoblagich rasmi (`METER`).
+  Abonentda har turdan **bitta**, qayta yuklash almashtiradi; oyga bog'liq
+  emas (`SubscriberPhoto`, baytlar bazada).
+- Yuklash / o'chirish - abonent sahifasidagi tugmalar ->
+  `PUT` / `DELETE /api/subscribers/<id>/photos/<subscriber|meter>`, ko'rish -
+  `GET` (`?v=<yangilangan vaqt>` bilan uzoq keshlanadi).
+- Brauzer rasmni yuborishdan oldin kichraytiradi (eng uzun tomoni 1600px,
+  JPEG 85%); server tanani 5 MB gacha o'qiydi va turni **baytlardan**
+  aniqlaydi: faqat JPEG, PNG, WebP (SVG va boshqalar rad etiladi).
+- Autentifikatsiya hali yo'q (`loyiha.md`, keyingi qadamlar) - yuklash va
+  o'chirish ochiq; foydalanuvchi shu holatda ham tanladi.
+
 ## 6. Tanlangan oy (UI)
 
 - Cookie `period` = `"2026-09"`. Yo'q yoki bazada bo'lmasa - eng so'nggi davr.
@@ -291,6 +315,7 @@ Fiderlar, Transformatorlar, Abonentlar.
 | Domen | `src/lib/domain/` | `labels.ts`, `normalize.ts`, `metrics.ts` - mijozda ham ishlaydi |
 | Format | `src/lib/format.ts` | barcha son/sana matnlari |
 | Import | `src/lib/import/` | faqat server |
+| Qo'lda kiritish | `src/app/api/subscribers/[id]/photos/` | faqat abonent rasmlari (5.2) |
 | Davr | `src/lib/period.ts` | faqat server (`server-only`) |
 | So'rovlar | `src/lib/queries/` | faqat server; oddiy (serializable) obyekt qaytaradi |
 | Sahifalar | `src/app/**/page.tsx` | async server komponent: so'rov -> props |
@@ -300,7 +325,8 @@ Fiderlar, Transformatorlar, Abonentlar.
 
 Yuklama %, harorat, kuchlanish, fazalar, soatlik/kunlik profil, SCADA,
 uzilishlar, obyekt holati (Faol/Nosoz/Kritik), obyekt kodlari (PS-01, F-03),
-hudud, liniya uzunligi, telefon, rasm, tarif, to'lov usuli, "Budjet" turi,
+hudud, liniya uzunligi, telefon, rasm (abonent rasmlaridan tashqari - 5.2),
+tarif, to'lov usuli, "Budjet" turi,
 dalolatnoma raqami va bosqichi, jarima/undirilgan summa, texnik/tijorat
 yo'qotish bo'linishi, ish ustuvorligi/holati (ta'mir sanalaridan
 tashqari), xodim lavozimi/bo'limi/tajribasi/navbatchiligi, hisobotlar jurnali

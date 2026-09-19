@@ -102,7 +102,16 @@ ESLint uni tekshirmaydi (`eslint.config.mjs` dagi `globalIgnores`).
 
 Next.js `LayoutProps` kabi tiplarni `.next/types` ga generatsiya qiladi.
 Toza papkada `npm run typecheck` xato beradi - avval `npm run build` qiling
-(yoki hech bo'lmasa bir marta `npm run dev` ishga tushiring).
+(yoki hech bo'lmasa bir marta `npm run dev` ishga tushiring). Yangi
+marshrut (masalan `route.ts` dagi `RouteContext<"/api/...">`) qo'shilgach
+`npx next typegen` yetarli.
+
+### 4a. Sxema o'zgargach dev server
+
+Migratsiyadan va `prisma generate` dan keyin ishlab turgan dev server eski
+klientni `globalThis` da saqlab qoladi. `src/lib/db/prisma.ts` dagi global
+kalit nomini almashtiring (masalan `prismaClientSubscriberPhotos`) - server
+qayta ishga tushirilmasdan yangi klient yaratiladi.
 
 ### 5. npm keshi buzilgan
 

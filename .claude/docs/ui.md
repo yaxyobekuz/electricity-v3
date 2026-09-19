@@ -2,10 +2,17 @@
 
 Manba maket: Figma fayl `73vcnX4vOx0MnLcnecVFo3` ("Assets (Softlance)").
 
-- Fider sahifasi: `node-id=4029:930` ("Feeder detail", 1920x1080)
+- Bosh sahifa: `node-id=4126:47` ("Home", 1920x1080) — `/dashboard`,
+  podstansiya, fider va TP sahifalari (`HomeView`); tuzilma, komponentlar
+  xaritasi va qamrovlar farqi: `.claude/figma/home/notes.md`
+- Abonent sahifasi (`/subscribers/[id]`, `SubscriberDetail`) - Figmada
+  maketi yo'q, bosh sahifa uslubida (18 ustun, rangli KPI - `HomeKpiRow`
+  bo'laklari): profil qatori (abonent va hisoblagich rasmi, xarita) 344,
+  KPI 196, tarix + ko'rsatkich farqi 336, qoidabuzarlik / murojaat / manba 280
 - Xarita sahifasi: `node-id=3947:166` ("Map", 1920x1080)
-- Bosh sahifa: `node-id=4126:47` ("Home", 1920x1080) — tuzilma va
-  komponentlar xaritasi: `.claude/figma/home/notes.md`
+- "Feeder detail": `node-id=4029:930` — 2026-09-19 dan hech bir sahifada
+  ishlatilmaydi (fider va TP sahifalari bosh sahifa maketiga o'tdi); aniq
+  qiymatlari tarix uchun `.claude/figma/reference.md` da
 
 ## Maket tuzilmasi
 
@@ -15,14 +22,16 @@ Sahifa: `p-8px`, ustunlararo `gap-8px`.
 [ IconRail 72 ] [ Ikkilamchi panel 340 ] [ Main 1476 ]
 ```
 
-`Main` - 18 ustunli grid, `gap-8px`, 4 qator:
+Bosh sahifa maketida `Main` - 18 ustunli grid, `gap-8px`, 5 qator (sahifa
+vertikal skroll qilinadi):
 
 | Qator | Balandlik | Ustunlar |
 |---|---|---|
 | KPI | 196 | 6 x span-3 |
-| 1 | 298 | span-6, span-6 (ichida 148 + 8 + 142), span-6 |
-| 2 | 336 | span-4, span-4, span-6, span-4 |
-| 3 | 209 | span-6, span-8, span-4 |
+| 1 | 402 | span-4 (ob'ektlar), span-10 (xarita), span-4 (filtr) |
+| 2 | 336 | span-6 (220 + 8 + 108), span-4, span-4, span-4 |
+| 3 | 298 | span-6, span-6, span-6 (reytinglar) |
+| 4 | 298 | span-6, span-8, span-4 |
 
 ## Ranglar (Tailwind tokenlari, `src/app/globals.css`)
 

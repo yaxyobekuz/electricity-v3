@@ -41,6 +41,22 @@ Ustun ichidagi bo'linish:
 - Ob'ektlar ustuni (`4179:2`): 80 + 8 + 80 + 8 + 80 + 8 + 138
 - Qoidabuzarlik + zarar (`4126:497`): 220 + 8 + 108
 
+## Qamrovlar
+
+Maket to'rtta sahifada bir xil (`HomeView`); qamrovga qarab farq qiladigan
+kartalar tarkibi `loadHomeData` da (`src/lib/queries/home-data.ts`)
+tanlanadi. Qolgan kartalar - shu qamrovning `ScopeSummary` / dinamikasi.
+
+| Qamrov | Ob'ektlar ustuni | Xarita | Filtratsiya | 4-qator reytinglari |
+|---|---|---|---|---|
+| Tuman (`/dashboard`) | Podstansiyalar, Fiderlar, Transformatorlar | butun tuman | qulfsiz | podstansiyalar, fiderlar, TP (foydali oqim) |
+| Podstansiya | Abonentlar, Fiderlar, Transformatorlar | butun tuman | podstansiya qulflangan | TP (yo'qotish %), fiderlar, TP (foydali oqim) |
+| Fider | Podstansiya (ota, nomi bilan), Transformatorlar, Abonentlar | fider TP lari sig'adigan markaz va zoom | podstansiya va fider qulflangan | TP (yo'qotish %), TP (abonentlar qarzdorligi), TP (foydali oqim) |
+| TP | Podstansiya, Fider (ota, nomi bilan), Abonentlar | faqat shu TP (zoom 15) | podstansiya va fider qulflangan; shu TP oldindan tanlangan, fiderdagi boshqa TP ga almashtirsa bo'ladi | fiderdagi TP lar (yo'qotish %), abonentlar (qarzdorlik, yorliq - shartnoma raqami), fiderdagi TP lar (foydali oqim) |
+
+TP sahifasida xarita tultipi sarlavhasi "Transformator" (boshqalarida -
+"Yuqori sarfga ega transformator").
+
 ## Komponentlar xaritasi
 
 | Figma tugun | Karta | Kod |
@@ -60,9 +76,11 @@ Ustun ichidagi bo'linish:
 | `4126:1005` | Rejalashtirilgan ishlar | `cards/PlannedWorksCard` (`works`) |
 | `4126:1040` | Hisobotlarni yuklab olish | `cards/DownloadReportsCard` (`stretchPeriods={false}`) |
 
-Umumiy kartalar fider sahifasida ham ishlatiladi - bosh sahifaga xos farqlar
-faqat **ixtiyoriy proplar** orqali, standart qiymatlar fider maketiniki.
-`cards/DebtCard` ham `RingStatsCard` ustiga qurilgan.
+`cards/*` dagi kartalar dastlab "Feeder detail" maketi (`4029:930`) uchun
+yozilgan: bosh sahifaga xos farqlar **ixtiyoriy proplar** orqali, standart
+qiymatlar o'sha maketniki. U maket endi ishlatilmaydi (2026-09-19), faqat
+unga xos kartalar (KPI, Qarzdorlik, Keltirilgan zarar, Ma'sul xodim, top
+jadval, Bajarilgan ishlar) o'chirilgan.
 
 ## KPI kartalari (`4126:133`)
 

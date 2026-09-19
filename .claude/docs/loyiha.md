@@ -35,6 +35,9 @@ Asosiy qism - **admin panel**:
 | **Qat'iy import** | Faylda bitta xato bo'lsa ham butun yuklash rad etiladi, hech narsa saqlanmaydi | 2026-09-14 |
 | Hisobot davri | Oy (varaq nomidagi sanadan). Sahifalar yon paneldagi tanlangan oyni ko'rsatadi; oyga qayta yuklash shu oy yozuvlarini almashtiradi | 2026-09-14 |
 | Ma'lumot qoidalari | Yagona shartnoma - [`malumotlar.md`](./malumotlar.md) | 2026-09-14 |
+| Fider va TP sahifalari | Dashboard va podstansiya sahifasi bilan bir xil maket (`HomeView`, Figma `4126:47`), o'z qamrovida. `4029:930` ("Feeder detail") maketi endi hech bir sahifada ishlatilmaydi, uning kartalari o'chirildi | 2026-09-19 |
+| Abonent rasmlari | Abonent va hisoblagich rasmi abonent sahifasidan **qo'lda** yuklanadi - "faqat shablon / faqat import" qoidasidan yagona istisno (`malumotlar.md` 5.2). Autentifikatsiya qo'shilguncha ochiq | 2026-09-19 |
+| Passport / PINFL | Abonent sahifasida qisman yashirilgan holda ko'rsatiladi ("AB*****67"); ro'yxat va qidiruvda - yo'q | 2026-09-19 |
 
 ## Til qoidasi
 
@@ -58,5 +61,5 @@ Asosiy qism - **admin panel**:
 - [x] Excel shablon parseri va qat'iy validatsiya (`src/lib/import/`)
 - [x] Import oqimi: yuklash -> tekshirish -> saqlash (`/imports`)
 - [x] Barcha sahifalar bazadagi ma'lumotga ulandi (`src/lib/queries/`)
-- [ ] Autentifikatsiya (admin / operator / ko'ruvchi rollari) - hozir `/api/imports` himoyalanmagan
+- [ ] Autentifikatsiya (admin / operator / ko'ruvchi rollari) - hozir `/api/imports` va abonent rasmlari API (`/api/subscribers/<id>/photos/...`) himoyalanmagan
 - [ ] Tungi mavzu (ixtiyoriy, keyinroq) - `src/app/globals.css` dagi izohga qarang

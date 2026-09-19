@@ -26,6 +26,8 @@ ma'lumotlar Excel shablonlari orqali yuklanadi.
 - **Faqat Excel shablonidagi ma'lumot.** Shablonda yo'q qiymat (yuklama,
   harorat, holat, telefon...) o'ylab topilmaydi va ko'rsatilmaydi. Har bir
   son `src/lib/queries/*` orqali bazadan olinadi - `malumotlar.md` 5-bo'lim.
+  Yagona istisno - abonent sahifasidan qo'lda yuklanadigan abonent va
+  hisoblagich rasmlari (`malumotlar.md` 5.2).
 - **UI matni - o'zbekcha, kod qiymatlari - inglizcha.** Batafsil:
   `loyiha.md` dagi "Til qoidasi".
 - **`prisma@latest` o'rnatmang** - `latest` teg RC versiyaga ishora qiladi.
