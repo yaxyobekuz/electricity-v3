@@ -151,11 +151,34 @@ model Subscriber {
   snapshots  SubscriberSnapshot[]
   violations Violation[]
   appeals    Appeal[]
+  photos     SubscriberPhoto[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("subscribers")
+}
+
+/// Abonent sahifasidan qo'lda yuklanadigan rasm (foydalanuvchi qarori,
+/// 2026-09-19 - "faqat shablon" qoidasidan yagona istisno). Oyga bog'liq
+/// emas: abonentda har turdan bitta, qayta yuklash almashtiradi.
+model SubscriberPhoto {
+  id           String              @id @default(cuid())
+  subscriberId String
+  kind         SubscriberPhotoKind
+  /// Baytlardan aniqlangan tur: "image/jpeg" | "image/png" | "image/webp".
+  mimeType     String
+  data         Bytes
+  /// Bayt.
+  size         Int
+
+  subscriber Subscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([subscriberId, kind])
+  @@map("subscriber_photos")
 }
 
 // ---------------------------------------------------------------------------
@@ -571,4 +594,12 @@ enum AppealStatus {
   IN_PROGRESS
   /// Muddati buzilgan
   OVERDUE
+}
+
+/// Abonent sahifasidagi rasm turi.
+enum SubscriberPhotoKind {
+  /// Abonent rasmi (shaxs yoki bino)
+  SUBSCRIBER
+  /// Hisoblagich rasmi
+  METER
 }
