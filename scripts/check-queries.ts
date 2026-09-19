@@ -14,8 +14,9 @@ import "dotenv/config";
 import type { AppealStatus, MeterStatus, SubscriberKind, TemplateType, ViolatorType } from "@/generated/prisma";
 import { prisma } from "@/lib/db/prisma";
 import { TEMPLATE_ORDER } from "@/lib/domain/labels";
-import { lossPercent } from "@/lib/domain/metrics";
-import { monthShort } from "@/lib/format";
+import { daysBetween, lossPercent, monthsBetween } from "@/lib/domain/metrics";
+import { detectPhotoType, photoKindFromSegment, photoUrl } from "@/lib/domain/photos";
+import { daysBeforeReport, durationText, maskIdentifier, monthShort } from "@/lib/format";
 import { getPeriodUploads, getPreviousPeriod, listPeriods } from "@/lib/period";
 import {
   getFeeder,
@@ -26,6 +27,17 @@ import {
 } from "@/lib/queries/entities";
 import { listAppeals, listFeeders, listSubscribers, listSubstations, listTransformers, listViolations } from "@/lib/queries/lists";
 import { listRepairs } from "@/lib/queries/repairs";
+import {
+  deleteSubscriberPhoto,
+  getSubscriberPhotos,
+  readSubscriberPhoto,
+  saveSubscriberPhoto,
+} from "@/lib/queries/subscriber-photos";
+import {
+  getSubscriberEventSeries,
+  getSubscriberRelated,
+  getSubscriberSource,
+} from "@/lib/queries/subscribers-related";
 import {
   getScopeComparison,
   getScopeSeries,
@@ -528,6 +540,11 @@ async function checkSummaryAgainstLists(tx: Db, periodId: string, scope: Scope, 
       summary.subscribers?.total,
       sumOf(transformers, (row) => row.onlineSubscribers + row.offlineSubscribers),
     );
+    expectEqual(
+      `${label}: TP ro'yxati qarzdorligi`,
+      summary.subscriberList.debtUzs,
+      sumOf(transformers, (row) => row.debtUzs ?? 0),
+    );
     expectEqual(`${label}: TP ro'yxati qoidabuzarliklari`, summary.violations.total, sumOf(transformers, (row) => row.violations ?? 0));
     expectEqual(`${label}: TP ro'yxati murojaatlari`, summary.appeals.total, sumOf(transformers, (row) => row.appeals ?? 0));
     // Yuklanmagan shablon soni - null (0 emas).
@@ -622,6 +639,7 @@ async function run(tx: Db) {
         row.onlineSubscribers,
         row.offlineSubscribers,
       ]);
+      expectEqual(`${tag} ${key}: qarzdorlik`, scoped.subscriberList.debtUzs, row.debtUzs);
       expectEqual(`${tag} ${key}: sonlar`, scoped.counts, { substations: 1, feeders: 1, transformers: 1 });
       await checkSummaryAgainstLists(tx, period.id, T(key), `${tag} ${key}`, scoped);
       const detail = await getTransformer(row.id, period.id, tx);
@@ -768,9 +786,9 @@ async function run(tx: Db) {
     const t4 = await getScopeSummary(p4.id, T("T4"), tx);
     const transformers = await listTransformers(p4.id, {}, tx);
     expectEqual(
-      "P4 TP qatori: ro'yxat qamramagan - TP holatidagi sonlar",
-      transformers.map((row) => [row.id, row.onlineSubscribers, row.offlineSubscribers]),
-      [[ids.transformers.T4, 5, 2]],
+      "P4 TP qatori: ro'yxat qamramagan - TP holatidagi sonlar, qarzdorlik null",
+      transformers.map((row) => [row.id, row.onlineSubscribers, row.offlineSubscribers, row.debtUzs]),
+      [[ids.transformers.T4, 5, 2, null]],
     );
     expectEqual("P4 T4 xulosa = qator", [t4.subscribers, t4.counts], [
       { total: 7, online: 5, offline: 2 },
@@ -1056,6 +1074,109 @@ async function run(tx: Db) {
     expectEqual("tarix: TP almashishi", c4History.map((point) => point.transformer.id), [ids.transformers.T3, ids.transformers.T2]);
   }
 
+  // --- Abonent sahifasi: yashirilgan raqamlar, oylar bo'yicha sonlar, manba, rasmlar ---
+  {
+    const c1Id = ids.subscribers["AB 104 512"];
+    const c1 = await getSubscriber(c1Id, p2.id, tx);
+    expectEqual("abonent: passport va PINFL qisman yashirilgan", [c1?.snapshot?.maskedPassport, c1?.snapshot?.maskedPinfl], [
+      "AA*****67",
+      "1***********34",
+    ]);
+    const c1Json = JSON.stringify(c1);
+    expectTrue("abonent: to'liq passport/PINFL natijada yo'q", !c1Json.includes("1234567") && !c1Json.includes("12345678901234"));
+    expectEqual(
+      "maskIdentifier: manbada yashirilgan, bo'sh, qisqa",
+      [maskIdentifier("AB*", 2, 2), maskIdentifier("  ", 2, 2), maskIdentifier("AB12", 2, 2), maskIdentifier("123456789", 2, 0)],
+      ["AB*", null, "****", "12*******"],
+    );
+
+    expectEqual(
+      "sanalar farqi: kun (vaqt qismi hisobga olinmaydi), to'liq oylar",
+      [
+        daysBetween("2026-09-08T00:00:00Z", "2026-09-10T00:00:00Z"),
+        daysBetween("2026-09-08T23:59:59Z", "2026-09-10T00:00:00Z"),
+        daysBetween("2026-09-12", "2026-09-10"),
+        monthsBetween("2020-09-20", "2026-09-10"),
+        monthsBetween("2026-09-10", "2020-09-20"),
+        durationText(monthsBetween("2020-09-20", "2026-09-10")),
+        durationText(0),
+        daysBeforeReport(daysBetween("2020-12-18", "2026-09-10"), monthsBetween("2020-12-18", "2026-09-10")),
+        daysBeforeReport(daysBetween("2026-09-08", "2026-09-10"), monthsBetween("2026-09-08", "2026-09-10")),
+        daysBeforeReport(0),
+      ],
+      [2, 2, -2, 71, null, "5 yil 11 oy", "1 oydan kam", "5 yil 8 oy oldin", "2 kun oldin", "hisobot kuni"],
+    );
+
+    // Oylar bo'yicha sonlar = shu oy ro'yxati (sahifadagi jadval) uzunligi; yuklanmagan - null.
+    const events = await getSubscriberEventSeries(c1Id, [p1.id, p2.id, p3.id], tx);
+    const expectedEvents = [];
+    for (const period of [p1, p2, p3]) {
+      const related = await getSubscriberRelated(c1Id, period.id, tx);
+      expectedEvents.push({
+        periodId: period.id,
+        violations: related.violations.uploaded ? related.violations.rows.length : null,
+        appeals: related.appeals.uploaded ? related.appeals.rows.length : null,
+      });
+    }
+    expectEqual("abonent: oylar bo'yicha qoidabuzarlik/murojaat = ro'yxat", events, expectedEvents);
+    expectEqual("abonent: P1 da 1 ta qoidabuzarlik, murojaatlar yuklanmagan", [events[0].violations, events[0].appeals], [1, null]);
+
+    // Manba: faqat ruxsat etilgan "(manba)" ustunlari, tozalangan qiymatga teng bo'lsa - ko'rsatilmaydi.
+    await tx.subscriberSnapshot.update({
+      where: { periodId_subscriberId: { periodId: p2.id, subscriberId: c1Id } },
+      data: {
+        sourceRow: {
+          FISH: "O‘rinboy Aliyev",
+          "FISH (manba)": " O'RINBOY  ALIYEV ",
+          Manzil: "Chinobod ko‘chasi 5",
+          "Manzil (manba)": "Chinobod ko‘chasi 5",
+          Passport: "AA1234567",
+          "Passport (manba)": "AA 1234567",
+          "Manba (fayl, qator)": "baliqchi/Elektr Abonentlar.xlsx, 12-qator",
+          Eslatma: "Sinov izohi",
+        },
+      },
+    });
+    const source = await getSubscriberSource(c1Id, p2.id, tx);
+    expectEqual("abonent manbasi", source, {
+      upload: null,
+      rowNumber: source?.rowNumber,
+      origin: "baliqchi/Elektr Abonentlar.xlsx, 12-qator",
+      note: "Sinov izohi",
+      originals: [{ label: "FISH", value: "O'RINBOY  ALIYEV" }],
+    });
+    expectTrue("abonent manbasi: passport chiqmaydi", !JSON.stringify(source).includes("1234567"));
+    expectEqual("abonent manbasi: holat yo'q oy - null", await getSubscriberSource(c1Id, p3.id, tx), null);
+
+    // Rasmlar: saqlash, almashtirish, o'qish, o'chirish.
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
+    const webp = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]);
+    expectEqual(
+      "rasm turi baytlardan",
+      [detectPhotoType(png), detectPhotoType(webp), detectPhotoType(new TextEncoder().encode("GIF89a")), detectPhotoType(new Uint8Array([0xff, 0xd8, 0xff, 0xe0]))],
+      ["image/png", "image/webp", null, "image/jpeg"],
+    );
+    expectEqual("rasm: noma'lum segment", [photoKindFromSegment("meter"), photoKindFromSegment("passport")], ["METER", null]);
+    expectEqual("rasm: abonent topilmasa - null", await saveSubscriberPhoto("missing-id", "METER", "image/png", png, tx), null);
+    const saved = await saveSubscriberPhoto(c1Id, "METER", "image/png", png, tx);
+    expectTrue("rasm: versiyali manzil", saved?.url.startsWith(photoUrl(c1Id, "METER") + "?v=") === true);
+    await saveSubscriberPhoto(c1Id, "METER", "image/webp", webp, tx);
+    const stored = await readSubscriberPhoto(c1Id, "METER", tx);
+    expectEqual("rasm: qayta yuklash almashtiradi", [stored?.mimeType, stored?.size, Array.from(stored?.data ?? [])], [
+      "image/webp",
+      webp.byteLength,
+      Array.from(webp),
+    ]);
+    expectEqual("rasm: har turdan bitta", await tx.subscriberPhoto.count({ where: { subscriberId: c1Id } }), 1);
+    const photos = await getSubscriberPhotos(c1Id, tx);
+    expectEqual("rasm: ro'yxat", [photos.SUBSCRIBER, photos.METER?.size], [null, webp.byteLength]);
+    expectEqual("rasm: o'chirish", [await deleteSubscriberPhoto(c1Id, "METER", tx), await deleteSubscriberPhoto(c1Id, "METER", tx)], [
+      true,
+      false,
+    ]);
+    expectEqual("rasm: o'chirilgach yo'q", await getSubscriberPhotos(c1Id, tx), { SUBSCRIBER: null, METER: null });
+  }
+
   // --- Noma'lum qamrov --------------------------------------------------------------
   {
     const missing = await getScopeSummary(p2.id, { kind: "feeder", id: "missing-id" }, tx);
@@ -1083,6 +1204,9 @@ async function run(tx: Db) {
     await listViolations(p2.id, {}, tx),
     await getScopeSeries(district, allPeriods, tx),
     await listSubstations(p3.id, tx),
+    await getSubscriberSource(ids.subscribers["AB 104 512"], p2.id, tx),
+    await getSubscriberEventSeries(ids.subscribers["AB 104 512"], [p1.id, p2.id], tx),
+    await getSubscriberPhotos(ids.subscribers["AB 104 512"], tx),
   ];
   const roundTrip = JSON.parse(JSON.stringify(serializable));
   expectEqual("natijalar JSON orqali o'zgarmaydi", roundTrip, serializable);
