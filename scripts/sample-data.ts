@@ -957,6 +957,8 @@ const COLUMNS: Record<TemplateType, readonly (readonly [field: string, header: s
     ["meterInstalledAt", "Hisoblagich o'rnatilingan sana"],
   ],
   VIOLATIONS: [
+    ["substation", "Podstansiya"],
+    ["feeder", "Fider"],
     ["transformer", "TP Nomi"],
     ["subscriberName", "Abonent"],
     ["violatorType", "Turi (Yuridik/Jismoniy/Aybisiz)"],
@@ -967,6 +969,8 @@ const COLUMNS: Record<TemplateType, readonly (readonly [field: string, header: s
     ["staff", "Ma'sul xodim"],
   ],
   APPEALS: [
+    ["substation", "Podstansiya"],
+    ["feeder", "Fider"],
     ["transformer", "TP Nomi"],
     ["text", "Murojaat"],
     ["subscriberName", "Abonent"],

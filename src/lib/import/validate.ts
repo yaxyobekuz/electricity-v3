@@ -794,7 +794,7 @@ function checkTransformers(file: ParsedFile, state: MonthState): FileCounts {
     file.warnings.add(
       group[0].data.row,
       "TP Nomi",
-      `${quote(group[0].data.name!)} nomli TP ${group.length} ta fiderda uchraydi (${listSample(places)}): qoidabuzarlik va murojaatlar bu TP ga faqat abonent yoki ma’sul xodim podstansiyasi orqali bog’lanadi`,
+      `${quote(group[0].data.name!)} nomli TP ${group.length} ta fiderda uchraydi (${listSample(places)}): qoidabuzarlik va murojaatlar bu TP ga faqat abonent, “Podstansiya” / “Fider” ustunlari yoki ma’sul xodim podstansiyasi orqali bog’lanadi`,
     );
   }
 
@@ -943,17 +943,29 @@ function checkEvents(file: ParsedFile, state: MonthState): FileCounts {
   if (state.links) {
     for (const [key, value] of state.links.allContracts) index.allContracts.set(key, value);
     for (const [key, values] of state.links.allTps) index.allTps.set(key, [...values]);
+    for (const key of state.links.feeders) index.feeders.add(key);
+    for (const key of state.links.substations) index.substations.add(key);
   }
+  // Shu submission fayllaridagi obyektlar ham saqlashda bazada bo'ladi.
+  const addPlace = (tpOrFeederKey: string) => {
+    const [substation, feeder] = tpOrFeederKey.split(KEY_SEP);
+    index.substations.add(substation);
+    if (feeder != null) index.feeders.add(`${substation}${KEY_SEP}${feeder}`);
+  };
+  for (const key of state.substations.keys()) index.substations.add(key);
+  for (const key of state.feeders.keys()) addPlace(key);
   for (const [contract, subscriber] of state.subscribers) {
     index.monthContracts.set(contract, subscriber.transformerKey);
     const tpName = subscriber.transformerKey.split(KEY_SEP)[2] ?? "";
     pushUnique(index.monthTps, tpName, subscriber.transformerKey);
     pushUnique(index.allTps, tpName, subscriber.transformerKey);
     pushUnique(index.subscriberNames, `${subscriber.transformerKey}${KEY_SEP}${subscriber.fullNameKey}`, contract);
+    addPlace(subscriber.transformerKey);
   }
   for (const [key, tp] of state.transformers) {
     pushUnique(index.monthTps, tp.nameKey, key);
     pushUnique(index.allTps, tp.nameKey, key);
+    addPlace(key);
   }
   for (const [key, substation] of state.substations) {
     if (substation.staffKey) pushUnique(index.staffSubstations, substation.staffKey, key);
@@ -961,29 +973,34 @@ function checkEvents(file: ParsedFile, state: MonthState): FileCounts {
 
   const warnings = new GroupedWarnings();
   const byTp = new Map<string, number>();
+  let feederOnly = 0;
   let substationOnly = 0;
   let unlinked = 0;
   for (const { data } of records) {
     const link = resolveEventLink(index, {
+      substationName: data.substationName,
+      feederName: data.feederName,
       transformerName: data.transformerName,
       subscriberName: data.subscriberName,
       staffName: data.staffName,
     });
     if (link.warning) warnings.add(`w:${link.warning}`, data.row, "TP Nomi", link.warning);
     if (link.tpKey) byTp.set(link.tpKey, (byTp.get(link.tpKey) ?? 0) + 1);
+    else if (link.feederKey) feederOnly += 1;
     else if (link.substationKey) substationOnly += 1;
     else unlinked += 1;
   }
   warnings.flush(file);
-  if (substationOnly + unlinked > 0) {
+  if (feederOnly + substationOnly + unlinked > 0) {
     const parts = [
-      substationOnly > 0 ? `${substationOnly} tasi ma’sul xodim orqali podstansiyaga bog’landi` : null,
+      feederOnly > 0 ? `${feederOnly} tasi faqat fiderga bog’landi` : null,
+      substationOnly > 0 ? `${substationOnly} tasi faqat podstansiyaga bog’landi` : null,
       unlinked > 0 ? `${unlinked} tasi hech qaysi obyektga bog’lanmadi` : null,
     ].filter(Boolean);
     file.warnings.add(
       null,
       "TP Nomi",
-      `${substationOnly + unlinked} ta yozuvning TP si aniqlanmadi (${parts.join(", ")}) - yozuvlar baribir saqlanadi va tuman bo’yicha sonlarga kiradi`,
+      `${feederOnly + substationOnly + unlinked} ta yozuvning TP si aniqlanmadi (${parts.join(", ")}) - yozuvlar baribir saqlanadi va tuman bo’yicha sonlarga kiradi`,
     );
   }
 

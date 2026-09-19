@@ -14,17 +14,20 @@ import { KEY_SEP } from "./templates";
  *      ham boshqa TP ni bir ma'noli ko'rsatsa - "TP Nomi" ustun (ogohlantirish).
  *   2. "TP Nomi" - shu oy TP lari (TP holatlari va abonentlar TP lari) orasida
  *      bitta bo'lsa; shu oyda yo'q bo'lsa - bazadagi barcha TP lar orasida
- *      bitta bo'lsa. "Ma'sul xodim" shu oyda podstansiya ma'sul xodimi bo'lsa,
- *      nomzodlar faqat uning podstansiya(lar)i TP lari (bir xil raqamli TP
- *      boshqa podstansiyalarda ham uchraydi).
- *   3. TP topilmasa - "Ma'sul xodim" shu oyda aynan bitta podstansiyaning
- *      ma'sul xodimi bo'lsa - faqat shu podstansiya.
+ *      bitta bo'lsa. Ixtiyoriy "Podstansiya" / "Fider" ustunlari berilsa,
+ *      nomzodlar faqat shu podstansiya / fider TP lari (bir xil raqamli TP
+ *      boshqa podstansiyalarda ham uchraydi). Berilmasa va "Ma'sul xodim" shu
+ *      oyda podstansiya ma'sul xodimi bo'lsa - uning podstansiya(lar)i TP lari.
+ *   3. TP topilmasa - "Podstansiya" / "Fider" bazada bo'lsa - shu fider yoki
+ *      podstansiya; berilmagan bo'lsa - "Ma'sul xodim" shu oyda aynan bitta
+ *      podstansiyaning ma'sul xodimi bo'lsa - faqat shu podstansiya.
  *   4. Hech biri - bog'lanmaydi; yozuv baribir saqlanadi.
  * Abonent: shartnoma raqami bo'yicha, aks holda nomi (FISH) shu oyda shu TP
  * abonentlari orasida aynan bitta bo'lsa.
  *
  * Kalitlar tabiiy: TP - "podstansiya|fider|tp" (`nameKey` lar, `KEY_SEP`
- * bilan), podstansiya - `nameKey`, abonent - `contractKey`.
+ * bilan), fider - "podstansiya|fider", podstansiya - `nameKey`, abonent -
+ * `contractKey`.
  */
 
 type Db = PrismaClient | Prisma.TransactionClient;
@@ -42,9 +45,17 @@ export interface EventLinkIndex {
   staffSubstations: Map<string, string[]>;
   /** Shu oy abonentlari: "TP kaliti|FISH kaliti" -> shartnoma kalitlari. */
   subscriberNames: Map<string, string[]>;
+  /** Bazadagi va shu oy fayllaridagi fiderlar: "podstansiya|fider" kalitlari. */
+  feeders: Set<string>;
+  /** Bazadagi va shu oy fayllaridagi podstansiyalar: `nameKey`. */
+  substations: Set<string>;
 }
 
 export interface EventLinkInput {
+  /** Ixtiyoriy "Podstansiya" ustuni. */
+  substationName: string | null;
+  /** Ixtiyoriy "Fider" ustuni. */
+  feederName: string | null;
   transformerName: string | null;
   subscriberName: string | null;
   staffName: string | null;
@@ -52,9 +63,11 @@ export interface EventLinkInput {
 
 export interface EventLink {
   tpKey: string | null;
+  /** "podstansiya|fider" - TP dan yoki "Podstansiya" / "Fider" ustunlaridan. */
+  feederKey: string | null;
   substationKey: string | null;
   contractKey: string | null;
-  via: "contract" | "tp" | "staff" | null;
+  via: "contract" | "tp" | "place" | "staff" | null;
   /** Foydalanuvchiga ogohlantirish (noaniqlik yoki qarama-qarshilik). */
   warning: string | null;
 }
@@ -66,6 +79,8 @@ export const emptyLinkIndex = (): EventLinkIndex => ({
   allTps: new Map(),
   staffSubstations: new Map(),
   subscriberNames: new Map(),
+  feeders: new Set(),
+  substations: new Set(),
 });
 
 export const tpKeyOf = (substationKey: string, feederKey: string, tpNameKey: string) =>
@@ -82,23 +97,40 @@ export function pushUnique(map: Map<string, string[]>, key: string, value: strin
 
 const tpNameOf = (tpKey: string) => tpKey.split(KEY_SEP)[2] ?? "";
 export const substationOf = (tpKey: string) => tpKey.split(KEY_SEP)[0] ?? "";
+/** TP yoki fider kalitidan "podstansiya|fider". */
+const feederOf = (key: string) => key.split(KEY_SEP).slice(0, 2).join(KEY_SEP);
 
 export function resolveEventLink(index: EventLinkIndex, input: EventLinkInput): EventLink {
   const contract = input.subscriberName ? contractKey(input.subscriberName) : "";
   const contractTp = contract ? (index.monthContracts.get(contract) ?? index.allContracts.get(contract) ?? null) : null;
   const staffSubstations = input.staffName ? (index.staffSubstations.get(nameKey(input.staffName)) ?? []) : [];
 
+  // "Podstansiya" / "Fider" ustunlari: TP nomzodlari shu joy bilan cheklanadi.
+  const placeSubstation = input.substationName ? nameKey(input.substationName) : null;
+  const placeFeederName = input.feederName ? nameKey(input.feederName) : null;
+  const hasPlace = placeSubstation != null || placeFeederName != null;
+  const inPlace = (key: string) =>
+    (placeSubstation == null || substationOf(key) === placeSubstation) &&
+    (placeFeederName == null || (key.split(KEY_SEP)[1] ?? "") === placeFeederName);
+  const placeLabel = [input.substationName, input.feederName].filter(Boolean).join(" / ");
+
   let tpByName: string | null = null;
   let ambiguous: string[] = [];
   let outsideStaff = false;
+  let outsidePlace = false;
   if (input.transformerName) {
     const name = nameKey(input.transformerName);
-    const inMonth = index.monthTps.get(name) ?? [];
-    const found = inMonth.length > 0 ? inMonth : (index.allTps.get(name) ?? []);
-    // Ma'sul xodim podstansiya(lar)ning xodimi bo'lsa - TP faqat shu podstansiya(lar)dan.
+    const monthAll = index.monthTps.get(name) ?? [];
+    const globalAll = index.allTps.get(name) ?? [];
+    const inMonth = hasPlace ? monthAll.filter(inPlace) : monthAll;
+    const found = inMonth.length > 0 ? inMonth : hasPlace ? globalAll.filter(inPlace) : globalAll;
+    outsidePlace = hasPlace && found.length === 0 && monthAll.length + globalAll.length > 0;
+    // Joy berilmagan, ma'sul xodim podstansiya(lar)ning xodimi bo'lsa - TP faqat shu podstansiya(lar)dan.
     const candidates =
-      staffSubstations.length > 0 ? found.filter((key) => staffSubstations.includes(substationOf(key))) : found;
-    outsideStaff = found.length > 0 && candidates.length === 0;
+      !hasPlace && staffSubstations.length > 0
+        ? found.filter((key) => staffSubstations.includes(substationOf(key)))
+        : found;
+    outsideStaff = !hasPlace && found.length > 0 && candidates.length === 0;
     if (candidates.length === 1) tpByName = candidates[0];
     else if (candidates.length > 1) {
       // Bir nechta TP - abonentning TP si ular orasida bo'lsa, o'shani olamiz.
@@ -125,12 +157,34 @@ export function resolveEventLink(index: EventLinkIndex, input: EventLinkInput): 
       .slice(0, 3)
       .map(tpKeyLabel)
       .join("; ")}) - TP ga bog’lanmadi`;
+  } else if (outsidePlace) {
+    warning = `“${input.transformerName}” nomli TP ${placeLabel} da yo’q - TP ga bog’lanmadi`;
   } else if (outsideStaff) {
     warning = `“${input.transformerName}” nomli TP ma’sul xodim podstansiyasida (${staffSubstations.join(", ")}) yo’q - TP ga bog’lanmadi`;
   }
 
   let substationKey = tpKey ? substationOf(tpKey) : null;
-  if (!tpKey && staffSubstations.length === 1) {
+  let feederKey = tpKey ? feederOf(tpKey) : null;
+  if (!tpKey && hasPlace) {
+    // Fider: podstansiyasi berilgan bo'lsa aniq kalit, aks holda nomi bitta fiderga mos kelsa.
+    const feeders = placeFeederName ? [...index.feeders].filter(inPlace) : [];
+    if (feeders.length === 1) {
+      feederKey = feeders[0];
+      substationKey = substationOf(feeders[0]);
+      via = "place";
+    } else if (placeSubstation && index.substations.has(placeSubstation)) {
+      substationKey = placeSubstation;
+      via = "place";
+    }
+    const missing =
+      placeSubstation && !index.substations.has(placeSubstation)
+        ? `“${input.substationName}” podstansiyasi`
+        : placeFeederName && feeders.length === 0
+          ? `“${placeLabel}” fideri`
+          : null;
+    if (missing && !warning) warning = `${missing} bazada yo’q`;
+  }
+  if (!tpKey && !substationKey && staffSubstations.length === 1) {
     substationKey = staffSubstations[0];
     via = "staff";
   }
@@ -147,7 +201,7 @@ export function resolveEventLink(index: EventLinkIndex, input: EventLinkInput): 
     }
   }
 
-  return { tpKey, substationKey, contractKey: linkedContract, via, warning };
+  return { tpKey, feederKey, substationKey, contractKey: linkedContract, via, warning };
 }
 
 /* ---------------------------------------------------------------------------
@@ -174,6 +228,11 @@ export async function loadGlobalLinks(db: Db, index: EventLinkIndex): Promise<vo
 
   const tps = await db.transformer.findMany({ select: TP_KEY_SELECT });
   for (const tp of tps) pushUnique(index.allTps, tp.nameKey, keyOfTp(tp));
+
+  const feeders = await db.feeder.findMany({ select: { nameKey: true, substation: { select: { nameKey: true } } } });
+  for (const feeder of feeders) index.feeders.add(`${feeder.substation.nameKey}${KEY_SEP}${feeder.nameKey}`);
+  const substations = await db.substation.findMany({ select: { nameKey: true } });
+  for (const substation of substations) index.substations.add(substation.nameKey);
 }
 
 /** Shu oy bo'yicha (saqlash rejimi - fayllar yozilgandan keyingi baza holati). */
@@ -202,6 +261,26 @@ export async function loadMonthLinks(db: Db, periodId: string, index: EventLinkI
   for (const row of substations) {
     if (row.staff) pushUnique(index.staffSubstations, row.staff.nameKey, row.substation.nameKey);
   }
+}
+
+/** Fider kaliti ("podstansiya|fider") -> id lar (saqlash uchun). */
+export async function feederRefs(
+  db: Db,
+  feederKeys: Iterable<string>,
+): Promise<Map<string, { id: string; substationId: string }>> {
+  const wanted = new Set(feederKeys);
+  const result = new Map<string, { id: string; substationId: string }>();
+  if (wanted.size === 0) return result;
+  const names = [...new Set([...wanted].map((key) => key.split(KEY_SEP)[1] ?? ""))];
+  const rows = await db.feeder.findMany({
+    where: { nameKey: { in: names } },
+    select: { id: true, substationId: true, nameKey: true, substation: { select: { nameKey: true } } },
+  });
+  for (const row of rows) {
+    const key = `${row.substation.nameKey}${KEY_SEP}${row.nameKey}`;
+    if (wanted.has(key)) result.set(key, { id: row.id, substationId: row.substationId });
+  }
+  return result;
 }
 
 /** TP kaliti -> id lar (saqlash uchun). */

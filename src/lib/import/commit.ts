@@ -18,6 +18,7 @@ import {
 import {
   emptyLinkIndex,
   type EventLinkIndex,
+  feederRefs,
   loadGlobalLinks,
   loadMonthLinks,
   resolveEventLink,
@@ -377,10 +378,14 @@ async function writeSubscribers(ctx: WriteContext, rows: SubscriberRow[]) {
  */
 
 interface EventRowInput {
+  substationName: string | null;
+  feederName: string | null;
   transformerName: string | null;
   subscriberName: string;
   staffName: string | null;
 }
+
+type GlobalLinks = Pick<EventLinkIndex, "allContracts" | "allTps" | "feeders" | "substations">;
 
 interface ResolvedEventLinks {
   transformerId: string | null;
@@ -394,12 +399,14 @@ async function resolveEvents(
   tx: Tx,
   periodId: string,
   rows: readonly EventRowInput[],
-  global?: Pick<EventLinkIndex, "allContracts" | "allTps">,
+  global?: GlobalLinks,
 ): Promise<ResolvedEventLinks[]> {
   const index = emptyLinkIndex();
   if (global) {
     index.allContracts = global.allContracts;
     index.allTps = global.allTps;
+    index.feeders = global.feeders;
+    index.substations = global.substations;
   } else {
     await loadGlobalLinks(tx, index);
   }
@@ -409,6 +416,10 @@ async function resolveEvents(
   const tpRefs = await transformerRefs(
     tx,
     links.flatMap((link) => (link.tpKey ? [link.tpKey] : [])),
+  );
+  const feeders = await feederRefs(
+    tx,
+    links.flatMap((link) => (!link.tpKey && link.feederKey ? [link.feederKey] : [])),
   );
   const substations = await substationIds(
     tx,
@@ -426,10 +437,14 @@ async function resolveEvents(
 
   return links.map((link) => {
     const tp = link.tpKey ? tpRefs.get(link.tpKey) : undefined;
+    const feeder = !tp && link.feederKey ? feeders.get(link.feederKey) : undefined;
     return {
       transformerId: tp?.id ?? null,
-      feederId: tp?.feederId ?? null,
-      substationId: tp?.substationId ?? (link.substationKey ? (substations.get(link.substationKey) ?? null) : null),
+      feederId: tp?.feederId ?? feeder?.id ?? null,
+      substationId:
+        tp?.substationId ??
+        feeder?.substationId ??
+        (link.substationKey ? (substations.get(link.substationKey) ?? null) : null),
       subscriberId: link.contractKey ? (subscribers.get(link.contractKey) ?? null) : null,
     };
   });
@@ -484,10 +499,10 @@ async function writeAppeals(ctx: WriteContext, rows: AppealRow[]) {
   }
 }
 
-/** Qatorning asl nusxasidagi "TP Nomi" (yozuvda alohida ustun yo'q). */
-function sourceTpName(sourceRow: Prisma.JsonValue): string | null {
+/** Qatorning asl nusxasidagi "TP Nomi", "Podstansiya", "Fider" (yozuvda alohida ustun yo'q). */
+function sourceText(sourceRow: Prisma.JsonValue, header: string): string | null {
   if (!sourceRow || typeof sourceRow !== "object" || Array.isArray(sourceRow)) return null;
-  const value = (sourceRow as Record<string, unknown>)["TP Nomi"];
+  const value = (sourceRow as Record<string, unknown>)[header];
   return value == null || value === "" ? null : String(value);
 }
 
@@ -499,7 +514,7 @@ async function relinkEvents(
   tx: Tx,
   periodId: string,
   kind: "violations" | "appeals",
-  global: Pick<EventLinkIndex, "allContracts" | "allTps">,
+  global: GlobalLinks,
 ) {
   const select = {
     id: true,
@@ -521,7 +536,9 @@ async function relinkEvents(
     tx,
     periodId,
     rows.map((row) => ({
-      transformerName: sourceTpName(row.sourceRow),
+      substationName: sourceText(row.sourceRow, "Podstansiya"),
+      feederName: sourceText(row.sourceRow, "Fider"),
+      transformerName: sourceText(row.sourceRow, "TP Nomi"),
       subscriberName: row.subscriberName,
       staffName: row.staff?.name ?? null,
     })),

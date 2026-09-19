@@ -114,7 +114,13 @@ export interface SubscriberRow extends BaseRow {
   meterInstalledAt: Date | null;
 }
 
-export interface ViolationRow extends BaseRow {
+/** Hodisa qayerda: ixtiyoriy "Podstansiya" / "Fider" (bir xil raqamli TP larni ajratadi, 4.3d). */
+interface EventPlace {
+  substationName: string | null;
+  feederName: string | null;
+}
+
+export interface ViolationRow extends BaseRow, EventPlace {
   /** "TP Nomi" - bo'sh bo'lishi mumkin (TP abonent orqali aniqlanadi, 4.3d). */
   transformerName: string | null;
   subscriberName: string;
@@ -126,7 +132,7 @@ export interface ViolationRow extends BaseRow {
   staffName: string | null;
 }
 
-export interface AppealRow extends BaseRow {
+export interface AppealRow extends BaseRow, EventPlace {
   /** "TP Nomi" - bo'sh bo'lishi mumkin (TP abonent orqali aniqlanadi, 4.3d). */
   transformerName: string | null;
   text: string;
@@ -272,6 +278,8 @@ const LOSS = col("lossKwh", "Yo’qotish", true, SIGNED_AMOUNT);
 const LAT = col("latitude", "Lokatsiya (Lat)", false, LATITUDE);
 const LONG = col("longitude", "Lokatsiya (Long)", false, LONGITUDE);
 const KVA = col("capacityKva", "Quvvati (KVA)", false, CAPACITY);
+const EVENT_SUBSTATION = col("substationName", "Podstansiya", false, TEXT);
+const EVENT_FEEDER = col("feederName", "Fider", false, TEXT);
 
 export const TEMPLATES: Record<TemplateType, TemplateSpec> = {
   SUBSTATIONS: {
@@ -372,6 +380,8 @@ export const TEMPLATES: Record<TemplateType, TemplateSpec> = {
   VIOLATIONS: {
     type: "VIOLATIONS",
     columns: [
+      EVENT_SUBSTATION,
+      EVENT_FEEDER,
       col("transformerName", "TP Nomi", false, TEXT),
       col("subscriberName", "Abonent", true, TEXT),
       col("violatorType", "Turi (Yuridik/Jismoniy/Aybisiz)", true, { kind: "enum", spec: VIOLATOR_TYPE }, [
@@ -391,6 +401,8 @@ export const TEMPLATES: Record<TemplateType, TemplateSpec> = {
   APPEALS: {
     type: "APPEALS",
     columns: [
+      EVENT_SUBSTATION,
+      EVENT_FEEDER,
       col("transformerName", "TP Nomi", false, TEXT),
       col("text", "Murojaat", true, TEXT),
       col("subscriberName", "Abonent", true, TEXT),
