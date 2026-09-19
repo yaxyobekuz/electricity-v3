@@ -25,7 +25,7 @@ import {
 import { RegistryToolbar } from "./RegistryToolbar";
 
 /* ---------------------------------------------------------------------------
-   Qoidabuzar turi ko'rinishi (ohanglar `ViolationsCard` bilan bir xil)
+   Qoidabuzar turi ko'rinishi (ohanglar `HomeViolationsCard` bilan bir xil)
    --------------------------------------------------------------------------- */
 
 const TYPE_STYLE: Record<ViolatorType, { icon: GlyphIcon; dot: string; accent: string; tint: string }> = {

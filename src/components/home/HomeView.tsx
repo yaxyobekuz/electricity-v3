@@ -26,7 +26,7 @@ import { HomeViolationsCard } from "./cards/HomeViolationsCard";
 import { ObjectsStack } from "./cards/ObjectsStack";
 import { SummaryTile } from "./cards/SummaryTile";
 
-/** Plitka ranglari fider sahifasidagi "Tezkor ko'rsatgichlar" bilan bir xil. */
+/** Plitka ranglari - "Tezkor ko'rsatgichlar" maketidagi (`QuickMetricsCard`) ranglar. */
 const QUICK_STYLE: Record<HomeQuickMetric["id"], { icon: GlyphIcon; tile: string }> = {
   offline: { icon: WifiOff, tile: "bg-[#ff928a]" },
   debtors: { icon: UserX, tile: "bg-[#ffae4c]" },
@@ -38,8 +38,10 @@ const QUICK_STYLE: Record<HomeQuickMetric["id"], { icon: GlyphIcon; tile: string
 
 /**
  * "Asosiy" (Bosh sahifa) - Figma `4126:47` ("Home", 1920x1080). Tuman
- * (`/dashboard`) va podstansiya (`/substations/[id]`) sahifalari bir xil
- * maketda; ma'lumot `loadHomeData` dan tayyor holda keladi.
+ * (`/dashboard`), podstansiya (`/substations/[id]`), fider (`/feeders/[id]`)
+ * va TP (`/transformers/[id]`) sahifalari bir xil maketda; ma'lumot
+ * `loadHomeData` dan tayyor holda keladi (kartalar tarkibi qamrovga qarab
+ * o'sha yerda tanlanadi).
  *
  * `Main` 1476px, 18 ustun, 8px oraliq. Qator balandliklari maketdan aynan:
  *
@@ -79,6 +81,9 @@ export function HomeView({ data }: { data: HomeData }) {
             : null
         }
         tooltipBottom={12}
+        fitDistrict={data.map.view == null}
+        center={data.map.view?.center}
+        zoom={data.map.view?.zoom}
         footerHref={data.map.href}
       />
       <FilterCard key={data.stateKey} className="col-span-4" data={data.filter} />
@@ -111,6 +116,7 @@ export function HomeView({ data }: { data: HomeData }) {
           items={bars.items}
           unit={bars.unit}
           valueColumn={bars.valueColumn}
+          labelColumn={bars.labelColumn}
           labelWidth={bars.labelWidth}
           footerLabel={bars.footerLabel}
           footerHref={bars.footerHref}

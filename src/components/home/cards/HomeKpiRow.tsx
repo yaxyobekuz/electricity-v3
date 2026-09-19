@@ -1,7 +1,6 @@
 import { ArrowDown, ArrowUp, HandCoins, Minus, Percent, PlugZap, Store, Users, Zap, ZapOff } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { MiniBars } from "@/components/cards/KpiCard";
 import { type GlyphIcon, Icon } from "@/components/ui/Icon";
 import { UserGroup } from "@/components/ui/icons/UserGroup";
 import type {
@@ -17,17 +16,18 @@ import { cn } from "@/lib/ui/cn";
 /*
  * Bosh sahifaning 1-qatori (Figma `4126:133`, 6 x 239.33x196).
  *
- * Fider sahifasidagi `KpiCard` dan tuzilmasi farq qiladi: delta qatori pastda,
- * to'rtinchi karta esa diagrammasiz. Shuning uchun qobiq va qatorlar alohida
- * bo'laklarga ajratilgan, fider kartasi o'zgarishsiz qoladi.
+ * Kartalar qobig'i va qatorlari alohida bo'laklarga ajratilgan: delta qatori
+ * pastda, to'rtinchi karta ("Yo'qotish darajasi") esa diagrammasiz.
  *
  * Qator balandliklari maketdan: sarlavha 32, qiymat 41, matn qatorlari 26,
  * diagramma 39. 16 + 32 + 41 + 26*2 + 39 + 16 = 196.
  *
- * Barcha qiymatlar `loadHomeData` dan tayyor matn sifatida keladi.
+ * Barcha qiymatlar `loadHomeData` dan tayyor matn sifatida keladi. Bo'laklar
+ * (`KpiShell`, `KpiFigure`, `KpiLines`, `KpiBars`) abonent sahifasining KPI
+ * qatorida ham ishlatiladi - dizayn bir xil qolsin.
  */
 
-interface KpiLine {
+export interface KpiLine {
   id: string;
   text: string;
   icon?: GlyphIcon;
@@ -35,20 +35,20 @@ interface KpiLine {
   tone?: string;
 }
 
-/** `KpiCard` dagi bilan bir xil: yo'qotish o'sishi - qizil, kamayishi - yashil. */
-const TONE_TEXT: Record<HomeTone, string> = {
+/** Yo'qotish va qarz o'sishi - qizil, kamayishi - yashil (`HomeTone`). */
+export const TONE_TEXT: Record<HomeTone, string> = {
   bad: "text-trend-up",
   good: "text-trend-down",
   neutral: "text-ink-muted",
 };
 
-const TREND_ICON: Record<HomeTrend["direction"], GlyphIcon> = {
+export const TREND_ICON: Record<HomeTrend["direction"], GlyphIcon> = {
   up: ArrowUp,
   down: ArrowDown,
   flat: Minus,
 };
 
-function KpiShell({
+export function KpiShell({
   title,
   icon,
   tint,
@@ -90,7 +90,7 @@ function KpiShell({
 }
 
 /** 41px qator: 24px son + 14px birlik, qutisi 4px pastga surilgan. */
-function KpiFigure({
+export function KpiFigure({
   value,
   unit,
   valueClassName = "text-2xl leading-[31px]",
@@ -115,7 +115,7 @@ function KpiFigure({
  * 26px lik matn qatorlari. Ikonkali qatorda 20px ikonka tepada, 18px matn
  * uning markazida; ikonkasiz qatorda matn tepada.
  */
-function KpiLines({ lines }: { lines: readonly KpiLine[] }) {
+export function KpiLines({ lines }: { lines: readonly KpiLine[] }) {
   return (
     <>
       {lines.map((line) => (
@@ -140,8 +140,37 @@ function KpiLines({ lines }: { lines: readonly KpiLine[] }) {
   );
 }
 
+/** 0..1 oralig'iga siqadi; NaN - 0. */
+function toFraction(value: number): number {
+  return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0;
+}
+
+/**
+ * Mayda ustunli diagramma. Ustunlar soni har xil (1..12 oy), shuning uchun
+ * ustunlar grid orqali teng bo'linadi va balandlik foizda beriladi - trek
+ * balandligi ota katakdan keladi.
+ */
+function MiniBars({ values, barClassName }: { values: readonly number[]; barClassName: string }) {
+  if (values.length === 0) return null;
+
+  return (
+    <div
+      className="grid h-full min-w-0 flex-1 items-end gap-x-[2px]"
+      style={{ gridTemplateColumns: `repeat(${values.length}, minmax(0, 1fr))` }}
+    >
+      {values.map((fraction, index) => (
+        <div
+          key={index}
+          className={cn("w-full self-end rounded-[1px]", barClassName)}
+          style={{ height: `${toFraction(fraction) * 100}%` }}
+        />
+      ))}
+    </div>
+  );
+}
+
 /** Oylik ustunlar (39px trek) va o'ngda "<n> oy" yorlig'i - kartaning pastida. */
-function KpiBars({ values, accent, label }: { values: readonly number[]; accent: string; label: string }) {
+export function KpiBars({ values, accent, label }: { values: readonly number[]; accent: string; label: string }) {
   return (
     <div className="mt-auto flex h-[39px] shrink-0 items-end gap-2">
       <MiniBars values={values} barClassName={accent} />

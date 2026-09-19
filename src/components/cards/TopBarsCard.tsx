@@ -148,6 +148,7 @@ export function TopBarsCard({
   unit,
   labelWidth = 59,
   valueColumn,
+  labelColumn = "Nomi",
   footerLabel,
   footerHref,
   emptyText = "Ma’lumot yo’q",
@@ -165,6 +166,8 @@ export function TopBarsCard({
   unit: string;
   /** Jadvaldagi qiymat ustuni nomi; standart - `Sarf, <unit>`. */
   valueColumn?: string;
+  /** Jadvaldagi yorliq ustuni nomi, masalan "Shartnoma". */
+  labelColumn?: string;
   footerLabel?: string;
   /** Berilmasa footer havolasi chizilmaydi. */
   footerHref?: string;
@@ -194,7 +197,7 @@ export function TopBarsCard({
   );
 
   const columns: TableColumn[] = [
-    { key: "name", label: "Nomi", grow: 3, align: "left" },
+    { key: "name", label: labelColumn, grow: 3, align: "left" },
     { key: "value", label: valueColumn ?? `Sarf, ${unit}`, grow: 2 },
   ];
 

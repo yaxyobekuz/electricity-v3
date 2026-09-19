@@ -1,12 +1,25 @@
 import { ExternalLink } from "lucide-react";
 
-import { buildWorkRows, type RepairWork } from "@/components/cards/CompletedWorksCard";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
-import { DataTable, type TableColumn } from "@/components/ui/DataTable";
+import { DataTable, type TableColumn, type TableRow } from "@/components/ui/DataTable";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { IconPill } from "@/components/ui/IconPill";
 
-export type PlannedWork = RepairWork;
+/**
+ * Ta'mir ishi - TP ning "Joriy ta’mir sanasi" / "To’la ta’mir sanasi"
+ * ustunlaridan. Holat (bajarilgan / rejalashtirilgan) sanani hisobot sanasi
+ * bilan taqqoslab sahifada aniqlanadi.
+ */
+export interface RepairWork {
+  /** Qator kaliti - bir transformatorda ikki xil ta'mir bo'lishi mumkin. */
+  id: string;
+  /** TP nomi. */
+  tp: string;
+  /** "Joriy ta’mir" / "To’la ta’mir". */
+  work: string;
+  /** Tayyor sana matni (`formatDate`). */
+  date: string;
+}
 
 /**
  * Maketdagi ustun kengliklari: 96 / 319.56 / 96 (holat ustuni olib
@@ -18,6 +31,20 @@ const COLUMNS: TableColumn[] = [
   { key: "work", label: "Ish", grow: 415.56, align: "left" },
   { key: "date", label: "Sana", grow: 96 },
 ];
+
+function buildWorkRows(works: readonly RepairWork[]): TableRow[] {
+  return works.map((item) => ({
+    key: item.id,
+    cells: [
+      // Maketda 1-ustun qolganlaridan qalinroq (medium).
+      <span key="tp" className="font-medium">
+        {item.tp}
+      </span>,
+      item.work,
+      item.date,
+    ],
+  }));
+}
 
 /**
  * "Rejalashtirilgan ishlar" kartasi (span-8, 209px; bosh sahifada 298px):

@@ -1,7 +1,7 @@
 import "server-only";
 
-import type { RepairWork } from "@/components/cards/CompletedWorksCard";
 import type { DynamicsMonth } from "@/components/cards/ConsumptionDynamicsCard";
+import type { RepairWork } from "@/components/cards/PlannedWorksCard";
 import type { TopBarItem } from "@/components/cards/TopBarsCard";
 import type { MapMarker } from "@/components/map/MapCanvas";
 import type { AppealStatus, MeterStatus, SubscriberKind, ViolatorType } from "@/generated/prisma";
@@ -29,17 +29,24 @@ import {
   scaled,
 } from "@/lib/format";
 import { getPeriodsUntil, type PeriodInfo } from "@/lib/period";
-import { scopedHref } from "@/lib/scope-param";
+import { scopedHref, scopeParam } from "@/lib/scope-param";
 
-import { getSubstation, getTransformer } from "./entities";
-import { listFeeders, listSubstations, listTransformers, type TransformerRow } from "./lists";
+import { getFeeder, getSubstation, getTransformer } from "./entities";
+import { listFeeders, listSubscribers, listSubstations, listTransformers, type TransformerRow } from "./lists";
 import { listRepairs } from "./repairs";
-import { getScopeComparison, getScopeSeries, type ScopeSeriesPoint, type ScopeSummary } from "./scope";
+import {
+  getScopeComparison,
+  getScopeSeries,
+  type EntityRef,
+  type ScopeSeriesPoint,
+  type ScopeSummary,
+} from "./scope";
 
 /*
- * "Asosiy" sahifa (`/dashboard`, tuman) va podstansiya sahifasi
- * (`/substations/[id]`) uchun bitta yuklovchi. Ikkala sahifa bir xil
- * `HomeView` ni chizadi, farqi faqat qamrovda.
+ * "Asosiy" sahifa (`/dashboard`, tuman), podstansiya (`/substations/[id]`),
+ * fider (`/feeders/[id]`) va TP (`/transformers/[id]`) sahifalari uchun
+ * bitta yuklovchi. Hammasi bir xil `HomeView` ni chizadi, farqi faqat
+ * qamrovda.
  *
  * Bu yerda yangi formula yo'q: har bir son `scope.ts` / `lists.ts` /
  * `repairs.ts` / `entities.ts` dan olinadi, foiz faqat `lossPercent` /
@@ -47,7 +54,11 @@ import { getScopeComparison, getScopeSeries, type ScopeSeriesPoint, type ScopeSu
  * bo'ladigan oddiy obyekt (ikonka va ranglar `HomeView` da tanlanadi).
  */
 
-export type HomeScope = { kind: "district" } | { kind: "substation"; id: string };
+export type HomeScope =
+  | { kind: "district" }
+  | { kind: "substation"; id: string }
+  | { kind: "feeder"; id: string }
+  | { kind: "transformer"; id: string };
 
 /** Delta qatorining bahosi: yo'qotish va qarz o'sishi - yomon. */
 export type HomeTone = "bad" | "good" | "neutral";
@@ -102,7 +113,8 @@ export interface HomeKpis {
 }
 
 export interface HomeObjectTile {
-  id: "substations" | "subscribers" | "feeders" | "transformers";
+  /** `substation` / `feeder` - fider va TP sahifalarida ota obyekt (qiymati - uning nomi). */
+  id: "substations" | "substation" | "feeder" | "subscribers" | "feeders" | "transformers";
   value: string;
   label: string;
   href: string;
@@ -152,6 +164,8 @@ export interface HomeTopBars {
   items: TopBarItem[];
   unit: string;
   valueColumn: string;
+  /** Jadvaldagi nom ustuni sarlavhasi; berilmasa - "Nomi". */
+  labelColumn?: string;
   labelWidth: number;
   footerLabel: string;
   footerHref: string;
@@ -170,6 +184,12 @@ export interface HomeMap {
   markers: MapMarker[];
   selectedId: string | null;
   tooltip: HomeMapTooltip | null;
+  /**
+   * Boshlang'ich ko'rinish. null - butun tuman (tuman va podstansiya
+   * sahifalari); fider sahifasida - uning TP lari, TP sahifasida - shu TP
+   * sig'adigan markaz va zoom.
+   */
+  view: { center: { lat: number; lng: number }; zoom: number } | null;
   href: string;
 }
 
@@ -190,8 +210,15 @@ export interface HomeFilterOption {
 }
 
 export interface HomeFilter {
-  /** Podstansiya sahifasida shu podstansiya tanlangan va qulflangan. */
+  /** Podstansiya, fider va TP sahifalarida sahifa podstansiyasi tanlangan va qulflangan. */
   lockedSubstationId: string | null;
+  /** Fider va TP sahifalarida sahifa fideri tanlangan va qulflangan. */
+  lockedFeederId: string | null;
+  /**
+   * TP sahifasida - shu TP: boshlang'ich tanlov, lekin qulflanmagan (shu
+   * fiderdagi boshqa TP ko'rsatkichlarini ko'rib, sahifasiga o'tish mumkin).
+   */
+  currentTransformerId: string | null;
   substations: HomeFilterOption[];
   feeders: HomeFilterOption[];
   transformers: HomeFilterOption[];
@@ -213,7 +240,7 @@ export interface HomeData {
   topBars: HomeTopBars[];
   dynamics: DynamicsMonth[];
   plannedWorks: { uploaded: boolean; works: RepairWork[] };
-  /** `DownloadReportsCard` uchun: "month=2026-09" yoki "scope=substation:<id>&month=2026-09". */
+  /** `DownloadReportsCard` uchun: "month=2026-09" yoki "scope=feeder:<id>&month=2026-09". */
   reportQuery: string;
 }
 
@@ -224,15 +251,45 @@ export interface HomeData {
 const TOP_LIMIT = 6;
 
 /** Diagramma birligi eng katta qiymatga qarab (`scaled` bilan bir xil pog'onalar). */
-const ENERGY_UNITS = [
-  { divisor: 1_000_000, unit: "mln kWh" },
-  { divisor: 1_000, unit: "ming kWh" },
-  { divisor: 1, unit: "kWh" },
+const UNIT_SCALES = [
+  { divisor: 1_000_000_000, prefix: "mlrd " },
+  { divisor: 1_000_000, prefix: "mln " },
+  { divisor: 1_000, prefix: "ming " },
+  { divisor: 1, prefix: "" },
 ] as const;
 
-function energyUnit(peak: number) {
+/** `unitScale(2_400_000, "kWh")` -> `{ divisor: 1_000_000, unit: "mln kWh" }`. */
+function unitScale(peak: number, unit: string): { divisor: number; unit: string } {
   const abs = Math.abs(peak);
-  return ENERGY_UNITS.find((item) => abs >= item.divisor) ?? ENERGY_UNITS[ENERGY_UNITS.length - 1];
+  const scale = UNIT_SCALES.find((item) => abs >= item.divisor) ?? UNIT_SCALES[UNIT_SCALES.length - 1];
+  return { divisor: scale.divisor, unit: `${scale.prefix}${unit}` };
+}
+
+/*
+ * Fider xaritasi: bitta TP bo'lsa shu masshtab, bir nechta bo'lsa hammasi
+ * sig'adigan eng yaqini. Xarita maydoni ~784x314px, o'ng pastki burchakda
+ * 215px lik tultip - markerlar chetga va tultip ostiga tushmasligi uchun
+ * hisob kichikroq kadrga (`MAP_VIEW_PX`) qilinadi.
+ */
+const MAP_SINGLE_ZOOM = 15;
+const MAP_MIN_ZOOM = 11;
+const MAP_MAX_ZOOM = 16;
+const MAP_VIEW_PX = { width: 520, height: 230 };
+
+/** Markerlar hammasi ko'rinadigan markaz va masshtab (Web Mercator, taxminiy). */
+function fitView(markers: readonly MapMarker[]): NonNullable<HomeMap["view"]> {
+  const lats = markers.map((marker) => marker.lat);
+  const lngs = markers.map((marker) => marker.lng);
+  const [minLat, maxLat, minLng, maxLng] = [Math.min(...lats), Math.max(...lats), Math.min(...lngs), Math.max(...lngs)];
+  const center = { lat: (minLat + maxLat) / 2, lng: (minLng + maxLng) / 2 };
+  const lngSpan = maxLng - minLng;
+  // Kenglik bo'yicha cho'zilish: 1 / cos(lat).
+  const latSpan = (maxLat - minLat) / Math.cos((center.lat * Math.PI) / 180);
+  if (lngSpan === 0 && latSpan === 0) return { center, zoom: MAP_SINGLE_ZOOM };
+  // Zoom z da dunyo kengligi 256 * 2^z px = 360 gradus.
+  const fit = (span: number, px: number) => (span > 0 ? Math.log2((px * 360) / (256 * span)) : MAP_MAX_ZOOM);
+  const zoom = Math.floor(Math.min(fit(lngSpan, MAP_VIEW_PX.width), fit(latSpan, MAP_VIEW_PX.height)));
+  return { center, zoom: Math.min(MAP_MAX_ZOOM, Math.max(MAP_MIN_ZOOM, zoom)) };
 }
 
 /** Yorliq ustuni kengligi: 12px shriftda ~7px belgi (maketdagi 46 / 59 / 66px ga mos). */
@@ -253,16 +310,16 @@ function distinctLabels<T extends { id: string; name: string }>(
   );
 }
 
-/** "2,1 ming kWh" - farq qiymati uchun (fider va TP sahifalaridagi bilan bir xil). */
+/** "2,1 ming kWh" - farq qiymati uchun. */
 function kwhText(value: number): string {
   const parts = scaled(value, "kWh");
   return `${parts.value} ${parts.unit}`;
 }
 
 /**
- * O'tgan oy bilan farq qatori - fider va TP sahifalaridagi yozuv: mutlaq farq,
- * "ga ko’p" / "ga kam". Foiz o'zgarishi ishlatilmaydi: Yo'qotish kartasida
- * uni yo'qotish ulushining o'zgarishi deb o'qish oson.
+ * O'tgan oy bilan farq qatori: mutlaq farq, "ga ko’p" / "ga kam". Foiz
+ * o'zgarishi ishlatilmaydi: Yo'qotish kartasida uni yo'qotish ulushining
+ * o'zgarishi deb o'qish oson.
  */
 function trendOf(
   current: number | null | undefined,
@@ -271,7 +328,7 @@ function trendOf(
 ): HomeTrend | null {
   const change = delta(current, previous);
   if (!change) return null;
-  // Ko'rsatilgan aniqlikda solishtiriladi (fider sahifasidagi kabi): "0 kWh ga ko’p" chiqmasin.
+  // Ko'rsatilgan aniqlikda solishtiriladi: "0 kWh ga ko’p" chiqmasin.
   if (kwhText(Math.abs(change.diff)) === kwhText(0)) return { text: "O’zgarmagan", direction: "flat", tone: "neutral" };
   const up = change.diff > 0;
   return {
@@ -330,9 +387,12 @@ function buildKpis(
 ): HomeKpis {
   const energyNow = current.energy;
   const energyBefore = previous?.energy ?? null;
+  // Oqim manbasi - qamrov obyektining o'z shabloni (tumanda - Podstansiyalar yig'indisi).
+  const energyTemplate =
+    scope.kind === "feeder" ? "FEEDERS" : scope.kind === "transformer" ? "TRANSFORMERS" : "SUBSTATIONS";
   const missingEnergy = scope.kind === "district" ? "Podstansiyalar yuklanmagan" : "Ma’lumot yo’q";
   // O'tgan oyda energiya holati yo'q: shablon yuklanmagan yoki obyekt o'sha oyda yo'q.
-  const missingBefore = previous?.uploads.SUBSTATIONS ? "ma’lumot yo’q" : "yuklanmagan";
+  const missingBefore = previous?.uploads[energyTemplate] ? "ma’lumot yo’q" : "yuklanmagan";
 
   const FLOWS = [
     { id: "total", title: "Umumiy oqim", key: "totalKwh", point: (p: ScopeSeriesPoint) => p.totalKwh },
@@ -372,7 +432,7 @@ function buildKpis(
   );
 
   // Qiymati yo'q qatorda son o'rniga KPI qatorlaridagi bilan bir xil izoh (kichik shriftda).
-  const missingNow = current.uploads.SUBSTATIONS ? "ma’lumot yo’q" : "yuklanmagan";
+  const missingNow = current.uploads[energyTemplate] ? "ma’lumot yo’q" : "yuklanmagan";
   const lossRates: HomeLossRate[] = [
     {
       id: "current",
@@ -455,19 +515,23 @@ function buildMap(
           }.`;
   }
 
+  // Fider va TP sahifalarida fider bitta - TP nomiga fider nomi qo'shilmaydi.
+  const withinFeeder = scope.kind === "feeder" || scope.kind === "transformer";
   return {
     markers,
     selectedId: top?.id ?? null,
     tooltip: top
       ? {
-          title: "Yuqori sarfga ega transformator",
-          label: `${top.name} · ${top.feeder.name}`,
+          // TP sahifasida `top` - sahifaning o'z TP si.
+          title: scope.kind === "transformer" ? "Transformator" : "Yuqori sarfga ega transformator",
+          label: withinFeeder ? top.name : `${top.name} · ${top.feeder.name}`,
           caption: `${monthName(period.month)} oyidagi Foydali oqim`,
           value: energy(top.usefulKwh),
           note,
         }
       : null,
-    href: scope.kind === "district" ? "/map" : `/map?node=substation:${scope.id}`,
+    view: withinFeeder && markers.length > 0 ? fitView(markers) : null,
+    href: scope.kind === "district" ? "/map" : `/map?node=${scopeParam(scope)}`,
   };
 }
 
@@ -497,23 +561,44 @@ function ringData(
 // ---------------------------------------------------------------------------
 
 export async function loadHomeData(period: PeriodInfo, scope: HomeScope): Promise<HomeData> {
-  const substationId = scope.kind === "substation" ? scope.id : undefined;
-  const periods = await getPeriodsUntil(period, 12);
-
-  const [comparison, series, substationRows, feederRows, transformerRows, repairs, substation] = await Promise.all([
-    getScopeComparison(scope, period),
-    getScopeSeries(scope, periods),
-    scope.kind === "district" ? listSubstations(period.id) : Promise.resolve([]),
-    listFeeders(period.id, { substationId }),
-    listTransformers(period.id, { substationId }),
-    listRepairs(period.id, scope),
-    substationId ? getSubstation(substationId, period.id) : Promise.resolve(null),
+  // Fider / TP sahifasi `getFeeder` / `getTransformer` ni o'zi chaqirgan - `cache` tufayli qayta so'rov yo'q.
+  const [feeder, transformer, periods] = await Promise.all([
+    scope.kind === "feeder" ? getFeeder(scope.id, period.id) : Promise.resolve(null),
+    scope.kind === "transformer" ? getTransformer(scope.id, period.id) : Promise.resolve(null),
+    getPeriodsUntil(period, 12),
   ]);
+  // Qamrov obyektining ota obyektlari (plitkalar va filtr qulflari).
+  const parentSubstation: EntityRef | null = feeder?.substation ?? transformer?.substation ?? null;
+  const parentFeeder: EntityRef | null = transformer?.feeder ?? null;
+  const substationId = scope.kind === "substation" ? scope.id : parentSubstation?.id;
+  const feederId = scope.kind === "feeder" ? scope.id : parentFeeder?.id;
+
+  const [comparison, series, substationRows, feederRows, transformerRows, repairs, substation, debtors] =
+    await Promise.all([
+      getScopeComparison(scope, period),
+      getScopeSeries(scope, periods),
+      scope.kind === "district" ? listSubstations(period.id) : Promise.resolve([]),
+      // Fider va TP sahifalarida ro'yxatda faqat sahifa fideri (filtr tanlovi uchun).
+      listFeeders(period.id, { substationId }).then((rows) =>
+        feederId ? rows.filter((row) => row.id === feederId) : rows,
+      ),
+      // TP sahifasida - shu TP ning fideridagi barcha TP lar (filtr va fider reytinglari).
+      listTransformers(period.id, { substationId, feederId }),
+      listRepairs(period.id, scope),
+      substationId ? getSubstation(substationId, period.id) : Promise.resolve(null),
+      // TP ichidagi reyting - eng katta qarzdorlar (`/subscribers?debtors=1` ro'yxatining boshi).
+      scope.kind === "transformer"
+        ? listSubscribers(period.id, { scope, debtorsOnly: true, sort: "debt", take: TOP_LIMIT })
+        : Promise.resolve(null),
+    ]);
   const { current, previous, previousPeriod } = comparison;
   const uploads = current.uploads;
+  // Xarita va tultip qamrovdagi TP lardan: TP sahifasida - faqat shu TP.
+  const scopeTransformers =
+    scope.kind === "transformer" ? transformerRows.filter((row) => row.id === scope.id) : transformerRows;
 
   // Eng ko'p Foydali oqimli TP (teng bo'lsa - fayldagi birinchisi).
-  const top = transformerRows.reduce<TransformerRow | null>(
+  const top = scopeTransformers.reduce<TransformerRow | null>(
     (best, row) => (best == null || row.usefulKwh > best.usefulKwh ? row : best),
     null,
   );
@@ -524,29 +609,64 @@ export async function loadHomeData(period: PeriodInfo, scope: HomeScope): Promis
 
   // --- Ob'ektlar ustuni -----------------------------------------------------
   const countValue = (value: number | null) => (value == null ? NOT_UPLOADED : count(value));
-  const tiles: HomeObjectTile[] = [
-    scope.kind === "district"
-      ? { id: "substations", value: countValue(current.counts.substations), label: "Podstansiyalar", href: "/substations" }
-      : {
-          id: "subscribers",
-          value: countValue(current.subscribers?.total ?? null),
-          label: "Abonentlar",
-          href: scoped("/subscribers"),
-        },
-    { id: "feeders", value: countValue(current.counts.feeders), label: "Fiderlar", href: scoped("/feeders") },
-    {
-      id: "transformers",
-      value: countValue(current.counts.transformers),
-      label: "Transformatorlar",
-      href: scoped("/transformers"),
-    },
-  ];
+  const subscribersTile: HomeObjectTile = {
+    id: "subscribers",
+    value: countValue(current.subscribers?.total ?? null),
+    label: "Abonentlar",
+    href: scoped("/subscribers"),
+  };
+  const feedersTile: HomeObjectTile = {
+    id: "feeders",
+    value: countValue(current.counts.feeders),
+    label: "Fiderlar",
+    href: scoped("/feeders"),
+  };
+  const transformersTile: HomeObjectTile = {
+    id: "transformers",
+    value: countValue(current.counts.transformers),
+    label: "Transformatorlar",
+    href: scoped("/transformers"),
+  };
+  // Ota obyekt plitkasi: qiymati - nomi, "Ochish" - uning sahifasi.
+  const parentTile = (id: "substation" | "feeder", ref: EntityRef | null, label: string, path: string) => ({
+    id,
+    value: ref?.name ?? EMPTY,
+    label,
+    href: ref ? `${path}/${ref.id}` : path,
+  });
+  let tiles: HomeObjectTile[];
+  switch (scope.kind) {
+    case "district":
+      tiles = [
+        { id: "substations", value: countValue(current.counts.substations), label: "Podstansiyalar", href: "/substations" },
+        feedersTile,
+        transformersTile,
+      ];
+      break;
+    case "substation":
+      tiles = [subscribersTile, feedersTile, transformersTile];
+      break;
+    case "feeder":
+      // "Fiderlar: 1 ta" ma'nosiz - o'rniga ota podstansiya.
+      tiles = [parentTile("substation", parentSubstation, "Podstansiya", "/substations"), transformersTile, subscribersTile];
+      break;
+    case "transformer":
+      // "Transformatorlar: 1 ta" ham ma'nosiz - ota podstansiya va fider.
+      tiles = [
+        parentTile("substation", parentSubstation, "Podstansiya", "/substations"),
+        parentTile("feeder", parentFeeder, "Fider", "/feeders"),
+        subscribersTile,
+      ];
+      break;
+  }
 
   // --- Filtratsiya -----------------------------------------------------------
   const feederLabels = distinctLabels(feederRows, (row) => row.substation.name);
   const transformerLabels = distinctLabels(transformerRows, (row) => row.feeder.name);
   const filter: HomeFilter = {
     lockedSubstationId: substationId ?? null,
+    lockedFeederId: feederId ?? null,
+    currentTransformerId: scope.kind === "transformer" ? scope.id : null,
     substations:
       scope.kind === "district"
         ? substationRows.map((row) => ({
@@ -675,7 +795,7 @@ export async function loadHomeData(period: PeriodInfo, scope: HomeScope): Promis
     emptyText: string,
   ): HomeTopBars => {
     const ranked = [...rows].sort((a, b) => b.usefulKwh - a.usefulKwh).slice(0, TOP_LIMIT);
-    const unit = energyUnit(Math.max(0, ...ranked.map((row) => Math.abs(row.usefulKwh))));
+    const unit = unitScale(Math.max(0, ...ranked.map((row) => Math.abs(row.usefulKwh))), "kWh");
     const items = ranked.map((row) => ({ id: row.id, label: labels(row), value: row.usefulKwh / unit.divisor }));
     return {
       id,
@@ -690,39 +810,34 @@ export async function loadHomeData(period: PeriodInfo, scope: HomeScope): Promis
     };
   };
 
-  const feederBars = usefulBars(
-    "feeders",
-    "Eng ko’p sarfga ega fiderlar",
-    feederRows,
-    (row) => feederLabels.get(row.id) ?? "",
-    "Fiderlar sahifasini ochish",
-    scoped("/feeders"),
-    uploads.FEEDERS ? "Fiderlar yo’q" : "Fiderlar yuklanmagan",
-  );
+  const feederBars = () =>
+    usefulBars(
+      "feeders",
+      "Eng ko’p sarfga ega fiderlar",
+      feederRows,
+      (row) => feederLabels.get(row.id) ?? "",
+      "Fiderlar sahifasini ochish",
+      scoped("/feeders"),
+      uploads.FEEDERS ? "Fiderlar yo’q" : "Fiderlar yuklanmagan",
+    );
+  // TP sahifasida TP reytinglari - uning fideridagi TP lar (qo'shnilar bilan solishtirish).
+  const siblings = scope.kind === "transformer";
+  const transformersFooter = siblings ? "Fider transformatorlarini ochish" : "Transformatorlar sahifasini ochish";
+  const transformersHref =
+    siblings && feederId ? scopedHref("/transformers", { kind: "feeder", id: feederId }) : scoped("/transformers");
+
   const transformerBars = usefulBars(
     "transformers",
-    "Eng ko’p sarfga ega transformatorlar",
+    siblings ? "Fiderdagi eng ko’p sarfga ega transformatorlar" : "Eng ko’p sarfga ega transformatorlar",
     transformerRows,
     (row) => transformerLabels.get(row.id) ?? "",
-    "Transformatorlar sahifasini ochish",
-    scoped("/transformers"),
+    transformersFooter,
+    transformersHref,
     uploads.TRANSFORMERS ? "Transformatorlar yo’q" : "Transformatorlar yuklanmagan",
   );
 
-  let firstBars: HomeTopBars;
-  if (scope.kind === "district") {
-    const names = new Map(substationRows.map((row) => [row.id, row.name]));
-    firstBars = usefulBars(
-      "substations",
-      "Eng ko’p sarfga ega podstansiyalar",
-      substationRows,
-      (row) => names.get(row.id) ?? "",
-      "Podstansiyalar sahifasini ochish",
-      "/substations",
-      uploads.SUBSTATIONS ? "Podstansiyalar yo’q" : "Podstansiyalar yuklanmagan",
-    );
-  } else {
-    // Podstansiya ichida: TP lar o'z yo'qotish ulushi bo'yicha.
+  // Podstansiya, fider va TP ichida: TP lar o'z yo'qotish ulushi bo'yicha.
+  const transformerLossBars = (): HomeTopBars => {
     const ranked = transformerRows
       .filter((row): row is TransformerRow & { lossPercent: number } => row.lossPercent != null)
       .sort((a, b) => b.lossPercent - a.lossPercent)
@@ -732,21 +847,107 @@ export async function loadHomeData(period: PeriodInfo, scope: HomeScope): Promis
       label: transformerLabels.get(row.id) ?? row.name,
       value: row.lossPercent,
     }));
-    firstBars = {
+    return {
       id: "transformer-loss",
-      title: "Eng ko’p yo’qotishga ega transformatorlar",
+      title: siblings ? "Fiderdagi eng ko’p yo’qotishga ega transformatorlar" : "Eng ko’p yo’qotishga ega transformatorlar",
       items,
       unit: "%",
       valueColumn: "Yo’qotish, %",
       labelWidth: labelWidth(items.map((item) => item.label)),
-      footerLabel: "Transformatorlar sahifasini ochish",
-      footerHref: scoped("/transformers"),
-      emptyText: uploads.TRANSFORMERS ? "Transformatorlar yo’q" : "Transformatorlar yuklanmagan",
+      footerLabel: transformersFooter,
+      footerHref: transformersHref,
+      // Ulush faqat umumiy oqim > 0 bo'lsa hisoblanadi (`lossPercent`).
+      emptyText: !uploads.TRANSFORMERS
+        ? "Transformatorlar yuklanmagan"
+        : transformerRows.length === 0
+          ? "Transformatorlar yo’q"
+          : "Transformatorlarda umumiy oqim 0",
     };
+  };
+
+  // Fider ichida: TP lar abonentlarining Σ qarzdorligi bo'yicha (abonentlar ro'yxatidan).
+  const transformerDebtBars = (): HomeTopBars => {
+    const ranked = transformerRows
+      .filter((row): row is TransformerRow & { debtUzs: number } => row.debtUzs != null && row.debtUzs > 0)
+      .sort((a, b) => b.debtUzs - a.debtUzs)
+      .slice(0, TOP_LIMIT);
+    const unit = unitScale(Math.max(0, ...ranked.map((row) => row.debtUzs)), "so’m");
+    const items = ranked.map((row) => ({
+      id: row.id,
+      label: transformerLabels.get(row.id) ?? row.name,
+      value: row.debtUzs / unit.divisor,
+    }));
+    return {
+      id: "transformer-debt",
+      title: "Eng katta qarzdorlikka ega transformatorlar",
+      items,
+      unit: unit.unit,
+      valueColumn: `Qarzdorlik, ${unit.unit}`,
+      labelWidth: labelWidth(items.map((item) => item.label)),
+      footerLabel: "Qarzdor abonentlarni ochish",
+      footerHref: scoped("/subscribers", { debtors: "1" }),
+      emptyText: !list.uploaded
+        ? "Abonentlar ro’yxati yuklanmagan"
+        : !uploads.TRANSFORMERS
+          ? "Transformatorlar yuklanmagan"
+          : "Qarzdor abonentlar yo’q",
+    };
+  };
+
+  // TP ichida: abonentlar qarzdorlik bo'yicha. Yorliq - shartnoma raqami:
+  // FISH (o'rtacha ~24 bosh harf) yorliq ustuniga sig'maydi.
+  const subscriberDebtBars = (): HomeTopBars => {
+    const rows = debtors?.rows ?? [];
+    const unit = unitScale(Math.max(0, ...rows.map((row) => row.debtUzs)), "so’m");
+    const items = rows.map((row) => ({ id: row.id, label: row.contractNumber, value: row.debtUzs / unit.divisor }));
+    return {
+      id: "subscriber-debt",
+      title: "Eng katta qarzdor abonentlar",
+      items,
+      unit: unit.unit,
+      valueColumn: `Qarzdorlik, ${unit.unit}`,
+      labelColumn: "Shartnoma",
+      labelWidth: labelWidth(items.map((item) => item.label)),
+      footerLabel: "Qarzdor abonentlarni ochish",
+      footerHref: scoped("/subscribers", { debtors: "1" }),
+      emptyText: list.uploaded ? "Qarzdor abonentlar yo’q" : "Abonentlar ro’yxati yuklanmagan",
+    };
+  };
+
+  let topBars: HomeTopBars[];
+  switch (scope.kind) {
+    case "district": {
+      const names = new Map(substationRows.map((row) => [row.id, row.name]));
+      topBars = [
+        usefulBars(
+          "substations",
+          "Eng ko’p sarfga ega podstansiyalar",
+          substationRows,
+          (row) => names.get(row.id) ?? "",
+          "Podstansiyalar sahifasini ochish",
+          "/substations",
+          uploads.SUBSTATIONS ? "Podstansiyalar yo’q" : "Podstansiyalar yuklanmagan",
+        ),
+        feederBars(),
+        transformerBars,
+      ];
+      break;
+    }
+    case "substation":
+      topBars = [transformerLossBars(), feederBars(), transformerBars];
+      break;
+    case "feeder":
+      // Fiderlar reytingi o'rnida (fider bitta) - TP lar qarzdorligi.
+      topBars = [transformerLossBars(), transformerDebtBars(), transformerBars];
+      break;
+    case "transformer":
+      // O'rtada - TP ning o'z abonentlari; chetlarida - fiderdagi TP lar.
+      topBars = [transformerLossBars(), subscriberDebtBars(), transformerBars];
+      break;
   }
 
   return {
-    stateKey: scope.kind === "district" ? period.key : `${period.key}:substation:${scope.id}`,
+    stateKey: scope.kind === "district" ? period.key : `${period.key}:${scopeParam(scope)}`,
     kpis: buildKpis(period, scope, current, previous, previousPeriod, series),
     objects: {
       tiles,
@@ -756,13 +957,13 @@ export async function loadHomeData(period: PeriodInfo, scope: HomeScope): Promis
         planned: { value: count(repairs.counts.planned), href: scoped("/works", { done: "0" }) },
       },
     },
-    map: buildMap(period, scope, transformerRows, topBefore?.usefulKwh ?? null, top),
+    map: buildMap(period, scope, scopeTransformers, topBefore?.usefulKwh ?? null, top),
     filter,
     violations,
     meters,
     appeals,
     quickMetrics,
-    topBars: [firstBars, feederBars, transformerBars],
+    topBars,
     dynamics: series
       .filter((point) => point.hasData)
       .map((point) => ({
@@ -784,6 +985,6 @@ export async function loadHomeData(period: PeriodInfo, scope: HomeScope): Promis
         })),
     },
     reportQuery:
-      scope.kind === "district" ? `month=${period.key}` : `scope=substation:${scope.id}&month=${period.key}`,
+      scope.kind === "district" ? `month=${period.key}` : `scope=${scopeParam(scope)}&month=${period.key}`,
   };
 }

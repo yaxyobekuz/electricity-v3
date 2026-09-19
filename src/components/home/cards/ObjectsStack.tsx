@@ -18,6 +18,19 @@ const TILE_STYLE: Record<
     accent: "text-accent-blue",
     glow: "bg-accent-blue",
   },
+  // Fider va TP sahifalaridagi ota obyektlar - "Podstansiyalar" / "Fiderlar" uslubida.
+  substation: {
+    icon: Factory,
+    tint: "bg-tint-blue",
+    accent: "text-accent-blue",
+    glow: "bg-accent-blue",
+  },
+  feeder: {
+    icon: UtilityPole,
+    tint: "bg-tint-green",
+    accent: "text-accent-green",
+    glow: "bg-accent-green",
+  },
   subscribers: {
     icon: Users,
     tint: "bg-tint-purple",

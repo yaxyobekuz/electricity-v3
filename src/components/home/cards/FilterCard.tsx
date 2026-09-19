@@ -42,16 +42,19 @@ function byId(items: readonly HomeFilterOption[]): Map<string, HomeFilterOption>
  * fiderlar podstansiyaga, transformatorlar podstansiya va fiderga qarab
  * qisqaradi; pastki tanlov ota tanlovlarni o'zi o'rnatadi, mos kelmay qolgan
  * pastki tanlov esa bekor qilinadi. Podstansiya sahifasida podstansiya
- * tanlovi qulflangan.
+ * tanlovi, fider va TP sahifalarida podstansiya va fider tanlovlari
+ * qulflangan. TP sahifasida shu TP oldindan tanlangan - fiderdagi boshqa TP
+ * ni tanlab, uning ko'rsatkichlarini ko'rish va sahifasiga o'tish mumkin.
  *
  * Oqimlar eng aniq tanlangan obyektning o'z holatidan; hech narsa
  * tanlanmasa - sahifa qamrovining qiymatlari (1-qatordagi KPI bilan bir xil).
  */
 export function FilterCard({ data, className }: { data: HomeFilter; className?: string }) {
   const locked = data.lockedSubstationId;
+  const lockedFeeder = data.lockedFeederId;
   const [substation, setSubstation] = useState<string | null>(locked);
-  const [feeder, setFeeder] = useState<string | null>(null);
-  const [transformer, setTransformer] = useState<string | null>(null);
+  const [feeder, setFeeder] = useState<string | null>(lockedFeeder);
+  const [transformer, setTransformer] = useState<string | null>(data.currentTransformerId);
 
   const substations = useMemo(() => byId(data.substations), [data.substations]);
   const feeders = useMemo(() => byId(data.feeders), [data.feeders]);
@@ -90,6 +93,7 @@ export function FilterCard({ data, className }: { data: HomeFilter; className?: 
   }
 
   function pickFeeder(next: string | null) {
+    if (lockedFeeder) return;
     setFeeder(next);
     const option = next ? feeders.get(next) : undefined;
     if (option && !locked) setSubstation(option.substationId);
@@ -102,19 +106,20 @@ export function FilterCard({ data, className }: { data: HomeFilter; className?: 
     setTransformer(next);
     const option = next ? transformers.get(next) : undefined;
     if (option) {
-      setFeeder(option.feederId);
+      if (!lockedFeeder) setFeeder(option.feederId);
       if (!locked) setSubstation(option.substationId);
     }
   }
 
-  /** Eng aniq tanlov; qulflangan podstansiya sahifaning o'zi - havola kerak emas. */
+  /** Eng aniq tanlov; sahifaning o'z obyektlari (qulflanganlar, TP sahifasining TP si) - havolasiz. */
   const selected =
     (transformer ? transformers.get(transformer) : undefined) ??
     (feeder ? feeders.get(feeder) : undefined) ??
     (substation ? substations.get(substation) : undefined) ??
     null;
   const metrics = selected?.metrics ?? data.scopeMetrics;
-  const href = selected && selected.id !== locked ? selected.href : null;
+  const pageObjects = [locked, lockedFeeder, data.currentTransformerId];
+  const href = selected && !pageObjects.includes(selected.id) ? selected.href : null;
 
   return (
     <Card className={cn("gap-[23px] pb-2", className)}>
@@ -133,6 +138,7 @@ export function FilterCard({ data, className }: { data: HomeFilter; className?: 
           options={feederOptions}
           placeholder="Fiderni tanlang"
           onChange={pickFeeder}
+          disabled={lockedFeeder != null}
         />
         <SelectField
           value={transformer}

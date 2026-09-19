@@ -40,8 +40,8 @@ export function DataTable({
   className?: string;
   /**
    * Zich variant (bosh sahifadagi kichik kartalar uchun): sarlavha 10px,
-   * qator balandliklari 26/24/28. Fider sahifasidagi jadvallar maketdagi
-   * 30/29/35 o’lchamda qoladi.
+   * qator balandliklari 26/24/28. Standart variant - maketdagi 30/29/35
+   * o’lcham.
    */
   compact?: boolean;
   /**

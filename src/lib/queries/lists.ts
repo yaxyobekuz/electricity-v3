@@ -113,19 +113,24 @@ async function subscriberListAggregates(
   return new Map(rows.map((row) => [row.id, { total: row.total, online: row.online, offline: row.total - row.online }]));
 }
 
-/** TP bo'yicha shu oy abonentlar ro'yxatidan sonlar. */
-async function subscriberTpAggregates(periodId: string, db: Db): Promise<Map<string, SubscriberCounts>> {
+/** TP bo'yicha shu oy abonentlar ro'yxatidan sonlar va Σ qarzdorlik. */
+async function subscriberTpAggregates(
+  periodId: string,
+  db: Db,
+): Promise<Map<string, SubscriberCounts & { debtUzs: number }>> {
   const groups = await db.subscriberSnapshot.groupBy({
     by: ["transformerId", "meterStatus"],
     where: { periodId },
     _count: { _all: true },
+    _sum: { debtUzs: true },
   });
-  const result = new Map<string, SubscriberCounts>();
+  const result = new Map<string, SubscriberCounts & { debtUzs: number }>();
   for (const group of groups) {
-    const entry = result.get(group.transformerId) ?? { total: 0, online: 0, offline: 0 };
+    const entry = result.get(group.transformerId) ?? { total: 0, online: 0, offline: 0, debtUzs: 0 };
     entry.total += group._count._all;
     if (group.meterStatus === "ONLINE") entry.online += group._count._all;
     else entry.offline += group._count._all;
+    entry.debtUzs += amount(group._sum.debtUzs);
     result.set(group.transformerId, entry);
   }
   return result;
@@ -301,6 +306,12 @@ export interface TransformerRow {
   currentRepairDate: string | null;
   overhaulDate: string | null;
   staff: EntityRef | null;
+  /**
+   * Σ abonentlar qarzdorligi (`SubscriberSnapshot.debtUzs`, TP qamrovidagi
+   * `ScopeSummary.subscriberList.debtUzs` bilan bir xil); TP podstansiyasi
+   * abonentlar ro'yxati bilan qamralmagan bo'lsa - null.
+   */
+  debtUzs: number | null;
   /** Shu oydagi qoidabuzarliklar soni; Qoidabuzarliklar yuklanmagan bo'lsa - null. */
   violations: number | null;
   /** Shu oydagi murojaatlar soni; Murojaatlar yuklanmagan bo'lsa - null. */
@@ -353,7 +364,9 @@ export async function listTransformers(
   // Abonent sonlari - `subscriberCounts` qoidasi: TP podstansiyasi abonentlar ro'yxati
   // bilan qamralgan bo'lsa ro'yxatdan, aks holda TP holatining o'z ustunlari.
   const listCounts =
-    coverage.SUBSCRIBERS.size > 0 ? await subscriberTpAggregates(periodId, db) : new Map<string, SubscriberCounts>();
+    coverage.SUBSCRIBERS.size > 0
+      ? await subscriberTpAggregates(periodId, db)
+      : new Map<string, SubscriberCounts & { debtUzs: number }>();
   return snapshots.map((snap) => {
     const fromList = coverage.SUBSCRIBERS.has(snap.transformer.substation.id);
     return {
@@ -371,6 +384,7 @@ export async function listTransformers(
       currentRepairDate: iso(snap.currentRepairDate),
       overhaulDate: iso(snap.overhaulDate),
       staff: snap.staff,
+      debtUzs: fromList ? (listCounts.get(snap.transformerId)?.debtUzs ?? 0) : null,
       violations: uploads.VIOLATIONS ? (violationCounts.get(snap.transformerId) ?? 0) : null,
       appeals: uploads.APPEALS ? (appealCounts.get(snap.transformerId) ?? 0) : null,
     };

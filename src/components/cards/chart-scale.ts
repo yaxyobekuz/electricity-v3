@@ -9,12 +9,6 @@ import { dec, num } from "@/lib/format";
 /** Chiziqli o'qlar uchun qadam ko'paytuvchilari. */
 const AXIS_FACTORS = [1, 2, 2.5, 5, 10] as const;
 
-/**
- * Halqali diagrammalar uchun (bo'linmalar soni qat'iy - 5 yoki 8): 7,5 ham
- * ruxsat, aks holda 0..375 kabi maketdagi shkala 0..500 ga sakraydi.
- */
-export const RING_FACTORS = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 7.5, 8, 10] as const;
-
 /** Son yoki 0 - NaN/Infinity diagrammaga tushmasin. */
 export function finite(value: number | null | undefined): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
@@ -53,24 +47,6 @@ export function linearScale(values: readonly number[], steps: number): LinearSca
     ticks.push(Number((min + step * index).toPrecision(12)));
   }
   return { min, max, step, ticks };
-}
-
-/**
- * Qat'iy `divisions` bo'linmali shkala (halqali diagrammalar): `max` doim
- * `step * divisions`. Eng katta qiymat nol yoki manfiy bo'lsa - qadam 1.
- */
-export function fixedScale(peak: number, divisions: number): { max: number; step: number } {
-  const step = niceStep(finite(peak) / divisions, RING_FACTORS);
-  return { max: step * divisions, step };
-}
-
-/** Pul summasi uchun shkala birligi: eng katta qiymatga qarab so'm / ming / mln / mlrd. */
-export function moneyUnit(peak: number): { divisor: number; unit: string } {
-  const abs = Math.abs(finite(peak));
-  if (abs >= 1_000_000_000) return { divisor: 1_000_000_000, unit: "mlrd so’m" };
-  if (abs >= 1_000_000) return { divisor: 1_000_000, unit: "mln so’m" };
-  if (abs >= 1_000) return { divisor: 1_000, unit: "ming so’m" };
-  return { divisor: 1, unit: "so’m" };
 }
 
 /** "1 250", "12,5", "0,25" - ortiqcha nollarsiz, eng ko'pi 2 xona. */
