@@ -36,7 +36,8 @@
  *     birlashtiriladi.
  *
  * Foydalanuvchi qarorlari (2026-09-19):
- *   - abonentlar reestri (13–14 sentabr holati) yanvar–sentabrning har oyiga;
+ *   - abonentlar reestri (13–14 sentabr holati) yanvar–avgustning har oyiga;
+ *   - oylik fayllar faqat yanvar–avgust uchun (sentabr hozircha kiritilmaydi);
  *   - davr faylida yo'q, lekin boshqa davrda yoki reestrda bor obyekt - oqimi
  *     0 qator (ma'lumot kelguncha), "Eslatmalar.xlsx" ga yoziladi;
  *   - Baliqchi podstansiyasi fiderlari oqimi = shu oydagi TP lari yig'indisi;
@@ -165,6 +166,14 @@ function monthSheetName(month: number): string {
 }
 
 const monthFolder = (month: number) => `${YEAR}-${String(month).padStart(2, "0")}`;
+
+/**
+ * Platformaga kiritiladigan oxirgi oy. Foydalanuvchi qarori (2026-09-20):
+ * "sentabr ma'lumotlarini olib tashla, hozircha 8 oy yetarli" - sentabr manba
+ * fayllari o'qiladi va "tozalangan/" da qoladi, lekin "oylik/" ga tushmaydi.
+ */
+const LAST_MONTH = 8;
+const inRange = (month: number) => month <= LAST_MONTH;
 
 /* ---------------------------------------------------------------------------
    Shablon ustunlari
@@ -855,6 +864,8 @@ async function readSource(ref: SheetRef, type: TemplateType): Promise<SourceShee
     const column = COLUMNS[type].find((item) => headerKey(item.header) === headerKey(header));
     if (column) {
       fields.set(colNumber, column.field);
+    } else if (ignored.has(colNumber)) {
+      // Sozlamada aytilgan ustun (sarlavhasi bo'lsa ham) - har bir katak jurnalga yoziladi.
     } else if (IGNORED_HEADERS.has(header.trim())) {
       ignored.set(colNumber, null);
       logFix(ref.label, HEADER_ROW, header.trim(), "(ustun)", "(olib tashlandi)", "Qator tartib raqami - ma'lumot emas");
@@ -2115,41 +2126,44 @@ function completeHierarchy(byType: Map<TemplateType, OutRow[]>): void {
 }
 
 /**
- * Baliqchi podstansiyasi fiderlari: Fiderlar faylidagi oqim TP lari
- * yig'indisidan 100–300 barobar kichik - foydalanuvchi qarori (2026-09-19):
- * oqim = shu oydagi TP lari yig'indisi (TP si yo'q fiderda fayl qiymati qoladi).
+ * Fider va podstansiya oqimlari - shu oydagi TP lari yig'indisi (foydalanuvchi
+ * qarori, 2026-09-20). Yig'indi 0 bo'lsa (shu oyda TP ma'lumoti yo'q) fayldagi
+ * qiymat qoladi. Asl qiymat "(fider faylida)" / "(podstansiya faylida)"
+ * ustunlarida saqlanadi.
  */
-const FEEDERS_FROM_TPS = new Set(["Baliqchi"]);
-
-function feederFlowsFromTps(byType: Map<TemplateType, OutRow[]>): void {
-  const sums = new Map<string, Record<(typeof FLOW_FIELDS)[number], number>>();
-  for (const tp of byType.get("TRANSFORMERS") ?? []) {
-    const key = monthKey("FEEDERS", { ...tp, values: { substation: tp.values.substation, name: tp.values.feeder } });
-    const sum = sums.get(`${key}`) ?? { total: 0, useful: 0, loss: 0 };
-    for (const field of FLOW_FIELDS) sum[field] += Number(tp.values[field] ?? 0);
-    sums.set(`${key}`, sum);
-  }
-  for (const feeder of byType.get("FEEDERS") ?? []) {
-    if (!FEEDERS_FROM_TPS.has(String(feeder.values.substation))) continue;
-    const sum = sums.get(`${monthKey("FEEDERS", feeder)}`);
-    if (!sum) continue;
-    const extra = { ...feeder.extra };
-    for (const field of FLOW_FIELDS) {
-      extra[`${headerOf("FEEDERS", field)} (fider faylida)`] = feeder.values[field];
+function flowsFromTransformers(byType: Map<TemplateType, OutRow[]>): void {
+  const tps = byType.get("TRANSFORMERS") ?? [];
+  const sumsOf = (keyOf: (row: OutRow) => string) => {
+    const sums = new Map<string, Record<(typeof FLOW_FIELDS)[number], number>>();
+    for (const tp of tps) {
+      const key = keyOf(tp);
+      const sum = sums.get(key) ?? { total: 0, useful: 0, loss: 0 };
+      for (const field of FLOW_FIELDS) sum[field] += Number(tp.values[field] ?? 0);
+      sums.set(key, sum);
     }
-    feeder.extra = extra;
-    feeder.values = { ...feeder.values, ...Object.fromEntries(FLOW_FIELDS.map((field) => [field, round6(sum[field])])) };
-    // Faylda yo'q fider ("oqim 0" eslatmasi) ham endi TP lari yig'indisi.
-    const missing = feeder.notes?.some((note) => note.topic.includes("oqim 0")) ?? false;
-    feeder.notes = feeder.notes?.filter((note) => !note.topic.includes("oqim 0"));
-    addNote(
-      feeder,
-      missing
-        ? "Fider shu oyning Fiderlar faylida yo'q - oqim shu oydagi TP lari yig'indisi"
-        : "Fider oqimi - shu oydagi TP lari yig'indisi (Fiderlar faylidagi qiymat TP laridan 100–300 barobar kichik, \"(fider faylida)\" ustunida)",
-      "Fiderning to'g'ri oqim qiymatlari",
-    );
-  }
+    return sums;
+  };
+  const apply = (type: "FEEDERS" | "SUBSTATIONS", sums: ReadonlyMap<string, Record<(typeof FLOW_FIELDS)[number], number>>, label: string) => {
+    for (const row of byType.get(type) ?? []) {
+      const sum = sums.get(monthKey(type, row) ?? "");
+      const empty = !sum || FLOW_FIELDS.every((field) => sum[field] === 0);
+      if (empty) {
+        // TP lari yo'q yoki oqimi 0 - fayldagi qiymat qoladi.
+        if (Number(row.values.total ?? 0) !== 0) {
+          addNote(row, `Shu oyda TP oqimlari yo'q - oqim ${label} qolgan (TP lari yig'indisi 0)`, "TP lar bo'yicha oqim qiymatlari");
+        }
+        continue;
+      }
+      const extra = { ...row.extra };
+      for (const field of FLOW_FIELDS) extra[`${headerOf(type, field)} (${label})`] = row.values[field];
+      row.extra = extra;
+      row.values = { ...row.values, ...Object.fromEntries(FLOW_FIELDS.map((field) => [field, round6(sum[field])])) };
+      // Faylda yo'q obyekt ("oqim 0" eslatmasi) ham endi TP lari yig'indisi.
+      row.notes = row.notes?.filter((note) => !note.topic.includes("oqim 0"));
+    }
+  };
+  apply("FEEDERS", sumsOf((tp) => monthKey("FEEDERS", { ...tp, values: { substation: tp.values.substation, name: tp.values.feeder } }) ?? ""), "fider faylida");
+  apply("SUBSTATIONS", sumsOf((tp) => monthKey("SUBSTATIONS", { ...tp, values: { name: tp.values.substation } }) ?? ""), "podstansiya faylida");
 }
 
 /* ---------------------------------------------------------------------------
@@ -2371,40 +2385,28 @@ async function writeJournal(file: string, monthFiles: readonly MonthFileInfo[]) 
 /** Qatorga emas, manbaning umumiy xususiyatiga tegishli eslatmalar. */
 const GENERAL_NOTES: readonly (readonly [topic: string, files: string, state: string, need: string])[] = [
   [
-    "O'rmonbek fiderlari, yanvar–iyul",
-    "baliqchi/7 oylik/Elektr Fiderlar.xlsx 3–8-qatorlar; converted/oylik/2026-01…07/Elektr Fiderlar.xlsx",
-    "7 oylik fayldagi qiymatlar avgust fayli bilan aynan bir xil; foydalanuvchi qarori bilan 7 ga bo'lingan - fider TP laridan ~7 barobar kichik chiqadi",
-    "O'rmonbek fiderlarining haqiqiy 7 oylik (yoki oylik) qiymatlari",
+    "TP lar: yanvar–avgust",
+    "transformatorlar.xlsx va baliqchi_transformatorlar.xlsx (Yanvar…Avgust varaqlari); converted/oylik/2026-01…08/Elektr Transformatorlar.xlsx",
+    "Foydalanuvchi bergan yangi oylik fayllar: Chinobod hududi 296 TP, Baliqchi va O'rmonbek 368 TP - manba papkalaridagi eski Transformatorlar fayllari o'rniga. Chinobod faylida ma'sul xodim va ta'mir sanalari yo'q, ular eski fayldan ko'chirildi",
+    "-",
   ],
   [
-    "Baliqchi va O'rmonbek TP lari: avgust va sentabr",
-    "baliqchi/Avgust/Elektr Transformatorlar.xlsx; baliqchi/Sentabr 10 kunlik/Elektr Transformatorlar.xlsx",
-    "Avgust TP qiymatlari = 7 oylik ÷ 7, sentabr (O'rmonbek) = avgust; fayldagidek olingan",
-    "Avgust va sentabr (1–10) uchun haqiqiy TP oqimlari",
+    "Sentabr oyi kiritilmadi",
+    "baliqchi/Sentabr 10 kunlik/*; chinobod/* [Sentabr] varaqlari; converted/tozalangan/",
+    "Foydalanuvchi qarori (2026-09-20): hozircha yanvar–avgust yetarli. Sentabr manba fayllari tozalangan holda saqlanadi, lekin oylik fayllarga va platformaga kiritilmaydi",
+    "Sentabr kerak bo'lganda ayting - bitta buyruq bilan qaytariladi",
   ],
   [
-    "To'rt tol fideri, sentabr",
-    "baliqchi/Sentabr 10 kunlik/Elektr Fiderlar.xlsx 3-qator; converted/oylik/2026-09/Elektr Fiderlar.xlsx",
-    "262 272 kWh - avgustning o'zi (boshqa O'rmonbek fiderlari avgust ÷ 7); fayldagidek olingan",
-    "To'rt tol fiderining sentabr (1–10) qiymati",
-  ],
-  [
-    "Chinobod hududi oqimlari",
-    "chinobod/Elektr Podstansiyalar.xlsx, Elektr Fiderlar.xlsx, Elektr Transformatorlar.xlsx",
-    "Yo'qotish hamma joyda 16%, sentabr = avgust ÷ 3, TP oqimlari podstansiya jamisining taqsimoti - o'lchov emas, hisoblangan ko'rinadi; fayldagidek olingan",
-    "O'lchangan oqim qiymatlari (bo'lsa)",
+    "Fider va podstansiya oqimlari",
+    "converted/oylik/2026-01…08/Elektr Fiderlar.xlsx, Elektr Podstansiyalar.xlsx",
+    "Foydalanuvchi qarori (2026-09-20): oqim = shu oydagi TP lari yig'indisi. Manba fayldagi qiymat \"(fider faylida)\" / \"(podstansiya faylida)\" ustunlarida qoladi; TP yig'indisi 0 bo'lsa fayl qiymati o'zgarmaydi",
+    "-",
   ],
   [
     "Abonentlar reestri barcha oylarda",
-    "baliqchi/Elektr Abonentlar.xlsx; chinobod/Elektr Abonentlar.xlsx; converted/oylik/2026-01…09/Elektr Abonentlar.xlsx",
-    "13–14 sentabr holatidagi reestr yanvar–sentabrning har oyiga nusxalangan (qarzdorlik, ko'rsatkich, holat - sentabr holati)",
+    "baliqchi/Elektr Abonentlar.xlsx; chinobod/Elektr Abonentlar.xlsx; converted/oylik/2026-01…08/Elektr Abonentlar.xlsx",
+    "13–14 sentabr holatidagi reestr yanvar–avgustning har oyiga nusxalangan (qarzdorlik, ko'rsatkich, holat - sentabr holati)",
     "Har oyning o'z reestri (bo'lsa)",
-  ],
-  [
-    "Sentabr hisobot sanasi",
-    "converted/oylik/2026-09/* (varaq nomi \"10-sentabr, 2026\")",
-    "Sentabr davri 10-sentabrgacha deb olingan; abonentlar reestri esa 13–14 sentabr holati",
-    "Tasdiq: sentabr hisobot sanasi",
   ],
   [
     "Baliqchi reestridagi Chinobod podstansiyasi",
@@ -2537,6 +2539,154 @@ const EVENT_TEMPLATES = ["VIOLATIONS", "APPEALS"] as const;
 /** Manba -> shablon -> davr -> tozalangan qatorlar. */
 type Cleaned = Map<TemplateType, Map<PeriodKey, OutRow[]>>;
 
+/* ---------------------------------------------------------------------------
+   To'g'rilangan qarzdorlik fayllari (foydalanuvchi berdi 2026-09-20)
+   --------------------------------------------------------------------------- */
+
+/**
+ * `qarzdorlik_<manba>.xlsx` - shu skript chiqargan tozalangan reestrning
+ * nusxasi, "Qarzdorlik" ustuni to'g'rilangan. Qatorlar "Manba (fayl, qator)"
+ * ustuni bo'yicha solishtiriladi; faqat qarzdorlik olinadi, qolgan ustunlar
+ * reestrdagidek qoladi.
+ */
+const DEBT_FILES: Partial<Record<SourceId, string>> = {
+  baliqchi: "qarzdorlik_baliqchi.xlsx",
+  chinobod: "qarzdorlik_chinobod.xlsx",
+};
+
+async function applyDebtFixes(source: SourceId, rows: readonly OutRow[]): Promise<void> {
+  const file = DEBT_FILES[source];
+  if (!file || !existsSync(path.join(ROOT, file))) return;
+  const workbook = await openWorkbook(file);
+  const sheet = workbook.worksheets[0];
+  const header = headerOf("SUBSCRIBERS", "debt");
+  const columns = new Map<string, number>();
+  sheet.getRow(HEADER_ROW).eachCell({ includeEmpty: false }, (cell, colNumber) => {
+    const text = readCell(cell.value).text;
+    if (text) columns.set(headerKey(text), colNumber);
+  });
+  const debtColumn = columns.get(headerKey(header));
+  const originColumn = columns.get(headerKey(ORIGIN_HEADER));
+  if (!debtColumn || !originColumn) throw new Error(`${file}: "${header}" yoki "${ORIGIN_HEADER}" ustuni yo'q`);
+
+  const fixed = new Map<string, number | null>();
+  sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    if (rowNumber <= HEADER_ROW) return;
+    const origin = readCell(row.getCell(originColumn).value).text;
+    if (!origin) return;
+    const cell = readCell(row.getCell(debtColumn).value);
+    if (cell.problem) throw new Error(`${file}: ${rowNumber}-qator, "${header}" katagida xato`);
+    fixed.set(origin, cell.value == null ? null : Number(cell.value));
+  });
+
+  let changed = 0;
+  let missing = 0;
+  for (const row of rows) {
+    const value = fixed.get(originText(row.origins));
+    if (value === undefined) {
+      missing += 1;
+      continue;
+    }
+    if (value === row.values.debt) continue;
+    row.extra[manbaHeader(header)] ??= row.values.debt;
+    logFix(
+      row.origins[0].file,
+      row.origins[0].row,
+      header,
+      "(reestrdagi qiymat)",
+      value == null ? "(bo'sh)" : String(value),
+      `To'g'rilangan qarzdorlik "${file}" faylidan olindi; reestrdagi qiymat "${manbaHeader(header)}" ustunida`,
+    );
+    row.values.debt = value;
+    changed += 1;
+  }
+  console.log(
+    `o'qildi: ${file} - ${fixed.size} qator, qarzdorlik o'zgardi: ${changed}` +
+      (missing > 0 ? `, bu faylda yo'q reestr qatorlari: ${missing}` : ""),
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   Oylik TP fayli (foydalanuvchi berdi 2026-09-20)
+   --------------------------------------------------------------------------- */
+
+/**
+ * Foydalanuvchi bergan oylik TP fayllari (2026-09-20): har oy alohida varaqda,
+ * "eski ma'lumotlar noto'g'ri" - shu oylarda manba papkasidagi Transformatorlar
+ * fayli o'rniga ishlatiladi. Chinobod faylida "Ma'sul xodim" va ta'mir sanalari
+ * ustunlari yo'q - ular eski fayldagi shu TP qatoridan olinadi.
+ */
+const MONTHLY_TP_FILES: Partial<Record<SourceId, { file: string; ignored: Record<number, string> }>> = {
+  chinobod: {
+    file: "transformatorlar.xlsx",
+    ignored: {
+      7: "Yo'qotish foizi - shablonda yo'q, yo'qotish va umumiy oqimdan hisoblanadi",
+      14: "Sarlavhasiz yordamchi son - TP ma'lumoti emas",
+    },
+  },
+  baliqchi: {
+    file: "baliqchi_transformatorlar.xlsx",
+    ignored: { 7: "Yo'qotish foizi (\"%\") - shablonda yo'q, yo'qotish va umumiy oqimdan hisoblanadi" },
+  },
+};
+
+/** Varaq nomi (`fold`) -> oy. */
+const MONTHLY_TP_SHEETS: Record<string, number> = {
+  yanvar: 1, fevral: 2, mart: 3, aprel: 4, may: 5, iyun: 6, iyul: 7, avgust: 8,
+};
+
+/** Oylik TP fayli: oy -> tozalangan qatorlar. */
+async function readMonthlyTransformers(source: Source): Promise<Map<number, OutRow[]>> {
+  const result = new Map<number, OutRow[]>();
+  const config = MONTHLY_TP_FILES[source.id];
+  if (!config || !existsSync(path.join(ROOT, config.file))) return result;
+  const workbook = await openWorkbook(config.file);
+  const ref = { ...source, ignoredColumns: { TRANSFORMERS: config.ignored } };
+  for (const sheet of workbook.worksheets) {
+    const month = MONTHLY_TP_SHEETS[fold(sheet.name)];
+    if (!month) throw new Error(`${config.file}: "${sheet.name}" varag'i qaysi oyligi noma'lum`);
+    const parsed = await readSource(
+      { source: ref, file: config.file, sheet: sheet.name, label: `${config.file} [${sheet.name}]`, period: null },
+      "TRANSFORMERS",
+    );
+    // Ma'lumot qatoridan keyin qolib ketgan bo'sh qatorlar (bitta chalkash katak).
+    const data = parsed.rows.filter((row) => {
+      if (["substation", "feeder", "name"].some((field) => row.cells.has(field))) return true;
+      logFix(parsed.ref.label, row.row, "(butun qator)", "qator", "(olib tashlandi)", "Podstansiya, fider va TP yo'q - bo'sh qator");
+      return false;
+    });
+    const rows = cleanTransformers({ ...parsed, rows: data });
+    result.set(month, rows);
+    console.log(`o'qildi: ${config.file} [${sheet.name}] - ${rows.length} qator`);
+  }
+  return result;
+}
+
+/**
+ * Yangi oylik TP faylida yo'q ustunlar (ma'sul xodim, ta'mir sanalari) eski
+ * manba faylidagi shu TP qatoridan olinadi.
+ */
+function fillFromOldTransformers(rows: readonly OutRow[], old: readonly OutRow[]): void {
+  const byKey = new Map(old.map((row) => [monthKey("TRANSFORMERS", row), row]));
+  const fields = ["staff", "currentRepair", "overhaul"] as const;
+  for (const row of rows) {
+    const previous = byKey.get(monthKey("TRANSFORMERS", row));
+    if (!previous) continue;
+    for (const field of fields) {
+      if (row.values[field] != null || previous.values[field] == null) continue;
+      row.values[field] = previous.values[field];
+      logFix(
+        row.origins[0].file,
+        row.origins[0].row,
+        headerOf("TRANSFORMERS", field),
+        "(ustun yo'q)",
+        "(eski fayldan)",
+        `Yangi oylik TP faylida bu ustun yo'q - ${previous.origins[0].file} dagi shu TP qatoridan olindi`,
+      );
+    }
+  }
+}
+
 /** Oylik faylning noyob kaliti (import bilan bir xil). */
 function monthKey(type: TemplateType, row: OutRow): string | null {
   const v = row.values;
@@ -2590,6 +2740,8 @@ async function main() {
     const registryFile = `${source.id}/${TEMPLATE_FILE_NAME.SUBSCRIBERS}`;
     const registryRef: SheetRef = { source, file: registryFile, sheet: null, label: registryFile, period: null };
     const registry = cleanSubscribers(await readSource(registryRef, "SUBSCRIBERS"));
+    // Qarzdorlik - foydalanuvchi to'g'rilagan fayldan (2026-09-20).
+    await applyDebtFixes(source.id, registry);
     registries.set(source.id, registry);
     console.log(`o'qildi: ${registryFile} - ${registry.length} qator`);
 
@@ -2606,6 +2758,30 @@ async function main() {
     locateSubscriberTps(registry, allTps);
   }
 
+  // 3b. Oylik TP fayllari (2026-09-20): yanvar–avgust uchun har manbaning TP lari.
+  const monthlyTps = new Map<SourceId, Map<number, OutRow[]>>();
+  for (const source of SOURCES) {
+    const rowsByMonth = await readMonthlyTransformers(source);
+    if (rowsByMonth.size === 0) continue;
+    monthlyTps.set(source.id, rowsByMonth);
+    const old = [...(cleaned.get(source.id)?.get("TRANSFORMERS")?.values() ?? [])].flat();
+    const map = feederMaps.get(source.id) ?? new Map<string, string>();
+    for (const rows of rowsByMonth.values()) {
+      applyFeederSubstations(rows, map);
+      fillFromOldTransformers(rows, old);
+    }
+    // Eski va yangi TP ro'yxati farqi (bo'lsa - ekranda).
+    const newKeys = new Set([...rowsByMonth.values()].flat().map((row) => monthKey("TRANSFORMERS", row)));
+    const oldKeys = new Set(old.map((row) => monthKey("TRANSFORMERS", row)));
+    const onlyOld = [...oldKeys].filter((key) => !newKeys.has(key));
+    const onlyNew = [...newKeys].filter((key) => !oldKeys.has(key));
+    if (onlyOld.length > 0 || onlyNew.length > 0) {
+      console.log(`
+${MONTHLY_TP_FILES[source.id]?.file}: faqat eski faylda ${onlyOld.length} ta TP, faqat yangi faylda ${onlyNew.length} ta`);
+      for (const key of [...onlyOld.slice(0, 10), ...onlyNew.slice(0, 10)]) console.log(`  ${key}`);
+    }
+  }
+
   // 4. Hodisalar (murojaat TP si manbaning TP ro'yxatidan, shartnomalar ikkala reestrdan).
   const allContracts = new Set(
     [...registries.values()].flat().map((row) => contractKey(String(row.values.contract))),
@@ -2616,7 +2792,10 @@ async function main() {
     );
   for (const source of SOURCES) {
     const byType = cleaned.get(source.id) as Cleaned;
-    const tpIndex = buildTpIndex([...(byType.get("TRANSFORMERS")?.values() ?? [])].flat());
+    const tpIndex = buildTpIndex([
+      ...[...(byType.get("TRANSFORMERS")?.values() ?? [])].flat(),
+      ...[...(monthlyTps.get(source.id)?.values() ?? [])].flat(),
+    ]);
     const registryTps = new Set((registries.get(source.id) ?? []).map((row) => String(row.values.tp)));
     const tpNames: TpNames = {
       own: tpNamesOf(source.id),
@@ -2686,13 +2865,26 @@ async function main() {
           (refs.get(refKey(source.id, type, periodKey))?.label ?? source.id) +
           (added.length > 0 ? ` + ${added.length} ta qator oqimi 0 (shu davr faylida yo'q)` : "");
         if (period.months.length === 1) {
-          put(period.months[0], type, rows, label);
+          if (inRange(period.months[0])) put(period.months[0], type, rows, label);
         } else {
           for (const [month, split] of splitFlows(type, rows, period)) {
-            put(month, type, split, `${label} (1/${period.months.length} qismi)`);
+            if (inRange(month)) put(month, type, split, `${label} (1/${period.months.length} qismi)`);
           }
         }
       }
+    }
+  }
+
+  // Yanvar–avgust: TP lar yangi oylik fayllardan (manba papkasidagi fayl o'rniga).
+  for (const [sourceId, rowsByMonth] of monthlyTps) {
+    for (const [month, rows] of rowsByMonth) {
+      const byType = monthly.get(month);
+      if (!byType) continue;
+      const kept = (byType.get("TRANSFORMERS") ?? []).filter((row) => row.source !== sourceId);
+      byType.set("TRANSFORMERS", [...kept, ...rows]);
+      const key = `${month}|TRANSFORMERS`;
+      const labels = [...(monthSources.get(key) ?? [])].filter((label) => !label.startsWith(`${sourceId}/`));
+      monthSources.set(key, new Set([...labels, rows[0]?.origins[0].file ?? MONTHLY_TP_FILES[sourceId]?.file ?? ""]));
     }
   }
 
@@ -2704,11 +2896,22 @@ async function main() {
         const rows = cleaned.get(source.id)?.get(type)?.get(period.key);
         if (!rows) continue;
         groups.push(rows);
-        for (const month of period.months) covered.add(month);
+        for (const month of period.months) if (inRange(month)) covered.add(month);
       }
     }
     const merged = mergeEvents(type, groups);
-    const outside = merged.filter((row) => !covered.has(row.month ?? 0));
+    // Chegaradan keyingi oy yozuvlari (sentabr) - oylik faylga kirmaydi.
+    for (const row of merged.filter((row) => !inRange(row.month ?? 0))) {
+      logFix(
+        row.origins[0].file,
+        row.origins[0].row,
+        "(butun qator)",
+        `sanasi ${monthFolder(row.month ?? 0)}`,
+        "(oylik faylga kiritilmadi)",
+        `Hozircha ${LAST_MONTH} oy kiritiladi (foydalanuvchi qarori 2026-09-20) - keyingi oy yozuvlari tozalangan/ da qoladi`,
+      );
+    }
+    const outside = merged.filter((row) => inRange(row.month ?? 0) && !covered.has(row.month ?? 0));
     if (outside.length > 0) {
       throw new Error(`${TEMPLATE_LABEL[type]}: ${outside.length} ta yozuv manba qamramagan oyda (${originText(outside[0].origins)})`);
     }
@@ -2769,7 +2972,7 @@ async function main() {
   }
 
   // Reestr (13–14 sentabr holati) har bir oyga (4-savol, 2026-09-19).
-  const allMonths = [...new Set(PERIODS.flatMap((period) => period.months))].sort((a, b) => a - b);
+  const allMonths = [...new Set(PERIODS.flatMap((period) => period.months))].filter(inRange).sort((a, b) => a - b);
   for (const month of allMonths) {
     for (const source of SOURCES) {
       put(
@@ -2785,7 +2988,7 @@ async function main() {
   for (const [month, byType] of monthly) {
     const before = new Map(FLOW_TEMPLATES.map((type) => [type, byType.get(type)?.length ?? 0]));
     completeHierarchy(byType);
-    feederFlowsFromTps(byType);
+    flowsFromTransformers(byType);
     for (const type of FLOW_TEMPLATES) {
       const added = (byType.get(type)?.length ?? 0) - (before.get(type) ?? 0);
       if (added > 0) {

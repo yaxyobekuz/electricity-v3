@@ -787,6 +787,121 @@ export async function getScopeSeries(
 }
 
 // ---------------------------------------------------------------------------
+// Yil boshidan (hodisalar: murojaatlar va qoidabuzarliklar)
+// ---------------------------------------------------------------------------
+
+export interface ScopeAppealsYear {
+  /** Shu yilda qamrovga murojaatlar yuklangan oylar (eskidan yangiga). */
+  periods: PeriodInfo[];
+  total: number;
+  byStatus: Record<AppealStatus, number>;
+}
+
+export interface ScopeViolationsYear {
+  /** Shu yilda qamrovga qoidabuzarliklar yuklangan oylar (eskidan yangiga). */
+  periods: PeriodInfo[];
+  total: number;
+  byType: Record<ViolatorType, number>;
+  damageUzs: number;
+  damageKwh: number;
+}
+
+/**
+ * Berilgan davrlardan qamrovga shablon yuklangan oylarni ajratadi. Yuklanmagan
+ * oy yig'indiga kirmaydi: "0 ta" va "yuklanmagan" aralashmasligi kerak.
+ */
+async function coveredPeriods(
+  scope: Scope,
+  periods: readonly PeriodInfo[],
+  template: "APPEALS" | "VIOLATIONS",
+  db: Db,
+): Promise<PeriodInfo[]> {
+  const periodIds = periods.map((period) => period.id);
+  const [parents, uploads, coverages] = await Promise.all([
+    resolveScope(scope, db),
+    uploadsMany(periodIds, db),
+    coverageMany(periodIds, db),
+  ]);
+  // `computeScopeSummary` bilan bir xil: obyekt topilmagan qamrovni hech bir shablon qamramaydi.
+  const substationId = scope.kind === "district" ? null : (parents?.substationId ?? "");
+  return periods.filter(
+    (period) => coveredUploads(uploads.get(period.id)!, coverages.get(period.id)!, substationId)[template],
+  );
+}
+
+/**
+ * Berilgan davrlar bo'yicha murojaatlarning holat kesimidagi yig'indisi -
+ * bosh sahifadagi "Murojaatlar" kartasi yil boshidan ko'rsatadi. Yangi
+ * formula yo'q: `getScopeSummary().appeals` bilan bir xil manba va bir xil
+ * qamrov filtri, faqat bir necha oy birga sanaladi.
+ */
+export async function getScopeAppealsYear(
+  scope: Scope,
+  periods: readonly PeriodInfo[],
+  db: Db = prisma,
+): Promise<ScopeAppealsYear> {
+  const result: ScopeAppealsYear = { periods: [], total: 0, byStatus: zeroRecord(APPEAL_STATUS_ORDER) };
+  if (periods.length === 0) return result;
+
+  const [covered, groups] = await Promise.all([
+    coveredPeriods(scope, periods, "APPEALS", db),
+    db.appeal.groupBy({
+      by: ["periodId", "status"],
+      where: { periodId: { in: periods.map((period) => period.id) }, ...eventScopeWhere(scope) },
+      _count: { _all: true },
+    }),
+  ]);
+  const coveredIds = new Set(covered.map((period) => period.id));
+  result.periods = covered;
+  for (const group of groups) {
+    if (!coveredIds.has(group.periodId)) continue;
+    result.total += group._count._all;
+    result.byStatus[group.status] += group._count._all;
+  }
+  return result;
+}
+
+/**
+ * Xuddi shu qoida qoidabuzarliklar uchun - "Qoidabuzarliklar" kartasi va
+ * uning ostidagi "Umumiy keltirilgan zarar" plitkasi ham yil boshidan.
+ * Manba `getScopeSummary().violations` bilan bir xil.
+ */
+export async function getScopeViolationsYear(
+  scope: Scope,
+  periods: readonly PeriodInfo[],
+  db: Db = prisma,
+): Promise<ScopeViolationsYear> {
+  const result: ScopeViolationsYear = {
+    periods: [],
+    total: 0,
+    byType: zeroRecord(VIOLATOR_TYPE_ORDER),
+    damageUzs: 0,
+    damageKwh: 0,
+  };
+  if (periods.length === 0) return result;
+
+  const [covered, groups] = await Promise.all([
+    coveredPeriods(scope, periods, "VIOLATIONS", db),
+    db.violation.groupBy({
+      by: ["periodId", "violatorType"],
+      where: { periodId: { in: periods.map((period) => period.id) }, ...eventScopeWhere(scope) },
+      _count: { _all: true },
+      _sum: { damageUzs: true, damageKwh: true },
+    }),
+  ]);
+  const coveredIds = new Set(covered.map((period) => period.id));
+  result.periods = covered;
+  for (const group of groups) {
+    if (!coveredIds.has(group.periodId)) continue;
+    result.total += group._count._all;
+    result.byType[group.violatorType] += group._count._all;
+    result.damageUzs += amount(group._sum.damageUzs);
+    result.damageKwh += amount(group._sum.damageKwh);
+  }
+  return result;
+}
+
+// ---------------------------------------------------------------------------
 // O'tgan oy bilan taqqoslash
 // ---------------------------------------------------------------------------
 

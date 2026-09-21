@@ -39,9 +39,11 @@ import {
   getSubscriberSource,
 } from "@/lib/queries/subscribers-related";
 import {
+  getScopeAppealsYear,
   getScopeComparison,
   getScopeSeries,
   getScopeSummary,
+  getScopeViolationsYear,
   periodUploads,
   previousPeriodOf,
   toPeriodInfo,
@@ -939,6 +941,82 @@ async function run(tx: Db) {
     ],
   );
   expectEqual("dinamika: bo'sh davrlar ro'yxati", await getScopeSeries(district, [], tx), []);
+
+  // --- Yil boshidan (murojaatlar) -------------------------------------------------
+  {
+    const yearPeriods = [p1, p2, p3, p4];
+    for (const [label, scope] of scopes) {
+      const year = await getScopeAppealsYear(scope, yearPeriods, tx);
+      // Yuklangan oylar yig'indisi: yuklanmagan oy hisobga olinmaydi.
+      let total = 0;
+      const byStatus: Record<string, number> = {};
+      const covered: string[] = [];
+      for (const period of yearPeriods) {
+        const summary = await getScopeSummary(period.id, scope, tx);
+        if (!summary.appeals.uploaded) continue;
+        covered.push(period.key);
+        total += summary.appeals.total;
+        for (const [status, value] of Object.entries(summary.appeals.byStatus)) {
+          byStatus[status] = (byStatus[status] ?? 0) + value;
+        }
+      }
+      expectEqual(`yil boshidan ${label}: jami = Σ oylik xulosalar`, year.total, total);
+      expectEqual(`yil boshidan ${label}: holatlar = Σ oylik xulosalar`, { ...year.byStatus }, byStatus);
+      expectEqual(`yil boshidan ${label}: qamralgan oylar`, year.periods.map((item) => item.key), covered);
+      expectEqual(`yil boshidan ${label}: jami = Σ holatlar`, year.total, sumOf(Object.values(year.byStatus), (value) => value));
+    }
+    // Fikstura: murojaatlar faqat P2 ga yuklangan - yillik yig'indi shu oyniki.
+    const districtYear = await getScopeAppealsYear(district, yearPeriods, tx);
+    const p2Summary = await getScopeSummary(p2.id, district, tx);
+    expectEqual("yil boshidan tuman: faqat P2 qamraladi", districtYear.periods.map((item) => item.key), [p2.key]);
+    expectEqual("yil boshidan tuman: jami = P2 jami", districtYear.total, p2Summary.appeals.total);
+    expectEqual("yil boshidan tuman: bo'sh davrlar ro'yxati", await getScopeAppealsYear(district, [], tx), {
+      periods: [],
+      total: 0,
+      byStatus: { RESOLVED: 0, REJECTED: 0, IN_PROGRESS: 0, OVERDUE: 0 },
+    });
+
+    // Qoidabuzarliklar uchun xuddi shu qoida.
+    for (const [label, scope] of scopes) {
+      const year = await getScopeViolationsYear(scope, yearPeriods, tx);
+      let total = 0;
+      let damageUzs = 0;
+      let damageKwh = 0;
+      const byType: Record<string, number> = {};
+      const covered: string[] = [];
+      for (const period of yearPeriods) {
+        const summary = await getScopeSummary(period.id, scope, tx);
+        if (!summary.violations.uploaded) continue;
+        covered.push(period.key);
+        total += summary.violations.total;
+        damageUzs += summary.violations.damageUzs;
+        damageKwh += summary.violations.damageKwh;
+        for (const [type, value] of Object.entries(summary.violations.byType)) {
+          byType[type] = (byType[type] ?? 0) + value;
+        }
+      }
+      expectEqual(`yil boshidan ${label}: qoidabuzarlik jami = Σ oylik`, year.total, total);
+      expectEqual(`yil boshidan ${label}: qoidabuzarlik turlari = Σ oylik`, { ...year.byType }, byType);
+      expectEqual(`yil boshidan ${label}: zarar so'm = Σ oylik`, year.damageUzs, damageUzs);
+      expectEqual(`yil boshidan ${label}: zarar kWh = Σ oylik`, year.damageKwh, damageKwh);
+      expectEqual(`yil boshidan ${label}: qoidabuzarlik oylari`, year.periods.map((item) => item.key), covered);
+      expectEqual(
+        `yil boshidan ${label}: qoidabuzarlik jami = Σ turlar`,
+        year.total,
+        sumOf(Object.values(year.byType), (value) => value),
+      );
+    }
+    // Fikstura: qoidabuzarliklar P1 va P2 ga yuklangan - yillik yig'indi ikkalasiniki.
+    const districtVio = await getScopeViolationsYear(district, yearPeriods, tx);
+    expectEqual("yil boshidan tuman: qoidabuzarlik P1+P2 qamraladi", districtVio.periods.map((item) => item.key), [p1.key, p2.key]);
+    expectEqual("yil boshidan tuman: bo'sh davrlar (qoidabuzarlik)", await getScopeViolationsYear(district, [], tx), {
+      periods: [],
+      total: 0,
+      byType: { LEGAL: 0, INDIVIDUAL: 0, INNOCENT: 0 },
+      damageUzs: 0,
+      damageKwh: 0,
+    });
+  }
 
   // --- O'tgan oy ------------------------------------------------------------------
   {

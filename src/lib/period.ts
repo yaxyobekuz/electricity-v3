@@ -85,6 +85,19 @@ export async function getPeriodsUntil(period: PeriodInfo, limit = 12): Promise<P
 }
 
 /**
+ * Tanlangan oy yilining yil boshidan shu oygacha (u ham kiradi) bo'lgan
+ * davrlari, eskidan yangiga. "Yil boshidan" ko'rsatkichlari uchun -
+ * `getPeriodsUntil` dan farqi: oldingi yil oylari kirmaydi.
+ */
+export async function getYearPeriods(period: PeriodInfo): Promise<PeriodInfo[]> {
+  const year = new Date(period.month).getUTCFullYear();
+  const periods = await listPeriods();
+  return periods
+    .filter((item) => item.month <= period.month && new Date(item.month).getUTCFullYear() === year)
+    .reverse();
+}
+
+/**
  * Shu oyga qaysi shablonlar muvaffaqiyatli yuklangan. "0 ta qoidabuzarlik"
  * (yuklangan, lekin bo'sh) va "yuklanmagan" ni farqlash uchun.
  */

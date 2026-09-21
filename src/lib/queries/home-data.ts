@@ -23,20 +23,23 @@ import {
   formatDate,
   money,
   monthName,
+  monthShort,
   num,
   parseMonthKey,
   percent,
   scaled,
 } from "@/lib/format";
-import { getPeriodsUntil, type PeriodInfo } from "@/lib/period";
+import { getPeriodsUntil, getYearPeriods, type PeriodInfo } from "@/lib/period";
 import { scopedHref, scopeParam } from "@/lib/scope-param";
 
 import { getFeeder, getSubstation, getTransformer } from "./entities";
 import { listFeeders, listSubscribers, listSubstations, listTransformers, type TransformerRow } from "./lists";
 import { listRepairs } from "./repairs";
 import {
+  getScopeAppealsYear,
   getScopeComparison,
   getScopeSeries,
+  getScopeViolationsYear,
   type EntityRef,
   type ScopeSeriesPoint,
   type ScopeSummary,
@@ -133,6 +136,10 @@ export interface HomeViolations {
   types: { id: ViolatorType; label: string; value: string; href: string }[];
   /** Σ "Keltirilgan zarar miqdori (UZS)"; yuklanmagan - null. */
   damage: string | null;
+  /** Kartadagi izoh: yil boshidan qamralgan oylar ("Yil boshidan (Yan–Avg)"). */
+  caption: string;
+  /** Zarar plitkasining izohi - u ham shu yig'indidan. */
+  damageLabel: string;
   href: string;
 }
 
@@ -148,6 +155,8 @@ export interface HomeRingData {
   /** Shablon yuklanmagan bo'lsa - bo'sh holat matni. */
   empty: string | null;
   month: string;
+  /** Diagrammadagi yorliqning 2-qatori: bir necha oy jamlanganda "Yan–Sen". */
+  months: string | null;
   rings: HomeRing[];
   summary: { label: string; value: string } | null;
 }
@@ -354,7 +363,7 @@ function energyMetrics(row: { totalKwh: number; usefulKwh: number; lossKwh: numb
 }
 
 /** "Iyl–Sen" (uzluksiz oylar) yoki "Iyl, Sen" (oraliqda bo'shliq bor). */
-function monthsCovered(points: readonly ScopeSeriesPoint[]): string {
+function monthsCovered(points: readonly { key: string; label: string }[]): string {
   if (points.length === 0) return EMPTY;
   if (points.length === 1) return points[0].label;
   const first = parseMonthKey(points[0].key);
@@ -363,6 +372,11 @@ function monthsCovered(points: readonly ScopeSeriesPoint[]): string {
   return span === points.length
     ? `${points[0].label}–${points[points.length - 1].label}`
     : points.map((point) => point.label).join(", ");
+}
+
+/** Davrlar bo'yicha xuddi shu yozuv: `PeriodInfo` da qisqa oy nomi yo'q, u `month` dan olinadi. */
+function monthsLabel(periods: readonly PeriodInfo[]): string {
+  return monthsCovered(periods.map((item) => ({ key: item.key, label: monthShort(item.month) })));
 }
 
 /** "517 ta · 20,1%" - ulush hisoblanmasa faqat son. */
@@ -542,10 +556,12 @@ function ringData(
   rings: { id: string; label: string; count: number }[],
   total: number,
   summary: string | null,
+  months: string | null = null,
 ): HomeRingData {
   return {
     empty: uploaded ? null : empty,
     month,
+    months,
     rings: rings.map((ring) => ({
       id: ring.id,
       label: ring.label,
@@ -562,10 +578,11 @@ function ringData(
 
 export async function loadHomeData(period: PeriodInfo, scope: HomeScope): Promise<HomeData> {
   // Fider / TP sahifasi `getFeeder` / `getTransformer` ni o'zi chaqirgan - `cache` tufayli qayta so'rov yo'q.
-  const [feeder, transformer, periods] = await Promise.all([
+  const [feeder, transformer, periods, yearPeriods] = await Promise.all([
     scope.kind === "feeder" ? getFeeder(scope.id, period.id) : Promise.resolve(null),
     scope.kind === "transformer" ? getTransformer(scope.id, period.id) : Promise.resolve(null),
     getPeriodsUntil(period, 12),
+    getYearPeriods(period),
   ]);
   // Qamrov obyektining ota obyektlari (plitkalar va filtr qulflari).
   const parentSubstation: EntityRef | null = feeder?.substation ?? transformer?.substation ?? null;
@@ -573,24 +590,36 @@ export async function loadHomeData(period: PeriodInfo, scope: HomeScope): Promis
   const substationId = scope.kind === "substation" ? scope.id : parentSubstation?.id;
   const feederId = scope.kind === "feeder" ? scope.id : parentFeeder?.id;
 
-  const [comparison, series, substationRows, feederRows, transformerRows, repairs, substation, debtors] =
-    await Promise.all([
-      getScopeComparison(scope, period),
-      getScopeSeries(scope, periods),
-      scope.kind === "district" ? listSubstations(period.id) : Promise.resolve([]),
-      // Fider va TP sahifalarida ro'yxatda faqat sahifa fideri (filtr tanlovi uchun).
-      listFeeders(period.id, { substationId }).then((rows) =>
-        feederId ? rows.filter((row) => row.id === feederId) : rows,
-      ),
-      // TP sahifasida - shu TP ning fideridagi barcha TP lar (filtr va fider reytinglari).
-      listTransformers(period.id, { substationId, feederId }),
-      listRepairs(period.id, scope),
-      substationId ? getSubstation(substationId, period.id) : Promise.resolve(null),
-      // TP ichidagi reyting - eng katta qarzdorlar (`/subscribers?debtors=1` ro'yxatining boshi).
-      scope.kind === "transformer"
-        ? listSubscribers(period.id, { scope, debtorsOnly: true, sort: "debt", take: TOP_LIMIT })
-        : Promise.resolve(null),
-    ]);
+  const [
+    comparison,
+    series,
+    appealsYear,
+    violationsYear,
+    substationRows,
+    feederRows,
+    transformerRows,
+    repairs,
+    substation,
+    debtors,
+  ] = await Promise.all([
+    getScopeComparison(scope, period),
+    getScopeSeries(scope, periods),
+    getScopeAppealsYear(scope, yearPeriods),
+    getScopeViolationsYear(scope, yearPeriods),
+    scope.kind === "district" ? listSubstations(period.id) : Promise.resolve([]),
+    // Fider va TP sahifalarida ro'yxatda faqat sahifa fideri (filtr tanlovi uchun).
+    listFeeders(period.id, { substationId }).then((rows) =>
+      feederId ? rows.filter((row) => row.id === feederId) : rows,
+    ),
+    // TP sahifasida - shu TP ning fideridagi barcha TP lar (filtr va fider reytinglari).
+    listTransformers(period.id, { substationId, feederId }),
+    listRepairs(period.id, scope),
+    substationId ? getSubstation(substationId, period.id) : Promise.resolve(null),
+    // TP ichidagi reyting - eng katta qarzdorlar (`/subscribers?debtors=1` ro'yxatining boshi).
+    scope.kind === "transformer"
+      ? listSubscribers(period.id, { scope, debtorsOnly: true, sort: "debt", take: TOP_LIMIT })
+      : Promise.resolve(null),
+  ]);
   const { current, previous, previousPeriod } = comparison;
   const uploads = current.uploads;
   // Xarita va tultip qamrovdagi TP lardan: TP sahifasida - faqat shu TP.
@@ -709,16 +738,29 @@ export async function loadHomeData(period: PeriodInfo, scope: HomeScope): Promis
   };
 
   // --- Qoidabuzarliklar, hisoblagichlar, murojaatlar -------------------------
+  /*
+   * Qoidabuzarliklar - yil boshidan (murojaatlar kartasi bilan bir xil qoida):
+   * tanlangan oyning yilida qoidabuzarliklar yuklangan barcha oylar birga
+   * sanaladi. Ostidagi "Umumiy keltirilgan zarar" plitkasi ham shu yig'indidan -
+   * aks holda ikki plitka bir-biriga zid son ko'rsatardi.
+   */
+  const violationsMonths = violationsYear.periods.length;
   const violations: HomeViolations = {
-    uploaded: current.violations.uploaded,
-    total: { value: count(current.violations.total), href: scoped("/violations") },
+    uploaded: violationsMonths > 0,
+    total: { value: count(violationsYear.total), href: scoped("/violations") },
     types: VIOLATOR_TYPE_ORDER.map((type) => ({
       id: type,
       label: VIOLATOR_TYPE_LABEL[type],
-      value: count(current.violations.byType[type]),
+      value: count(violationsYear.byType[type]),
       href: scoped("/violations", { type }),
     })),
-    damage: current.violations.uploaded ? money(current.violations.damageUzs) : null,
+    damage: violationsMonths > 0 ? money(violationsYear.damageUzs) : null,
+    caption:
+      violationsMonths > 0
+        ? `Yil boshidan (${monthsLabel(violationsYear.periods)})`
+        : "Umumiy aniqlangan holatlar",
+    damageLabel:
+      violationsMonths > 0 ? "Yil boshidan keltirilgan zarar" : "Umumiy keltirilgan zarar miqdori",
     href: scoped("/violations"),
   };
 
@@ -739,17 +781,24 @@ export async function loadHomeData(period: PeriodInfo, scope: HomeScope): Promis
     list.total,
     null,
   );
+  /*
+   * Murojaatlar - yil boshidan: tanlangan oyning yilida murojaatlar
+   * yuklangan barcha oylar birga sanaladi (bitta oy emas). Kartadagi
+   * yorliq - shu yil, ostida esa qamralgan oylar ("Yan–Sen").
+   */
+  const appealsMonths = appealsYear.periods.length;
   const appeals = ringData(
-    month,
-    current.appeals.uploaded,
+    appealsMonths > 0 ? `${new Date(period.month).getUTCFullYear()}-yil` : month,
+    appealsMonths > 0,
     "Murojaatlar yuklanmagan",
     APPEAL_STATUS_ORDER.map((status: AppealStatus) => ({
       id: status,
       label: APPEAL_STATUS_LABEL[status],
-      count: current.appeals.byStatus[status],
+      count: appealsYear.byStatus[status],
     })),
-    current.appeals.total,
-    "Umumiy murojaatlar",
+    appealsYear.total,
+    appealsMonths > 0 ? "Yil boshidan" : "Umumiy murojaatlar",
+    appealsMonths > 0 ? monthsLabel(appealsYear.periods) : null,
   );
 
   // --- Tezkor ko'rsatkichlar (faqat hisoblangan) -----------------------------

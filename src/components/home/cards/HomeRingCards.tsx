@@ -72,8 +72,18 @@ export function MetersCard({ data, className }: { data: HomeRingData; className?
 /**
  * "Murojaatlar" (Figma `4301:2515`, 321.78x336). Umumiy son legendada emas,
  * diagramma maydonining chap yuqori burchagida nuqtasiz yorliq sifatida.
+ *
+ * Bu karta - bitta oy emas, yil boshidan: tanlangan oyning yilida murojaatlar
+ * yuklangan barcha oylar birga sanaladi (`home-data.ts`), diagrammada yil va
+ * qamralgan oylar oralig'i ko'rsatiladi.
  */
 export function AppealsCard({ data, className }: { data: HomeRingData; className?: string }) {
+  /*
+   * Yil boshidan ko'rinishida shkala birligi yozilmaydi: yorliq "2026-yil / % /
+   * Yan–Avg" bo'lib uch qatorga cho'ziladi. 0–100 bo'linmalari va ulush yoylari
+   * foizligini o'zi ko'rsatadi.
+   */
+  const yearly = data.months !== null;
   return (
     <RingStatsCard
       className={className}
@@ -82,7 +92,8 @@ export function AppealsCard({ data, className }: { data: HomeRingData; className
       max={100}
       tickLabels={PERCENT_TICKS}
       month={data.month}
-      scaleUnit="%"
+      monthNote={data.months}
+      scaleUnit={yearly ? undefined : "%"}
       columns={["Holat", "Soni"]}
       summary={data.summary}
       empty={data.empty}

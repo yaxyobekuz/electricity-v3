@@ -81,6 +81,7 @@ function polarDecoration(
   tickLabels: readonly string[],
   month: string,
   scaleUnit: string | undefined,
+  monthNote: string | null,
   geometry: RingGeometry,
 ) {
   return function PolarDecoration({ center, outerRadius }: RadialBarCustomLayerProps) {
@@ -127,6 +128,16 @@ function polarDecoration(
               {scaleUnit}
             </text>
           ) : null}
+          {/* Bir necha oy jamlanganda - qamralgan oylar oralig'i ("Yan–Sen"). */}
+          {monthNote ? (
+            <text
+              x={geometry.month.x * scale}
+              y={(geometry.month.y + UNIT_OFFSET * (scaleUnit ? 2 : 1)) * scale}
+              fontSize={9}
+            >
+              {monthNote}
+            </text>
+          ) : null}
         </g>
       </g>
     );
@@ -156,6 +167,7 @@ export function RingStatsCard({
   max,
   tickLabels,
   month,
+  monthNote = null,
   scaleUnit,
   columns,
   summary,
@@ -172,6 +184,8 @@ export function RingStatsCard({
   tickLabels?: readonly string[] | null;
   /** Diagrammadagi oy nomi: "Sentabr". */
   month: string;
+  /** Oy nomi ostidagi qo'shimcha yozuv: bir necha oy jamlanganda "Yan–Sen". */
+  monthNote?: string | null;
   /** Shkala birligi (oy nomi ostida): "mln so’m", "%". */
   scaleUnit?: string;
   /** Jadval ustunlari nomi: [turi, qiymati]. */
@@ -214,8 +228,8 @@ export function RingStatsCard({
   );
 
   const decoration = useMemo(
-    () => polarDecoration(labels, month, scaleUnit, geometry),
-    [labels, month, scaleUnit, geometry],
+    () => polarDecoration(labels, month, scaleUnit, monthNote, geometry),
+    [labels, month, scaleUnit, monthNote, geometry],
   );
 
   const tableColumns: TableColumn[] = [

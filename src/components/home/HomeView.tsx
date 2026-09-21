@@ -93,7 +93,7 @@ export function HomeView({ data }: { data: HomeData }) {
         <HomeViolationsCard data={data.violations} />
         <SummaryTile
           icon={Cable}
-          label="Umumiy keltirilgan zarar miqdori"
+          label={data.violations.damageLabel}
           value={data.violations.damage ?? "Qoidabuzarliklar yuklanmagan"}
           valueFirst={false}
           actionLabel="Ba’tafsil"

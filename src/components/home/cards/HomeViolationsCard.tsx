@@ -51,9 +51,13 @@ function Stat({ stat, className }: { stat: ViolationStat; className?: string }) 
 }
 
 /**
- * Bosh sahifadagi "Qoidabuzarliklar" (Figma `4126:498`, 486.67x220): tanlangan
- * oydagi qoidabuzarliklar soni va shablondagi tur bo'yicha taqsimot.
+ * Bosh sahifadagi "Qoidabuzarliklar" (Figma `4126:498`, 486.67x220):
+ * qoidabuzarliklar soni va shablondagi tur bo'yicha taqsimot.
  * 16 + 18 + 12 + 73 + 12 + 73 + 16 = 220.
+ *
+ * Bitta oy emas, yil boshidan: tanlangan oyning yilida qoidabuzarliklar
+ * yuklangan barcha oylar birga sanaladi (`home-data.ts`), qamralgan oylar
+ * "Umumiy aniqlangan holatlar" o'rnidagi izohda ko'rsatiladi.
  */
 export function HomeViolationsCard({
   data,
@@ -71,7 +75,7 @@ export function HomeViolationsCard({
         <>
           <Stat
             stat={{
-              label: "Umumiy aniqlangan holatlar",
+              label: data.caption,
               value: data.total.value,
               href: data.total.href,
               icon: ShieldCheck,
