@@ -64,18 +64,23 @@ const TILE_STYLE: Record<
 /**
  * "Obektlar holati" (Figma `4289:353`, 321.78x138).
  *
- * Maketda qutilar "Ko'rikdan o'tkazilgan / o'tkazilishi kerak" deb yozilgan,
- * lekin shablonlarda ko'rik tushunchasi yo'q. Foydalanuvchi qaroriga ko'ra
- * (2026-09-21) o'rniga TP holatidagi TA'MIR sanalari ko'rsatiladi: hisobot
- * sanasigacha "Bajarilgan", keyin "Rejalashtirilgan". Har bir quti ishlar
- * ro'yxatiga (`/works`) olib boradi.
+ * Yozuvlar maketdagidek: "Ko'rikdan o'tkazilgan" / "Ko'rikdan o'tkazilishi
+ * kerak". Shablonlarda ko'rik tushunchasi yo'q, shuning uchun sonlar TP
+ * holatidagi TA'MIR sanalaridan olinadi: hisobot sanasigacha bajarilgan,
+ * undan keyin rejalashtirilgan. Har bir quti ishlar ro'yxatiga (`/works`)
+ * olib boradi.
  *
  * Ikki teng ustun (140.89px, oraliq 8px): izoh 46px, ostida 29px quti.
  */
 function RepairsCard({ repairs }: { repairs: HomeRepairs }) {
   const boxes = [
-    { id: "done", label: "Bajarilgan ta’mir", tone: "text-[#31ae5f]", ...repairs.done },
-    { id: "planned", label: "Rejalashtirilgan ta’mir", tone: "text-accent-amber", ...repairs.planned },
+    { id: "done", label: "Ko’rikdan o’tkazilgan", tone: "text-[#31ae5f]", ...repairs.done },
+    {
+      id: "planned",
+      label: "Ko’rikdan o’tkazilishi kerak",
+      tone: "text-accent-amber",
+      ...repairs.planned,
+    },
   ];
 
   return (
