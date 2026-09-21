@@ -164,11 +164,12 @@ export interface HomeRingData {
  * "Shubhali iste'molchilar" - hisoblagich holati bo'yicha (shablondagi
  * "Holati" ustuni).
  *
- * Maketda "0 / 50 kVt iste'mol" yozilgan, lekin abonent iste'moli kWh da
- * yo'q: hisoblagich koeffitsienti shablonda berilmagan (`domen.md`).
- * Ko'rsatkich farqi ham ishlamaydi - reestr hozircha har oyga bir xil
- * nusxalangan, farq doim 0. Shuning uchun foydalanuvchi qaroriga ko'ra
- * (2026-09-21) shubha belgisi sifatida hisoblagich holati ko'rsatiladi.
+ * Yozuvlar maketdagidek: "0 kVt iste'moldagilar" va "50 kVt dan kam
+ * iste'moldagilar". Abonent iste'moli kWh da yo'q (hisoblagich koeffitsienti
+ * shablonda berilmagan, `domen.md`), ko'rsatkich farqi ham ishlamaydi -
+ * reestr hozircha har oyga bir xil nusxalangan, farq doim 0. Shuning uchun
+ * sonlar hisoblagich holatidan olinadi: aloqaga chiqmayotgan (0 kVt) va
+ * sxemasi o'zgartirilgan (kam iste'mol) abonentlar.
  */
 export interface HomeSuspicious {
   rows: { id: MeterStatus; caption: string; value: string }[];
@@ -178,9 +179,10 @@ export interface HomeSuspicious {
 }
 
 /**
- * "O'rtacha ko'rsatgichlar" - davr YIG'INDILARI (o'rtacha emas: foizlar
- * o'rtachasi olinmaydi, `malumotlar.md` 4.4). Har bir qator - shuncha oyning
- * umumiy oqimi; oyi yetmasa qamralgan oylar soni yoziladi.
+ * "O'rtacha ko'rsatgichlar" - yozuvlar maketdagidek ("Yillik / Chorak /
+ * Oylik o'rtacha iste'mol"), qiymatlar esa davr YIG'INDILARI (o'rtacha emas:
+ * foizlar o'rtachasi olinmaydi, `malumotlar.md` 4.4). Har bir qator -
+ * shuncha oyning umumiy oqimi.
  */
 export interface HomeAverages {
   rows: { id: "year" | "quarter" | "month"; caption: string; value: string }[];
@@ -823,16 +825,18 @@ export async function loadHomeData(period: PeriodInfo, scope: HomeScope): Promis
   );
 
   /*
-   * "Shubhali iste'molchilar" - hisoblagich holati bo'yicha: aloqaga
-   * chiqmayotgan va sxemasi o'zgartirilgan abonentlar. Ikkalasi ham
-   * shablondagi "Holati" ustunidan (maketdagi kVt chegaralari emas -
-   * `HomeSuspicious` izohiga qarang).
+   * "Shubhali iste'molchilar" - yozuvlar maketdagi kVt chegaralari, sonlar
+   * esa shablondagi "Holati" ustunidan: aloqaga chiqmayotgan va sxemasi
+   * o'zgartirilgan abonentlar (`HomeSuspicious` izohiga qarang).
    */
-  const SUSPICIOUS_STATUSES: readonly MeterStatus[] = ["NOT_RESPONDING", "SCHEME_CHANGED"];
+  const SUSPICIOUS_ROWS: readonly { status: MeterStatus; caption: string }[] = [
+    { status: "NOT_RESPONDING", caption: "0 kVt iste’moldagilar" },
+    { status: "SCHEME_CHANGED", caption: "50 kVt dan kam iste’moldagilar" },
+  ];
   const suspicious: HomeSuspicious = {
-    rows: SUSPICIOUS_STATUSES.map((status) => ({
+    rows: SUSPICIOUS_ROWS.map(({ status, caption }) => ({
       id: status,
-      caption: METER_STATUS_LABEL[status],
+      caption,
       value: list.uploaded ? count(list.byStatus[status]) : NOT_UPLOADED,
     })),
     note: list.uploaded ? null : "Abonentlar ro’yxati yuklanmagan",
@@ -840,10 +844,10 @@ export async function loadHomeData(period: PeriodInfo, scope: HomeScope): Promis
   };
 
   /*
-   * "O'rtacha ko'rsatgichlar" - aslida davr YIG'INDILARI (foizlar o'rtachasi
-   * olinmaydi, `malumotlar.md` 4.4). Oyi yetmasa - nechta oy qamralgani
-   * izohda; maketdagi "Kunlik o'rtacha" va "Yuqori iste'mol vaqti" plitkalari
-   * olib tashlandi (kunlik va soatlik ma'lumot manbasi yo'q).
+   * "O'rtacha ko'rsatgichlar" - qiymatlar aslida davr YIG'INDILARI (foizlar
+   * o'rtachasi olinmaydi, `malumotlar.md` 4.4). Maketdagi "Kunlik o'rtacha
+   * istemol" va "Yuqori iste'mol vaqti" plitkalari olib tashlandi (kunlik va
+   * soatlik ma'lumot manbasi yo'q).
    */
   const windowRow = (id: "year" | "quarter" | "month", size: number, title: string) => {
     const points = series.filter((point) => point.hasData).slice(-size);
@@ -856,9 +860,9 @@ export async function loadHomeData(period: PeriodInfo, scope: HomeScope): Promis
   };
   const averages: HomeAverages = {
     rows: [
-      windowRow("year", 12, "Yillik umumiy oqim"),
-      windowRow("quarter", 3, "Choraklik umumiy oqim"),
-      windowRow("month", 1, "Oylik umumiy oqim"),
+      windowRow("year", 12, "Yillik o’rtacha iste’mol"),
+      windowRow("quarter", 3, "Chorak o’rtacha iste’mol"),
+      windowRow("month", 1, "Oylik o’rtacha iste’mol"),
     ],
   };
 

@@ -51,7 +51,7 @@ const AVERAGE_STYLE: Record<string, { icon: GlyphIcon; tile: string }> = {
  *   402  Ob'ektlar ustuni (4) | Interaktiv xarita (10) | Shubhali + Mobil (4)
  *   336  Qoidabuzarlik + Zarar (6) | Hisoblagichlar (4) | Murojaatlar (4) | O'rtacha (4)
  *   298  Uchta reyting (6 + 6 + 6)
- *   298  Oqim dinamikasi (6) | Rejalashtirilgan ishlar (8) | Hisobotlar (4)
+ *   298  Foydali oqim dinamikasi (6) | Rejalashtirilgan ishlar (8) | Hisobotlar (4)
  *
  * Jami 1530 + 4x8 = 1562px, ya'ni 1064px lik ish maydoniga sig'maydi va
  * sahifa VERTIKAL SKROLL qilinadi.
@@ -149,7 +149,7 @@ export function HomeView({ data }: { data: HomeData }) {
       {/* 5-qator */}
       <ConsumptionDynamicsCard
         className="col-span-6"
-        title="Oqim dinamikasi"
+        title="Foydali oqim dinamikasi"
         months={data.dynamics}
       />
       {data.plannedWorks.uploaded ? (
