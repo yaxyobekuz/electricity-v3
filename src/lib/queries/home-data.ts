@@ -156,8 +156,6 @@ export interface HomeRingData {
   /** Shablon yuklanmagan bo'lsa - bo'sh holat matni. */
   empty: string | null;
   month: string;
-  /** Diagrammadagi yorliqning 2-qatori: bir necha oy jamlanganda "Yan–Sen". */
-  months: string | null;
   rings: HomeRing[];
   summary: { label: string; value: string } | null;
 }
@@ -586,12 +584,10 @@ function ringData(
   rings: { id: string; label: string; count: number }[],
   total: number,
   summary: string | null,
-  months: string | null = null,
 ): HomeRingData {
   return {
     empty: uploaded ? null : empty,
     month,
-    months,
     rings: rings.map((ring) => ({
       id: ring.id,
       label: ring.label,
@@ -824,7 +820,6 @@ export async function loadHomeData(period: PeriodInfo, scope: HomeScope): Promis
     })),
     appealsYear.total,
     "Umumiy murojaatlar",
-    null,
   );
 
   /*

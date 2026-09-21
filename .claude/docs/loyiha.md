@@ -39,6 +39,9 @@ Asosiy qism - **admin panel**:
 | Abonent rasmlari | Abonent va hisoblagich rasmi abonent sahifasidan **qo'lda** yuklanadi - "faqat shablon / faqat import" qoidasidan yagona istisno (`malumotlar.md` 5.2). Autentifikatsiya qo'shilguncha ochiq | 2026-09-19 |
 | Passport / PINFL | Abonent sahifasida qisman yashirilgan holda ko'rsatiladi ("AB*****67"); ro'yxat va qidiruvda - yo'q | 2026-09-19 |
 | **Dashboard yangi maketi** | Figma `4126:47` yangilandi: KPI kartalari yillik son + "Bu oy / O'tgan oy" qatorlari, Abonentlar va Qarzdorlik aholi/yuridik kesimida, yon panelda Sozlamalar va sun'iy intellekt kartasi, o'ng ustunda mobil ilova kartasi | 2026-09-21 |
+| Dashboarddan olib tashlandi | Maketda yo'q: **Filtratsiya** va **Tezkor ko'rsatgichlar** kartalari | 2026-09-21 |
+| Kartalardagi davr izohlari | Maketda yo'q: "(Yan–Avg)", "(8 oy)" kabi qo'shimchalar yozilmaydi - yozuvlar aynan maketdagidek ("Umumiy aniqlangan holatlar", "Yillik") | 2026-09-21 |
+| Ob'ekt plitkalari | Maketdagi 48px svgrepo illyustratsiyalari eksport qilindi (`public/home/obj-*.svg`, `damage.svg`) - lucide glifi o'rniga | 2026-09-21 |
 | Maketdagi 30 kunlik grafik | Kunlik ma'lumot manbasi yo'q (`malumotlar.md` 8-bo'lim). Foydalanuvchi qarori: o'rniga **12 oylik** dinamika ko'rsatiladi (`getScopeSeries`) | 2026-09-21 |
 | Maketdagi "Kunlik" yo'qotish | Manbasi yo'q - olib tashlandi; "Yo'qotish darajasi" kartasida Yillik va Oylik qoladi | 2026-09-21 |
 | "Obektlar holati" kartasi | Maketda "Ko'rikdan o'tkazilgan" - shablonda ko'rik yo'q. Foydalanuvchi qarori: **ta'mir sanalari** bilan (Bajarilgan / Rejalashtirilgan) | 2026-09-21 |
