@@ -258,6 +258,13 @@ export function restoreHint(log: string): string | null {
       "--no-privileges | gzip > baza.sql.gz` - SQL fayl versiyalarga bog’liq emas."
     );
   }
+  if (/unrecognized configuration parameter/i.test(log)) {
+    return (
+      "SQL fayl yangiroq PostgreSQL da olingan va shu serverda yo’q sozlamaga murojaat qilyapti. " +
+      "Nusxa olayotganda o’sha `SET ...` satrini olib tashlang (masalan PostgreSQL 17 dan 16 ga: " +
+      "`SET transaction_timeout = 0;`)."
+    );
+  }
   if (/could not read from input file|premature end|corrupt/i.test(log)) {
     return "Fayl to’liq yuklanmagan yoki buzilgan - nusxani qaytadan oling va yana urinib ko’ring.";
   }

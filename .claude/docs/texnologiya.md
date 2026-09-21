@@ -89,6 +89,23 @@ format fayl mazmunidan aniqlanadi, kengaytmaga qaralmaydi. Chegara 2 GB.
 Tiklash bitta tranzaksiyada ketadi: xato bo'lsa baza eski holida qoladi
 (1,1 GB baza / 56 MB arxiv - lokal sinovda ~20 soniya).
 
+**Versiyalar mos kelmasa** (2026-09-21: ish stoli PostgreSQL 17.10, server
+Ubuntu 24.04 da PostgreSQL 16): `-Fc` arxivi ishlamaydi - eski `pg_restore`
+1.16 formatini o'qiy olmaydi (`unsupported version (1.16) in file header`).
+Bunda oddiy SQL oling va PostgreSQL 17 ga xos satrlarni olib tashlang:
+
+```bash
+pg_dump "$DATABASE_URL" --no-owner --no-privileges \
+  | sed -e '/^SET transaction_timeout = 0;$/d' \
+        -e '/^[\]restrict /d' -e '/^[\]unrestrict /d' \
+  | gzip > baza.sql.gz
+```
+
+`transaction_timeout` faqat 17 da bor; `\restrict` / `\unrestrict` esa psql
+ning yangi minor versiyalarida (17.6 / 16.10 dan) paydo bo'lgan. Qolgan
+hammasi 16 bilan mos - sxemada faqat `CREATE TABLE/TYPE/INDEX`,
+`ALTER TABLE ONLY` va `COPY` bor.
+
 Talab: serverda `pg_restore` va `psql` bo'lsin. PATH da bo'lmasa `.env` da
 `PG_BIN` ni ko'rsating (Windows: `C:\Program Files\PostgreSQL\17\bin`).
 Sxema migratsiyalari (`_prisma_migrations`) dump bilan birga ko'chadi -
