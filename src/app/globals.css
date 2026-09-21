@@ -36,6 +36,8 @@
   --color-accent-brown: #ac7f5e;
   --color-accent-amber: #f59e0b;
   --color-accent-teal: #14b8a6;
+  /* "Yo'qotish darajasi" kartasining bosiq qizili (nishon va tabletkalar). */
+  --color-accent-rose: #cd7575;
 
   /* Aksent kartalarining yumshoq foni */
   --color-tint-blue: #eff6ff;
@@ -46,6 +48,7 @@
   --color-tint-brown: #fff5ef;
   --color-tint-amber: #fff7ed;
   --color-tint-teal: #effcfa;
+  --color-tint-rose: #ffefef;
 
   /* Trend (o'sish yomon, kamayish yaxshi - yo'qotish konteksti) */
   --color-trend-up: #cf4646;

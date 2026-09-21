@@ -470,35 +470,30 @@ function buildKpis(
   );
 
   /*
-   * Maketdagi tartib (Figma `4257:169`): birinchi va eng katta - Yillik
-   * (yil boshidan), ostida joriy oy va o'tgan oy. Maketdagi uchinchi
-   * "Kunlik" tabletkasi yo'q: kunlik ma'lumot manbasi yo'q
-   * (`malumotlar.md` 8-bo'lim).
+   * Maketdagi tartib (Figma `4257:169`): uchta tabletka - "Bu oy" (eng
+   * katta), "O'tgan oy", "Yillik o'rtacha" (yil boshidan). Yorliqlar
+   * maketdagidek qat'iy: qavsli izoh yoki oy nomi qo'shilmaydi.
    */
   const lossRates: HomeLossRate[] = [
-    yearPoints.length > 0
-      ? {
-          id: "year",
-          value: percent(yearPercent),
-          unit: "Yillik",
-          large: true,
-        }
-      : { id: "year", value: missingNow, unit: "Yillik", large: false },
     {
       id: "current",
       value: energyNow ? percent(energyNow.lossPercent) : missingNow,
-      unit: monthName(period.month),
+      unit: "Bu oy",
+      large: true,
+    },
+    {
+      id: "previous",
+      value: energyBefore ? percent(energyBefore.lossPercent) : missingBefore,
+      unit: "O’tgan oy",
+      large: false,
+    },
+    {
+      id: "year",
+      value: yearPoints.length > 0 ? percent(yearPercent) : missingNow,
+      unit: "Yillik o’rtacha",
       large: false,
     },
   ];
-  if (previousPeriod) {
-    lossRates.push({
-      id: "previous",
-      value: energyBefore ? percent(energyBefore.lossPercent) : missingBefore,
-      unit: `${monthName(previousPeriod.month)} (o’tgan oy)`,
-      large: false,
-    });
-  }
 
   const list = current.subscriberList;
   const subscribers: HomeCountKpi = current.subscribers

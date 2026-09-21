@@ -265,28 +265,30 @@ export function HomeKpiRow({ kpis }: { kpis: HomeKpis }) {
         className="col-span-3"
         title="Yo’qotish darajasi"
         icon={Percent}
-        tint="bg-tint-indigo"
-        accent="bg-accent-indigo"
+        tint="bg-tint-rose"
+        accent="bg-accent-rose"
       >
         {/*
           * Maketda har bir daraja - to'q qizil tabletka: oq qalin son va
-          * yarim shaffof oq davr nomi, markazda.
+          * yarim shaffof oq davr nomi ("Bu oy", "O'tgan oy", "Yillik
+          * o'rtacha"), markazda. Yorliqqa qavsli izoh yoki oy nomi
+          * qo'shilmaydi - maketdagidek qat'iy.
           */}
         <div className="flex shrink-0 flex-col gap-1 pt-1">
           {kpis.lossRates.map((rate) => (
             <span
               key={rate.id}
-              className="flex min-w-0 items-center justify-center gap-2 rounded-full bg-[#cd7575] px-3 py-1.5"
+              className="flex min-w-0 items-center justify-center gap-2 rounded-full bg-accent-rose px-3 py-1.5"
             >
               <span
                 className={cn(
-                  "shrink-0 font-bold text-white",
+                  "min-w-0 truncate font-bold text-white",
                   rate.large ? "text-2xl leading-[31px]" : "text-base leading-[21px]",
                 )}
               >
                 {rate.value}
               </span>
-              <span className="truncate text-sm leading-[18px] font-medium text-white/70">
+              <span className="shrink-0 text-sm leading-[18px] font-medium text-white/70">
                 {rate.unit}
               </span>
             </span>
