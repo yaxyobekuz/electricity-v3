@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 import { type GlyphIcon, Icon } from "@/components/ui/Icon";
@@ -13,12 +14,13 @@ import { cn } from "@/lib/ui/cn";
  * Maketda chap pastki burchakda karta chetidan chiqib turgan 106px aylana
  * ("Rectangle 18", tepadan 27px) bor - u bezak, karta chegarasida kesiladi.
  *
- * DIQQAT: maketdagi 48px belgilar svgrepo illyustratsiyalari. Figma MCP
- * kvotasi tugagani uchun ular eksport qilinmadi - hozircha shu joyda dizayn
- * tizimi uslubidagi lucide glifi turadi (`icon`).
+ * Maketdagi 48px belgi svgrepo illyustratsiyasi bo'lsa `image` bilan
+ * beriladi (masalan zarar kartasi); berilmasa - dizayn tizimi uslubidagi
+ * lucide glifi (`icon`) rangli kvadrat ichida.
  */
 export function SummaryTile({
   icon,
+  image,
   value,
   label,
   valueFirst = true,
@@ -30,6 +32,8 @@ export function SummaryTile({
   className,
 }: {
   icon: GlyphIcon;
+  /** Maketdagi 48px illyustratsiya (`public/home/...`); berilsa `icon` o'rniga. */
+  image?: string;
   /** Qalin qator: "4ta", "635,1 mln so'm". */
   value: string;
   /** Izoh qatori: "Podstansiyalar". */
@@ -70,11 +74,19 @@ export function SummaryTile({
 
       <div className="relative flex min-w-0 flex-1 items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <span
-            className={cn("flex size-12 shrink-0 items-center justify-center rounded-xl", tint, accent)}
-          >
-            <Icon icon={icon} size={28} />
-          </span>
+          {image ? (
+            <Image src={image} alt="" width={48} height={48} className="size-12 shrink-0" />
+          ) : (
+            <span
+              className={cn(
+                "flex size-12 shrink-0 items-center justify-center rounded-xl",
+                tint,
+                accent,
+              )}
+            >
+              <Icon icon={icon} size={28} />
+            </span>
+          )}
           <div className="flex min-w-0 flex-col gap-1">
             {valueFirst ? valueNode : labelNode}
             {valueFirst ? labelNode : valueNode}

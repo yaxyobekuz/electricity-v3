@@ -17,7 +17,15 @@ interface ViolationStat {
   tone: string;
 }
 
-/** Shablondagi "Turi" ustuni: Yuridik / Jismoniy / Aybisiz. */
+/**
+ * Shablondagi "Turi" ustuni: Yuridik / Jismoniy / Aybisiz.
+ *
+ * Maketda uchinchi ustun "Istemolchi aybisiz" deb yozilgan - kartada shu
+ * yozuv ishlatiladi (`CARD_LABEL`), lekin `VIOLATOR_TYPE_LABEL` ga tegilmaydi:
+ * u import paytida Excel katagi bilan solishtiriladi (`import/templates.ts`).
+ */
+const CARD_LABEL: Partial<Record<ViolatorType, string>> = { INNOCENT: "Istemolchi aybisiz" };
+
 const TYPE_STYLE: Record<ViolatorType, { icon: GlyphIcon; tone: string }> = {
   LEGAL: { icon: FileExclamationPoint, tone: "text-accent-amber" },
   INDIVIDUAL: { icon: Gavel, tone: "text-accent-red" },
@@ -85,7 +93,10 @@ export function HomeViolationsCard({
           />
           <div className="mt-3 grid shrink-0 grid-cols-3 gap-2">
             {data.types.map((type) => (
-              <Stat key={type.id} stat={{ ...type, ...TYPE_STYLE[type.id] }} />
+              <Stat
+                key={type.id}
+                stat={{ ...type, label: CARD_LABEL[type.id] ?? type.label, ...TYPE_STYLE[type.id] }}
+              />
             ))}
           </div>
         </>

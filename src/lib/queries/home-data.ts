@@ -23,7 +23,6 @@ import {
   formatDate,
   money,
   monthName,
-  monthShort,
   num,
   parseMonthKey,
   percent,
@@ -79,6 +78,8 @@ export interface HomeFlowKpi {
   unit: string;
   /** Joriy oyda ma'lumot yo'q bo'lsa izoh ("Podstansiyalar yuklanmagan"). */
   note: string | null;
+  /** "Bu oy: 19,1 ming kWh" - katta son yillik bo'lgani uchun joriy oy alohida. */
+  currentMonth: string;
   /** "O’tgan oy: 2,2 mln kWh"; o'tgan oy bazada yo'q - null. */
   previous: string | null;
   trend: HomeTrend | null;
@@ -159,6 +160,32 @@ export interface HomeRingData {
   months: string | null;
   rings: HomeRing[];
   summary: { label: string; value: string } | null;
+}
+
+/**
+ * "Shubhali iste'molchilar" - hisoblagich holati bo'yicha (shablondagi
+ * "Holati" ustuni).
+ *
+ * Maketda "0 / 50 kVt iste'mol" yozilgan, lekin abonent iste'moli kWh da
+ * yo'q: hisoblagich koeffitsienti shablonda berilmagan (`domen.md`).
+ * Ko'rsatkich farqi ham ishlamaydi - reestr hozircha har oyga bir xil
+ * nusxalangan, farq doim 0. Shuning uchun foydalanuvchi qaroriga ko'ra
+ * (2026-09-21) shubha belgisi sifatida hisoblagich holati ko'rsatiladi.
+ */
+export interface HomeSuspicious {
+  rows: { id: MeterStatus; caption: string; value: string }[];
+  /** Ro'yxat yuklanmagan bo'lsa - sabab. */
+  note: string | null;
+  href: string;
+}
+
+/**
+ * "O'rtacha ko'rsatgichlar" - davr YIG'INDILARI (o'rtacha emas: foizlar
+ * o'rtachasi olinmaydi, `malumotlar.md` 4.4). Har bir qator - shuncha oyning
+ * umumiy oqimi; oyi yetmasa qamralgan oylar soni yoziladi.
+ */
+export interface HomeAverages {
+  rows: { id: "year" | "quarter" | "month"; caption: string; value: string }[];
 }
 
 export interface HomeQuickMetric {
@@ -245,6 +272,8 @@ export interface HomeData {
   violations: HomeViolations;
   meters: HomeRingData;
   appeals: HomeRingData;
+  suspicious: HomeSuspicious;
+  averages: HomeAverages;
   quickMetrics: HomeQuickMetric[];
   topBars: HomeTopBars[];
   dynamics: DynamicsMonth[];
@@ -362,23 +391,6 @@ function energyMetrics(row: { totalKwh: number; usefulKwh: number; lossKwh: numb
   };
 }
 
-/** "Iyl–Sen" (uzluksiz oylar) yoki "Iyl, Sen" (oraliqda bo'shliq bor). */
-function monthsCovered(points: readonly { key: string; label: string }[]): string {
-  if (points.length === 0) return EMPTY;
-  if (points.length === 1) return points[0].label;
-  const first = parseMonthKey(points[0].key);
-  const last = parseMonthKey(points[points.length - 1].key);
-  const span = first && last ? (last.getUTCFullYear() - first.getUTCFullYear()) * 12 + last.getUTCMonth() - first.getUTCMonth() + 1 : 0;
-  return span === points.length
-    ? `${points[0].label}–${points[points.length - 1].label}`
-    : points.map((point) => point.label).join(", ");
-}
-
-/** Davrlar bo'yicha xuddi shu yozuv: `PeriodInfo` da qisqa oy nomi yo'q, u `month` dan olinadi. */
-function monthsLabel(periods: readonly PeriodInfo[]): string {
-  return monthsCovered(periods.map((item) => ({ key: item.key, label: monthShort(item.month) })));
-}
-
 /** "517 ta · 20,1%" - ulush hisoblanmasa faqat son. */
 function countWithShare(part: number, whole: number): string {
   const ratio = share(part, whole);
@@ -414,45 +426,68 @@ function buildKpis(
     { id: "loss", title: "Yo’qotish", key: "lossKwh", point: (p: ScopeSeriesPoint) => p.lossKwh },
   ] as const;
 
+  // Qiymati yo'q qatorda son o'rniga KPI qatorlaridagi bilan bir xil izoh (kichik shriftda).
+  const missingNow = current.uploads[energyTemplate] ? "ma’lumot yo’q" : "yuklanmagan";
+
+  // Yil boshidan: shu yildagi, ma'lumoti bor oylar.
+  const year = new Date(period.month).getUTCFullYear();
+  const yearPoints = series.filter(
+    (point) => point.hasData && parseMonthKey(point.key)?.getUTCFullYear() === year,
+  );
+
+  /*
+   * Maketda katta son - YILLIK (yil boshidan yig'indi), ostida joriy va
+   * o'tgan oy alohida qatorlarda. Yig'indi faqat ma'lumoti bor oylardan;
+   * birorta oy yo'q bo'lsa - joriy oyning o'zi ko'rsatiladi.
+   */
   const flows = FLOWS.map((flow): HomeFlowKpi => {
     const value = energyNow ? energyNow[flow.key] : null;
     const before = energyBefore ? energyBefore[flow.key] : null;
+    const yearValue = yearPoints.length > 0 ? sum(yearPoints.map(flow.point)) : null;
     /*
      * Millionlarda 2 xona (`energy()` bilan bir xil): tuman bo'yicha Umumiy
      * va Foydali oqim faqat ~2% yo'qotishga farq qiladi, 1 xonada ikkalasi
      * bir xil son bo'lib ko'rinadi.
      */
-    const figure = scaled(value, "kWh", Math.abs(value ?? 0) >= 1_000_000 ? 2 : 1);
+    const figure = scaled(yearValue, "kWh", Math.abs(yearValue ?? 0) >= 1_000_000 ? 2 : 1);
     return {
       id: flow.id,
       title: flow.title,
       value: figure.value,
-      unit: figure.unit,
+      // Maketdagi "ming kWh yillik" - birlikdan keyin davr izohi.
+      unit: yearValue != null ? `${figure.unit} yillik` : figure.unit,
       note: energyNow ? null : missingEnergy,
+      currentMonth: `Bu oy: ${value != null ? energy(value) : missingNow}`,
       previous: previousPeriod ? `O’tgan oy: ${before != null ? energy(before) : missingBefore}` : null,
       trend: previousPeriod ? trendOf(value, before, flow.id === "loss") : null,
       ...barsOf(series, flow.point),
     };
   });
-
-  // Yil boshidan: shu yildagi, ma'lumoti bor oylar - Σ yo'qotish / Σ umumiy oqim.
-  const year = new Date(period.month).getUTCFullYear();
-  const yearPoints = series.filter(
-    (point) => point.hasData && parseMonthKey(point.key)?.getUTCFullYear() === year,
-  );
   const yearPercent = lossPercent(
     sum(yearPoints.map((point) => point.totalKwh)),
     sum(yearPoints.map((point) => point.lossKwh)),
   );
 
-  // Qiymati yo'q qatorda son o'rniga KPI qatorlaridagi bilan bir xil izoh (kichik shriftda).
-  const missingNow = current.uploads[energyTemplate] ? "ma’lumot yo’q" : "yuklanmagan";
+  /*
+   * Maketdagi tartib (Figma `4257:169`): birinchi va eng katta - Yillik
+   * (yil boshidan), ostida joriy oy va o'tgan oy. Maketdagi uchinchi
+   * "Kunlik" tabletkasi yo'q: kunlik ma'lumot manbasi yo'q
+   * (`malumotlar.md` 8-bo'lim).
+   */
   const lossRates: HomeLossRate[] = [
+    yearPoints.length > 0
+      ? {
+          id: "year",
+          value: percent(yearPercent),
+          unit: "Yillik",
+          large: true,
+        }
+      : { id: "year", value: missingNow, unit: "Yillik", large: false },
     {
       id: "current",
       value: energyNow ? percent(energyNow.lossPercent) : missingNow,
       unit: monthName(period.month),
-      large: energyNow != null,
+      large: false,
     },
   ];
   if (previousPeriod) {
@@ -463,11 +498,6 @@ function buildKpis(
       large: false,
     });
   }
-  lossRates.push(
-    yearPoints.length > 0
-      ? { id: "year", value: percent(yearPercent), unit: `Yil boshidan (${monthsCovered(yearPoints)})`, large: false }
-      : { id: "year", value: missingNow, unit: "Yil boshidan", large: false },
-  );
 
   const list = current.subscriberList;
   const subscribers: HomeCountKpi = current.subscribers
@@ -755,12 +785,8 @@ export async function loadHomeData(period: PeriodInfo, scope: HomeScope): Promis
       href: scoped("/violations", { type }),
     })),
     damage: violationsMonths > 0 ? money(violationsYear.damageUzs) : null,
-    caption:
-      violationsMonths > 0
-        ? `Yil boshidan (${monthsLabel(violationsYear.periods)})`
-        : "Umumiy aniqlangan holatlar",
-    damageLabel:
-      violationsMonths > 0 ? "Yil boshidan keltirilgan zarar" : "Umumiy keltirilgan zarar miqdori",
+    caption: "Umumiy aniqlangan holatlar",
+    damageLabel: "Umumiy keltirilgan zarar miqdori",
     href: scoped("/violations"),
   };
 
@@ -783,12 +809,12 @@ export async function loadHomeData(period: PeriodInfo, scope: HomeScope): Promis
   );
   /*
    * Murojaatlar - yil boshidan: tanlangan oyning yilida murojaatlar
-   * yuklangan barcha oylar birga sanaladi (bitta oy emas). Kartadagi
-   * yorliq - shu yil, ostida esa qamralgan oylar ("Yan–Sen").
+   * yuklangan barcha oylar birga sanaladi (bitta oy emas). Yorliqlar
+   * maketdagidek qoladi (davr izohi qo'shilmaydi).
    */
   const appealsMonths = appealsYear.periods.length;
   const appeals = ringData(
-    appealsMonths > 0 ? `${new Date(period.month).getUTCFullYear()}-yil` : month,
+    month,
     appealsMonths > 0,
     "Murojaatlar yuklanmagan",
     APPEAL_STATUS_ORDER.map((status: AppealStatus) => ({
@@ -797,9 +823,49 @@ export async function loadHomeData(period: PeriodInfo, scope: HomeScope): Promis
       count: appealsYear.byStatus[status],
     })),
     appealsYear.total,
-    appealsMonths > 0 ? "Yil boshidan" : "Umumiy murojaatlar",
-    appealsMonths > 0 ? monthsLabel(appealsYear.periods) : null,
+    "Umumiy murojaatlar",
+    null,
   );
+
+  /*
+   * "Shubhali iste'molchilar" - hisoblagich holati bo'yicha: aloqaga
+   * chiqmayotgan va sxemasi o'zgartirilgan abonentlar. Ikkalasi ham
+   * shablondagi "Holati" ustunidan (maketdagi kVt chegaralari emas -
+   * `HomeSuspicious` izohiga qarang).
+   */
+  const SUSPICIOUS_STATUSES: readonly MeterStatus[] = ["NOT_RESPONDING", "SCHEME_CHANGED"];
+  const suspicious: HomeSuspicious = {
+    rows: SUSPICIOUS_STATUSES.map((status) => ({
+      id: status,
+      caption: METER_STATUS_LABEL[status],
+      value: list.uploaded ? count(list.byStatus[status]) : NOT_UPLOADED,
+    })),
+    note: list.uploaded ? null : "Abonentlar ro’yxati yuklanmagan",
+    href: scoped("/subscribers"),
+  };
+
+  /*
+   * "O'rtacha ko'rsatgichlar" - aslida davr YIG'INDILARI (foizlar o'rtachasi
+   * olinmaydi, `malumotlar.md` 4.4). Oyi yetmasa - nechta oy qamralgani
+   * izohda; maketdagi "Kunlik o'rtacha" va "Yuqori iste'mol vaqti" plitkalari
+   * olib tashlandi (kunlik va soatlik ma'lumot manbasi yo'q).
+   */
+  const windowRow = (id: "year" | "quarter" | "month", size: number, title: string) => {
+    const points = series.filter((point) => point.hasData).slice(-size);
+    const covered = points.length;
+    return {
+      id,
+      caption: title,
+      value: covered > 0 ? energy(sum(points.map((point) => point.totalKwh))) : NOT_UPLOADED,
+    };
+  };
+  const averages: HomeAverages = {
+    rows: [
+      windowRow("year", 12, "Yillik umumiy oqim"),
+      windowRow("quarter", 3, "Choraklik umumiy oqim"),
+      windowRow("month", 1, "Oylik umumiy oqim"),
+    ],
+  };
 
   // --- Tezkor ko'rsatkichlar (faqat hisoblangan) -----------------------------
   const quickMetrics: HomeQuickMetric[] = [
@@ -1011,6 +1077,8 @@ export async function loadHomeData(period: PeriodInfo, scope: HomeScope): Promis
     violations,
     meters,
     appeals,
+    suspicious,
+    averages,
     quickMetrics,
     topBars,
     dynamics: series

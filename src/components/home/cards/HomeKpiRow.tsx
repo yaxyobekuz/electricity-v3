@@ -22,6 +22,9 @@ import { cn } from "@/lib/ui/cn";
  * Qator balandliklari maketdan: sarlavha 32, qiymat 41, matn qatorlari 26,
  * diagramma 39. 16 + 32 + 41 + 26*2 + 39 + 16 = 196.
  *
+ * Oqim kartalarida uchta matn qatori bor ("Bu oy", "O'tgan oy", o'zgarish),
+ * shuning uchun diagramma qat'iy emas - qolgan joyni egallaydi (24..39px).
+ *
  * Barcha qiymatlar `loadHomeData` dan tayyor matn sifatida keladi. Bo'laklar
  * (`KpiShell`, `KpiFigure`, `KpiLines`, `KpiBars`) abonent sahifasining KPI
  * qatorida ham ishlatiladi - dizayn bir xil qolsin.
@@ -172,7 +175,7 @@ function MiniBars({ values, barClassName }: { values: readonly number[]; barClas
 /** Oylik ustunlar (39px trek) va o'ngda "<n> oy" yorlig'i - kartaning pastida. */
 export function KpiBars({ values, accent, label }: { values: readonly number[]; accent: string; label: string }) {
   return (
-    <div className="mt-auto flex h-[39px] shrink-0 items-end gap-2">
+    <div className="mt-auto flex max-h-[39px] min-h-6 flex-1 items-end gap-2">
       <MiniBars values={values} barClassName={accent} />
       <span className="shrink-0 text-sm leading-[18px] text-ink-muted">{label}</span>
     </div>
@@ -188,6 +191,7 @@ const FLOW_STYLE: Record<HomeFlowKpi["id"], { icon: GlyphIcon; tint: string; acc
 function flowLines(flow: HomeFlowKpi): KpiLine[] {
   const lines: KpiLine[] = [];
   if (flow.note) lines.push({ id: "note", text: flow.note });
+  lines.push({ id: "currentMonth", text: flow.currentMonth });
   if (flow.previous) lines.push({ id: "previous", text: flow.previous });
   if (flow.trend) {
     lines.push({
@@ -264,16 +268,28 @@ export function HomeKpiRow({ kpis }: { kpis: HomeKpis }) {
         tint="bg-tint-indigo"
         accent="bg-accent-indigo"
       >
+        {/*
+          * Maketda har bir daraja - to'q qizil tabletka: oq qalin son va
+          * yarim shaffof oq davr nomi, markazda.
+          */}
         <div className="flex shrink-0 flex-col gap-1 pt-1">
           {kpis.lossRates.map((rate) => (
-            <KpiFigure
+            <span
               key={rate.id}
-              value={rate.value}
-              unit={rate.unit}
-              // Birinchi qator 24px, qolganlari 16px (21px qator qutisi).
-              valueClassName={rate.large ? "text-2xl leading-[31px]" : "text-base leading-[21px]"}
-              className="justify-center gap-2"
-            />
+              className="flex min-w-0 items-center justify-center gap-2 rounded-full bg-[#cd7575] px-3 py-1.5"
+            >
+              <span
+                className={cn(
+                  "shrink-0 font-bold text-white",
+                  rate.large ? "text-2xl leading-[31px]" : "text-base leading-[21px]",
+                )}
+              >
+                {rate.value}
+              </span>
+              <span className="truncate text-sm leading-[18px] font-medium text-white/70">
+                {rate.unit}
+              </span>
+            </span>
           ))}
         </div>
       </KpiShell>

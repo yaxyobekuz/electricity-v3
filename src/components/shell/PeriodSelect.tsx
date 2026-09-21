@@ -7,7 +7,6 @@ import { useOptimistic, useTransition } from "react";
 import { selectPeriod } from "@/app/actions/period";
 import { Icon } from "@/components/ui/Icon";
 import { SelectField, type SelectOption } from "@/components/ui/SelectField";
-import { formatDate } from "@/lib/format";
 import type { PeriodInfo } from "@/lib/period";
 import { cn } from "@/lib/ui/cn";
 
@@ -48,7 +47,7 @@ export function PeriodSelect({
   }
 
   return (
-    <div className="flex shrink-0 flex-col gap-1 pb-2">
+    <div className="flex shrink-0 flex-col pb-2">
       <SelectField
         value={current.key}
         options={options}
@@ -56,9 +55,6 @@ export function PeriodSelect({
         onChange={choose}
         className={cn("w-full", pending && "opacity-70")}
       />
-      <p className="truncate px-3 text-xs text-ink-soft">
-        {formatDate(current.reportDate)} holatiga
-      </p>
     </div>
   );
 }

@@ -241,6 +241,11 @@ fider yoki TP (`Scope`).
 | Ma'sul xodim (obyekt kartasi) | shu holatning `staffId` | - |
 | Xodimlar ro'yxati | shu oy holatlari/yozuvlarida uchragan `staffId` lar | - |
 | Ta'mir ishlari | `TransformerSnapshot.currentRepairDate` ("Joriy ta’mir"), `overhaulDate` ("To’la ta’mir") | sana ≤ `Period.reportDate` -> "Bajarilgan", aks holda "Rejalashtirilgan" |
+| Oqim KPI: yillik son | Σ shu yildagi, ma'lumoti bor oylar (`getScopeSeries`) | katta son - yillik, ostida "Bu oy" va "O'tgan oy" |
+| Yo'qotish darajasi | Yillik (yil boshidan), joriy oy, o'tgan oy | maketdagi "Kunlik" yo'q - kunlik manba yo'q (8-bo'lim) |
+| "Shubhali iste'molchilar" | `SubscriberSnapshot.meterStatus`: "Aloqaga chiqmayotgan", "Sxemasi o'zgartirilgan" | `transformer.*` |
+| "O'rtacha ko'rsatgichlar" | Σ umumiy oqim: 12 / 3 / 1 oy (`getScopeSeries`) | **o'rtacha emas, yig'indi**; oyi yetmasa izohda qamralgan oy soni |
+| "Obektlar holati" | Ta'mir ishlari bilan bir xil (pastdagi qator) | maketdagi "ko'rik" tushunchasi shablonda yo'q |
 | "O'tgan oy" | xuddi shu funksiya, `month - 1` davri | yo'q bo'lsa - ko'rsatilmaydi |
 | Abonent: xizmat / shartnoma muddati, to'lovdan beri | sana va `Period.reportDate` farqi (`daysBetween`, `monthsBetween`) | - |
 | Abonent: passport, PINFL | `SubscriberSnapshot`, faqat qisman yashirilgan (`maskIdentifier`: "AB*****67", "3***********67"; manbada yashirilgan "AB*" - o'zgarishsiz). To'liq qiymat bazadan chiqmaydi | - |

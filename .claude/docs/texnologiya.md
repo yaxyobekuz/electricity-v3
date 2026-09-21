@@ -67,6 +67,43 @@ Baza `electricity_v3`, foydalanuvchi `yaxyobek` (superuser).
 /Applications/Postgres.app/Contents/Versions/latest/bin/psql -d electricity_v3
 ```
 
+### Bazani boshqa serverga ko'chirish
+
+Butun ma'lumot bitta Postgres bazasida (abonent va hisoblagich rasmlari ham -
+`subscriber_photos.data`, `Bytes`). Alohida fayl ombori yo'q, shuning uchun
+ko'chirish = bazani ko'chirish.
+
+**1. Eski serverda nusxa oling** (siqilgan arxiv - eng kichigi):
+
+```bash
+pg_dump "$DATABASE_URL" -Fc --no-owner --no-privileges -f electricity_v3.dump
+```
+
+**2. Yangi platformaning `/imports` sahifasida** "Boshqa serverdan baza
+nusxasi" kartasiga shu faylni tashlang, tasdiq katagini belgilab "Bazani
+tiklash" ni bosing (`POST /api/restore`, `src/lib/db/restore.ts`).
+
+Qabul qilinadi: `pg_dump -Fc` arxivi, oddiy SQL va ularning `.gz` siqilgani -
+format fayl mazmunidan aniqlanadi, kengaytmaga qaralmaydi. Chegara 2 GB.
+
+Tiklash bitta tranzaksiyada ketadi: xato bo'lsa baza eski holida qoladi
+(1,1 GB baza / 56 MB arxiv - lokal sinovda ~20 soniya).
+
+Talab: serverda `pg_restore` va `psql` bo'lsin. PATH da bo'lmasa `.env` da
+`PG_BIN` ni ko'rsating (Windows: `C:\Program Files\PostgreSQL\17\bin`).
+Sxema migratsiyalari (`_prisma_migrations`) dump bilan birga ko'chadi -
+tiklashdan keyin `db:deploy` kerak emas.
+
+Terminal orqali qilinsa ham o'sha natija:
+
+```bash
+pg_restore -d "$DATABASE_URL" --clean --if-exists --no-owner --no-privileges \
+  --single-transaction electricity_v3.dump
+```
+
+Oldinga `nginx` qo'yilgan bo'lsa `client_max_body_size` ni dump hajmidan
+katta qiling - aks holda yuklash uzilib qoladi.
+
 ## Diqqat qilinadigan joylar
 
 ### 1. Prisma 7 - `url` endi schema'da emas
@@ -152,6 +189,8 @@ prisma.config.ts       # Prisma 7 konfiguratsiyasi (ulanish manzili)
 src/
   app/                 # Next.js App Router sahifalari
   app/api/imports/     # Excel yuklash API (validate / commit)
+  app/api/restore/     # to'liq baza nusxasini (pg_dump) tiklash API
+  lib/db/restore.ts    # pg_restore / psql chaqiruvi (server-only)
   lib/db/prisma.ts     # PrismaClient singleton (adapter bilan, server-only)
   lib/import/          # Excel parser, validatsiya, saqlash
   lib/queries/         # sahifalar uchun yagona so'rovlar qatlami

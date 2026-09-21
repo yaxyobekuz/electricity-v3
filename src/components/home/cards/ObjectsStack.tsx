@@ -8,28 +8,36 @@ import { cn } from "@/lib/ui/cn";
 
 import { SummaryTile } from "./SummaryTile";
 
+/*
+ * Maketdagi 48px svgrepo illyustratsiyalari (`public/home/obj-*.svg`).
+ * Ular yo'q plitkalarda (ota obyekt, abonentlar) dizayn tizimi uslubidagi
+ * lucide glifi rangli kvadratda qoladi.
+ */
 const TILE_STYLE: Record<
   HomeObjectTile["id"],
-  { icon: GlyphIcon; tint: string; accent: string; glow: string }
+  { icon: GlyphIcon; image?: string; tint: string; accent: string; glow: string }
 > = {
   substations: {
     icon: Factory,
+    image: "/home/obj-substation.svg",
     tint: "bg-tint-blue",
     accent: "text-accent-blue",
-    glow: "bg-accent-blue",
+    glow: "bg-[#838bc5]",
   },
   // Fider va TP sahifalaridagi ota obyektlar - "Podstansiyalar" / "Fiderlar" uslubida.
   substation: {
     icon: Factory,
+    image: "/home/obj-substation.svg",
     tint: "bg-tint-blue",
     accent: "text-accent-blue",
-    glow: "bg-accent-blue",
+    glow: "bg-[#838bc5]",
   },
   feeder: {
     icon: UtilityPole,
+    image: "/home/obj-feeder.svg",
     tint: "bg-tint-green",
     accent: "text-accent-green",
-    glow: "bg-accent-green",
+    glow: "bg-[#fcdd7c]",
   },
   subscribers: {
     icon: Users,
@@ -39,22 +47,28 @@ const TILE_STYLE: Record<
   },
   feeders: {
     icon: UtilityPole,
+    image: "/home/obj-feeder.svg",
     tint: "bg-tint-green",
     accent: "text-accent-green",
-    glow: "bg-accent-green",
+    glow: "bg-[#fcdd7c]",
   },
   transformers: {
     icon: CircuitBoard,
+    image: "/home/obj-transformer.svg",
     tint: "bg-tint-indigo",
     accent: "text-accent-indigo",
-    glow: "bg-accent-indigo",
+    glow: "bg-[#8f6c56]",
   },
 };
 
 /**
- * "Ta'mir ishlari" (Figma `4289:353` o'rnida, 321.78x138): TP holatidagi
- * ta'mir sanalari - hisobot sanasigacha "Bajarilgan", keyin
- * "Rejalashtirilgan". Har bir quti ishlar ro'yxatiga (`/works`) olib boradi.
+ * "Obektlar holati" (Figma `4289:353`, 321.78x138).
+ *
+ * Maketda qutilar "Ko'rikdan o'tkazilgan / o'tkazilishi kerak" deb yozilgan,
+ * lekin shablonlarda ko'rik tushunchasi yo'q. Foydalanuvchi qaroriga ko'ra
+ * (2026-09-21) o'rniga TP holatidagi TA'MIR sanalari ko'rsatiladi: hisobot
+ * sanasigacha "Bajarilgan", keyin "Rejalashtirilgan". Har bir quti ishlar
+ * ro'yxatiga (`/works`) olib boradi.
  *
  * Ikki teng ustun (140.89px, oraliq 8px): izoh 46px, ostida 29px quti.
  */
@@ -67,7 +81,7 @@ function RepairsCard({ repairs }: { repairs: HomeRepairs }) {
   return (
     <Card>
       <h2 className="shrink-0 truncate text-sm leading-[18px] font-bold text-ink">
-        Ta&rsquo;mir ishlari
+        Obektlar holati
       </h2>
       {repairs.uploaded ? (
         <div className="mt-2 grid shrink-0 grid-cols-2 gap-2">

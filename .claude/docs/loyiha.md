@@ -38,6 +38,14 @@ Asosiy qism - **admin panel**:
 | Fider va TP sahifalari | Dashboard va podstansiya sahifasi bilan bir xil maket (`HomeView`, Figma `4126:47`), o'z qamrovida. `4029:930` ("Feeder detail") maketi endi hech bir sahifada ishlatilmaydi, uning kartalari o'chirildi | 2026-09-19 |
 | Abonent rasmlari | Abonent va hisoblagich rasmi abonent sahifasidan **qo'lda** yuklanadi - "faqat shablon / faqat import" qoidasidan yagona istisno (`malumotlar.md` 5.2). Autentifikatsiya qo'shilguncha ochiq | 2026-09-19 |
 | Passport / PINFL | Abonent sahifasida qisman yashirilgan holda ko'rsatiladi ("AB*****67"); ro'yxat va qidiruvda - yo'q | 2026-09-19 |
+| **Dashboard yangi maketi** | Figma `4126:47` yangilandi: KPI kartalari yillik son + "Bu oy / O'tgan oy" qatorlari, Abonentlar va Qarzdorlik aholi/yuridik kesimida, yon panelda Sozlamalar va sun'iy intellekt kartasi, o'ng ustunda mobil ilova kartasi | 2026-09-21 |
+| Maketdagi 30 kunlik grafik | Kunlik ma'lumot manbasi yo'q (`malumotlar.md` 8-bo'lim). Foydalanuvchi qarori: o'rniga **12 oylik** dinamika ko'rsatiladi (`getScopeSeries`) | 2026-09-21 |
+| Maketdagi "Kunlik" yo'qotish | Manbasi yo'q - olib tashlandi; "Yo'qotish darajasi" kartasida Yillik va Oylik qoladi | 2026-09-21 |
+| "Obektlar holati" kartasi | Maketda "Ko'rikdan o'tkazilgan" - shablonda ko'rik yo'q. Foydalanuvchi qarori: **ta'mir sanalari** bilan (Bajarilgan / Rejalashtirilgan) | 2026-09-21 |
+| "Shubhali iste'molchilar" | Maketda "0 / 50 kVt iste'mol" - koeffitsient yo'qligi uchun kVt deb atalmaydi (`domen.md`). Ko'rsatkich farqi ham ishlamadi: reestr har oyga bir xil nusxalangan, farq doim 0 (44 440 ta). Foydalanuvchi qarori: **hisoblagich holati** bo'yicha (Aloqaga chiqmayotgan / Sxemasi o'zgartirilgan) | 2026-09-21 |
+| "O'rtacha ko'rsatgichlar" | Foiz o'rtachasi olinmaydi (`malumotlar.md` 4.4). Davr **yig'indilari** ko'rsatiladi; "Kunlik o'rtacha" va "Yuqori iste'mol vaqti" plitkalari olib tashlandi (vaqt ma'lumoti yo'q) | 2026-09-21 |
+| Yon panel (maket) | Maketdagi barcha bo'limlar chiziladi: ikonka panelida Sun'iy intellekt, Tarmoq holati, Monitoring va pastda sozlamalar; pastda AI kartasi va avatar. Ro'yxatdagi "Sozlamalar" havolasi foydalanuvchi so'roviga ko'ra olib tashlandi (rail'dagi sozlama ikonkasi qoldi). Sahifasi yo'qlari **bosilmaydi** (`ready: false`) - bo'sh sahifa ochilmaydi | 2026-09-21 |
+| Qoidabuzarlik turlari | Maketda "Ma'muriy / Jinoiy" - shablon ustuni boshqa o'lcham. Foydalanuvchi qarori: **shablondagidek** Yuridik / Jismoniy / Istemolchi aybisiz | 2026-09-21 |
 
 ## Til qoidasi
 

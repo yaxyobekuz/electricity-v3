@@ -1,5 +1,6 @@
 import {
   ChartNoAxesColumn,
+  Cctv,
   CircuitBoard,
   Factory,
   FileText,
@@ -7,9 +8,12 @@ import {
   House,
   LayoutDashboard,
   ListChecks,
+  LayoutPanelTop,
   Map as MapIcon,
   MessagesSquare,
   Search,
+  Settings,
+  Sparkles,
   Upload,
   Users,
   Workflow,
@@ -30,6 +34,8 @@ export interface RailSection {
   href: string;
   /** Shu bo'limga tegishli barcha yo'llar prefiksi. */
   match: string[];
+  /** Sahifasi bor (maketdagi, lekin manbasiz bo'limlarda - `false`). */
+  ready?: boolean;
 }
 
 /** Ikkilamchi paneldagi sahifa havolasi. */
@@ -38,10 +44,17 @@ export interface SidebarLink {
   label: string;
   Icon: GlyphIcon;
   href: string;
+  /** Sahifasi bor; maketdagi manbasiz havolalarda - `false`. */
+  ready?: boolean;
 }
 
-// Monitoring, Tarmoq holati va Sun'iy intellekt bo'limlari olib tashlangan:
-// ularning Excel shablonlarida manbasi yo'q (`.claude/docs/malumotlar.md`, 8-bo'lim).
+/*
+ * Maketda (Figma `4126:47`) ikonka panelida 6 ta bo'lim bor. Sun'iy intellekt,
+ * Tarmoq holati va Monitoring bo'limlarining Excel shablonlarida manbasi yo'q
+ * (`malumotlar.md` 8-bo'lim), lekin foydalanuvchi qaroriga ko'ra (2026-09-21)
+ * maket to'liq quriladi: ular ko'rinadi, ammo `ready: false` - bosilganda
+ * "sahifa tayyor emas" deb turadi, chalg'ituvchi bo'sh sahifa ochilmaydi.
+ */
 export const RAIL_SECTIONS: RailSection[] = [
   {
     key: "workspace",
@@ -65,6 +78,14 @@ export const RAIL_SECTIONS: RailSection[] = [
   },
   { key: "search", label: "Qidiruv", Icon: Search, href: "/search", match: ["/search"] },
   { key: "map", label: "Xarita", Icon: MapIcon, href: "/map", match: ["/map"] },
+  { key: "ai", label: "Sun’iy intellekt", Icon: Sparkles, href: "#", match: [], ready: false },
+  { key: "network", label: "Tarmoq holati", Icon: LayoutPanelTop, href: "#", match: [], ready: false },
+  { key: "monitoring", label: "Monitoring", Icon: Cctv, href: "#", match: [], ready: false },
+];
+
+/** Ikonka panelining pastki qismi (maketda avatar va sozlamalar). */
+export const RAIL_FOOTER: RailSection[] = [
+  { key: "settings", label: "Sozlamalar", Icon: Settings, href: "#", match: [], ready: false },
 ];
 
 /** "Boshqaruv paneli" bo'limining ikkilamchi paneli. */

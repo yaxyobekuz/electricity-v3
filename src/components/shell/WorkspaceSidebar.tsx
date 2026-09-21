@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/ui/cn";
 
+import { AiPromoCard } from "./AiPromoCard";
 import { SidebarPanel } from "./AppShell";
 import { DISTRICT_TITLE, WORKSPACE_LINKS } from "./nav";
 
@@ -48,27 +49,43 @@ export function WorkspaceSidebar({
       title={
         isDetailPath(pathname) ? <span className="workspace-title">{title}</span> : DISTRICT_TITLE
       }
+      footer={<AiPromoCard />}
     >
       {periodSelect}
       <nav aria-label="Boshqaruv paneli sahifalari">
         <ul className="flex flex-col gap-2">
           {WORKSPACE_LINKS.map((link) => {
             const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
+            const row = (
+              <>
+                <span className="shrink-0">
+                  <Icon icon={link.Icon} size={24} />
+                </span>
+                <span className="truncate text-base font-semibold">{link.label}</span>
+              </>
+            );
+            const shape = "flex w-full items-center gap-4 rounded-xl px-5 py-3 transition-colors";
             return (
               <li key={link.key}>
-                <Link
-                  href={link.href}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "flex items-center gap-4 rounded-xl px-5 py-3 transition-colors",
-                    active ? "bg-brand text-white" : "text-ink hover:bg-canvas",
-                  )}
-                >
-                  <span className="shrink-0">
-                    <Icon icon={link.Icon} size={24} />
-                  </span>
-                  <span className="truncate text-base font-semibold">{link.label}</span>
-                </Link>
+                {link.ready === false ? (
+                  // Maketda bor, sahifasi yo'q: bo'sh sahifaga olib bormaydi.
+                  <button
+                    type="button"
+                    disabled
+                    title="Sahifa tayyor emas"
+                    className={cn(shape, "cursor-not-allowed text-ink/40")}
+                  >
+                    {row}
+                  </button>
+                ) : (
+                  <Link
+                    href={link.href}
+                    aria-current={active ? "page" : undefined}
+                    className={cn(shape, active ? "bg-brand text-white" : "text-ink hover:bg-canvas")}
+                  >
+                    {row}
+                  </Link>
+                )}
               </li>
             );
           })}

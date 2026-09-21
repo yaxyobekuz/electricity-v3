@@ -1,11 +1,10 @@
 import {
+  ArrowDownWideNarrow,
   Cable,
-  ClockAlert,
-  Hourglass,
-  UserX,
-  Wallet,
-  WifiOff,
-  ZapOff,
+  CalendarDays,
+  CalendarRange,
+  ChartPie,
+  CircleOff,
 } from "lucide-react";
 
 import { ConsumptionDynamicsCard } from "@/components/cards/ConsumptionDynamicsCard";
@@ -17,23 +16,26 @@ import { TopBarsCard } from "@/components/cards/TopBarsCard";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { GlyphIcon } from "@/components/ui/Icon";
-import type { HomeData, HomeQuickMetric } from "@/lib/queries/home-data";
+import type { HomeData } from "@/lib/queries/home-data";
 
-import { FilterCard } from "./cards/FilterCard";
 import { HomeKpiRow } from "./cards/HomeKpiRow";
 import { AppealsCard, MetersCard } from "./cards/HomeRingCards";
 import { HomeViolationsCard } from "./cards/HomeViolationsCard";
+import { MobileAppCard } from "./cards/MobileAppCard";
 import { ObjectsStack } from "./cards/ObjectsStack";
 import { SummaryTile } from "./cards/SummaryTile";
 
-/** Plitka ranglari - "Tezkor ko'rsatgichlar" maketidagi (`QuickMetricsCard`) ranglar. */
-const QUICK_STYLE: Record<HomeQuickMetric["id"], { icon: GlyphIcon; tile: string }> = {
-  offline: { icon: WifiOff, tile: "bg-[#ff928a]" },
-  debtors: { icon: UserX, tile: "bg-[#ffae4c]" },
-  credit: { icon: Wallet, tile: "bg-accent-blue" },
-  appealsInProgress: { icon: Hourglass, tile: "bg-[#8979ff]" },
-  appealsOverdue: { icon: ClockAlert, tile: "bg-[#2bb7dc]" },
-  damageKwh: { icon: ZapOff, tile: "bg-accent-red" },
+/** "Shubhali iste'molchilar" plitkalari (maket `4416:89`), hisoblagich holati bo'yicha. */
+const SUSPICIOUS_STYLE: Record<string, { icon: GlyphIcon; tile: string }> = {
+  NOT_RESPONDING: { icon: CircleOff, tile: "bg-[#ff928a]" },
+  SCHEME_CHANGED: { icon: ArrowDownWideNarrow, tile: "bg-[#ffae4c]" },
+};
+
+/** "O'rtacha ko'rsatgichlar" plitkalari (maket `4126:936`). */
+const AVERAGE_STYLE: Record<string, { icon: GlyphIcon; tile: string }> = {
+  year: { icon: CalendarDays, tile: "bg-accent-blue" },
+  quarter: { icon: ChartPie, tile: "bg-[#3cc3df]" },
+  month: { icon: CalendarRange, tile: "bg-[#3cdfc4]" },
 };
 
 /**
@@ -46,8 +48,8 @@ const QUICK_STYLE: Record<HomeQuickMetric["id"], { icon: GlyphIcon; tile: string
  * `Main` 1476px, 18 ustun, 8px oraliq. Qator balandliklari maketdan aynan:
  *
  *   196  6 ta KPI kartasi (span-3)
- *   402  Ob'ektlar ustuni (4) | Interaktiv xarita (10) | Filtratsiya (4)
- *   336  Qoidabuzarlik + Zarar (6) | Hisoblagichlar (4) | Murojaatlar (4) | Tezkor (4)
+ *   402  Ob'ektlar ustuni (4) | Interaktiv xarita (10) | Shubhali + Mobil (4)
+ *   336  Qoidabuzarlik + Zarar (6) | Hisoblagichlar (4) | Murojaatlar (4) | O'rtacha (4)
  *   298  Uchta reyting (6 + 6 + 6)
  *   298  Oqim dinamikasi (6) | Rejalashtirilgan ishlar (8) | Hisobotlar (4)
  *
@@ -55,9 +57,12 @@ const QUICK_STYLE: Record<HomeQuickMetric["id"], { icon: GlyphIcon; tile: string
  * sahifa VERTIKAL SKROLL qilinadi.
  */
 export function HomeView({ data }: { data: HomeData }) {
-  const quickMetrics: QuickMetric[] = data.quickMetrics.map((metric) => ({
-    ...metric,
-    ...QUICK_STYLE[metric.id],
+  const suspiciousMetrics: QuickMetric[] = data.suspicious.note
+    ? []
+    : data.suspicious.rows.map((row) => ({ ...row, ...SUSPICIOUS_STYLE[row.id] }));
+  const averageMetrics: QuickMetric[] = data.averages.rows.map((row) => ({
+    ...row,
+    ...AVERAGE_STYLE[row.id],
   }));
 
   return (
@@ -86,13 +91,26 @@ export function HomeView({ data }: { data: HomeData }) {
         zoom={data.map.view?.zoom}
         footerHref={data.map.href}
       />
-      <FilterCard key={data.stateKey} className="col-span-4" data={data.filter} />
+      {/*
+        * O'ng ustun (maket `4179:367`): "Shubhali iste'molchilar" (156px) va
+        * mobil ilova kartasi. Filtratsiya kartasi pastga, reytinglar ustiga
+        * ko'chdi - maketda 2-qatorda u yo'q.
+        */}
+      <div className="col-span-4 grid min-h-0 grid-rows-[156px_minmax(0,1fr)] gap-2">
+        <QuickMetricsCard
+          title="Shubhali iste’molchilar"
+          metrics={suspiciousMetrics}
+          emptyText={data.suspicious.note ?? "Ko’rsatkich farqi hisoblanmadi"}
+        />
+        <MobileAppCard />
+      </div>
 
       {/* 3-qator. Chap ustun: 220 + 8 + 108 = 336. */}
       <div className="col-span-6 grid min-h-0 grid-rows-[220px_minmax(0,1fr)] gap-2">
         <HomeViolationsCard data={data.violations} />
         <SummaryTile
           icon={Cable}
+          image="/home/damage.svg"
           label={data.violations.damageLabel}
           value={data.violations.damage ?? "Qoidabuzarliklar yuklanmagan"}
           valueFirst={false}
@@ -105,7 +123,11 @@ export function HomeView({ data }: { data: HomeData }) {
       </div>
       <MetersCard className="col-span-4" data={data.meters} />
       <AppealsCard className="col-span-4" data={data.appeals} />
-      <QuickMetricsCard className="col-span-4" metrics={quickMetrics} />
+      <QuickMetricsCard
+        className="col-span-4"
+        title="O’rtacha ko’rsatgichlar"
+        metrics={averageMetrics}
+      />
 
       {/* 4-qator - reytinglar (tanlangan oy) */}
       {data.topBars.map((bars) => (
@@ -140,6 +162,7 @@ export function HomeView({ data }: { data: HomeData }) {
           </CardBody>
         </Card>
       )}
+
       <DownloadReportsCard
         className="col-span-4"
         query={data.reportQuery}

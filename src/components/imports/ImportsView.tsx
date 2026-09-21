@@ -2,6 +2,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import type { CoverageRow, ImportHistoryItem } from "@/lib/import/types";
 
 import { CoverageCard } from "./CoverageCard";
+import { DumpRestoreCard } from "./DumpRestoreCard";
 import { ImportHistoryCard } from "./ImportHistoryCard";
 import { ImportUploader } from "./ImportUploader";
 import { TemplateGuideCard } from "./TemplateGuideCard";
@@ -36,6 +37,9 @@ export function ImportsView({
         </div>
         <div className="shrink-0">
           <ImportHistoryCard items={history} />
+        </div>
+        <div className="shrink-0">
+          <DumpRestoreCard />
         </div>
       </div>
     </div>
