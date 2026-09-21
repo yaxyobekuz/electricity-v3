@@ -228,6 +228,46 @@ function run(
 }
 
 /**
+ * Xato bo'lganda logga qo'shiladigan ma'lumot: qaysi vosita va qaysi server
+ * ishlatildi. Versiyalarsiz "unsupported version" kabi xabarlarni tushunib
+ * bo'lmaydi.
+ */
+async function versionNote(tool: string, env: NodeJS.ProcessEnv, dbname: string): Promise<string> {
+  const lines: string[] = [];
+  const own = await run(tool, ["--version"], env).catch(() => null);
+  if (own?.log) lines.push(`vosita: ${own.log} (${tool})`);
+  try {
+    const server = await run(resolveTool("psql"), ["--dbname", dbname, "-XAtc", "show server_version"], env);
+    if (server.code === 0 && server.log) lines.push(`baza serveri: PostgreSQL ${server.log}`);
+  } catch {
+    // psql topilmasa - versiyasiz qolaveradi.
+  }
+  return lines.join("\n");
+}
+
+/**
+ * Tanish xatolar uchun o'zbekcha izoh. Foydalanuvchi ingliz tilidagi
+ * `pg_restore` xabaridan nima qilishni bilmaydi.
+ */
+export function restoreHint(log: string): string | null {
+  if (/unsupported version .* in file header/i.test(log)) {
+    return (
+      "Arxiv yangiroq `pg_dump` bilan olingan - shu serverdagi `pg_restore` uni o’qiy olmaydi. " +
+      "Yo serverga bir xil (yoki yangiroq) versiyadagi PostgreSQL klient vositalarini o’rnating, " +
+      "yo nusxani oddiy SQL ko’rinishida oling: `pg_dump \"$DATABASE_URL\" --no-owner " +
+      "--no-privileges | gzip > baza.sql.gz` - SQL fayl versiyalarga bog’liq emas."
+    );
+  }
+  if (/could not read from input file|premature end|corrupt/i.test(log)) {
+    return "Fayl to’liq yuklanmagan yoki buzilgan - nusxani qaytadan oling va yana urinib ko’ring.";
+  }
+  if (/password authentication failed|role .* does not exist/i.test(log)) {
+    return "Serverdagi `.env` dagi DATABASE_URL foydalanuvchisi yoki paroli to’g’ri emas.";
+  }
+  return null;
+}
+
+/**
  * Bazani dump holatiga keltiradi. Ikkala yo'l ham `--single-transaction`:
  * xato bo'lsa hammasi bekor qilinadi, baza eski holida qoladi.
  *
@@ -246,45 +286,49 @@ export async function restoreDump(
   // (jumladan parol) `pgEnv` orqali muhitda ketadi.
   const dbname = databaseName(url);
 
-  if (format === "custom") {
-    return run(
-      resolveTool("pg_restore"),
-      [
-        "--dbname",
-        dbname,
-        "--single-transaction",
-        "--clean",
-        "--if-exists",
-        "--no-owner",
-        "--no-privileges",
-        "--exit-on-error",
-        file,
-      ],
-      env,
-    );
-  }
-
   const schema = schemaName(url).replace(/"/g, '""');
-  return run(
-    resolveTool("psql"),
-    [
-      "--dbname",
-      dbname,
-      "--quiet",
-      // So'rov natijalari (dump ichidagi `SELECT set_config(...)` kabi) logga
-      // tushmasin - xatolar baribir stderr orqali keladi.
-      "--output",
-      process.platform === "win32" ? "NUL" : "/dev/null",
-      "--single-transaction",
-      "--set",
-      "ON_ERROR_STOP=1",
-      "--command",
-      // `client_min_messages` - "drop cascades to ..." bildirishlari logni
-      // to'ldirib, haqiqiy xatoni ko'rinmas qilib qo'ymasin.
-      `SET client_min_messages = warning; DROP SCHEMA IF EXISTS "${schema}" CASCADE; CREATE SCHEMA "${schema}";`,
-      "--file",
-      file,
-    ],
-    env,
-  );
+  const [tool, args] =
+    format === "custom"
+      ? [
+          resolveTool("pg_restore"),
+          [
+            "--dbname",
+            dbname,
+            "--single-transaction",
+            "--clean",
+            "--if-exists",
+            "--no-owner",
+            "--no-privileges",
+            "--exit-on-error",
+            file,
+          ],
+        ]
+      : [
+          resolveTool("psql"),
+          [
+            "--dbname",
+            dbname,
+            "--quiet",
+            // So'rov natijalari (dump ichidagi `SELECT set_config(...)` kabi)
+            // logga tushmasin - xatolar baribir stderr orqali keladi.
+            "--output",
+            process.platform === "win32" ? "NUL" : "/dev/null",
+            "--single-transaction",
+            "--set",
+            "ON_ERROR_STOP=1",
+            "--command",
+            // `client_min_messages` - "drop cascades to ..." bildirishlari
+            // logni to'ldirib, haqiqiy xatoni ko'rinmas qilib qo'ymasin.
+            `SET client_min_messages = warning; DROP SCHEMA IF EXISTS "${schema}" CASCADE; CREATE SCHEMA "${schema}";`,
+            "--file",
+            file,
+          ],
+        ];
+
+  const result = await run(tool, args, env);
+  if (result.code !== 0) {
+    const note = await versionNote(tool, env, dbname);
+    if (note) result.log = `${result.log}\n\n${note}`.trim();
+  }
+  return result;
 }

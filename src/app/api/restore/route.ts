@@ -6,6 +6,7 @@ import {
   prepareDump,
   RestoreError,
   restoreDump,
+  restoreHint,
   saveUpload,
   type Upload,
 } from "@/lib/db/restore";
@@ -79,6 +80,7 @@ export async function POST(request: Request): Promise<Response> {
     const { code, log } = await restoreDump(file, format);
     const durationMs = Date.now() - startedAt;
 
+    const hint = code === 0 ? null : restoreHint(log);
     const result: RestoreResult = {
       ok: code === 0,
       fileName,
@@ -88,7 +90,8 @@ export async function POST(request: Request): Promise<Response> {
       message:
         code === 0
           ? "Baza dump fayldan to’liq tiklandi"
-          : `Tiklash xato bilan tugadi (kod ${code}). Baza o’zgarmadi - quyidagi xabarga qarang`,
+          : `Tiklash xato bilan tugadi (kod ${code}). Baza o’zgarmadi. ` +
+            (hint ?? "Sababi quyidagi xabarda"),
       log,
     };
 
