@@ -25,10 +25,10 @@ import { MobileAppCard } from "./cards/MobileAppCard";
 import { ObjectsStack } from "./cards/ObjectsStack";
 import { SummaryTile } from "./cards/SummaryTile";
 
-/** "Shubhali iste'molchilar" plitkalari (maket `4416:89`), hisoblagich holati bo'yicha. */
+/** "Shubhali iste'molchilar" plitkalari (maket `4416:89`), hisoblagich ko'rsatgichi bo'yicha. */
 const SUSPICIOUS_STYLE: Record<string, { icon: GlyphIcon; tile: string }> = {
-  NOT_RESPONDING: { icon: CircleOff, tile: "bg-[#ff928a]" },
-  SCHEME_CHANGED: { icon: ArrowDownWideNarrow, tile: "bg-[#ffae4c]" },
+  zero: { icon: CircleOff, tile: "bg-[#ff928a]" },
+  low: { icon: ArrowDownWideNarrow, tile: "bg-[#ffae4c]" },
 };
 
 /** "O'rtacha ko'rsatgichlar" plitkalari (maket `4126:936`). */

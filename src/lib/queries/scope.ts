@@ -49,6 +49,13 @@ export type Scope =
 
 export const DISTRICT: Scope = { kind: "district" };
 
+/**
+ * "Shubhali iste'molchilar" kartasidagi kam iste'mol chegarasi, kVt.
+ * Shablondagi "Hisoblagich ko'rsatgichi" shu qiymatdan past bo'lsa abonent
+ * shubhali hisoblanadi (0 esa alohida guruh).
+ */
+export const LOW_READING_KVT = 50;
+
 /** Obyektga havola (breadcrumb, jadval katagi). */
 export interface EntityRef {
   id: string;
@@ -331,6 +338,14 @@ export interface ScopeSummary {
     /** `debtUzs > 0` bo'lgan abonentlar soni. */
     debtors: number;
     debtByKind: Record<SubscriberKind, number>;
+    /**
+     * "Shubhali iste'molchilar" - shablondagi "Hisoblagich ko'rsatgichi"
+     * (`meterReading`) bo'yicha. Katak bo'sh (null) bo'lsa hech qaysi
+     * guruhga qo'shilmaydi: o'qilmagan hisoblagich "0 iste'mol" degani emas.
+     */
+    zeroReading: number;
+    /** `0 < meterReading < 50` - kam iste'mol (`zeroReading` bilan kesishmaydi). */
+    lowReading: number;
   };
   violations: {
     uploaded: boolean;
@@ -527,6 +542,8 @@ async function computeScopeSummary(periodId: string, scope: Scope, db: Db): Prom
     tpSubscribers,
     subscriberGroups,
     debtors,
+    zeroReading,
+    lowReading,
     violationGroups,
     appealGroups,
   ] = await Promise.all([
@@ -542,6 +559,10 @@ async function computeScopeSummary(periodId: string, scope: Scope, db: Db): Prom
       _sum: { debtUzs: true, creditUzs: true },
     }),
     db.subscriberSnapshot.count({ where: { ...scoped, debtUzs: { gt: 0 } } }),
+    db.subscriberSnapshot.count({ where: { ...scoped, meterReading: 0 } }),
+    db.subscriberSnapshot.count({
+      where: { ...scoped, meterReading: { gt: 0, lt: LOW_READING_KVT } },
+    }),
     db.violation.groupBy({
       by: ["violatorType"],
       where: eventsScoped,
@@ -568,6 +589,8 @@ async function computeScopeSummary(periodId: string, scope: Scope, db: Db): Prom
     creditUzs: 0,
     debtors,
     debtByKind: zeroRecord(SUBSCRIBER_KIND_ORDER),
+    zeroReading,
+    lowReading,
   };
   for (const group of subscriberGroups) {
     const debt = amount(group._sum.debtUzs);

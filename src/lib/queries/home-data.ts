@@ -39,6 +39,7 @@ import {
   getScopeComparison,
   getScopeSeries,
   getScopeViolationsYear,
+  LOW_READING_KVT,
   type EntityRef,
   type ScopeSeriesPoint,
   type ScopeSummary,
@@ -161,18 +162,18 @@ export interface HomeRingData {
 }
 
 /**
- * "Shubhali iste'molchilar" - hisoblagich holati bo'yicha (shablondagi
- * "Holati" ustuni).
+ * "Shubhali iste'molchilar" - shablondagi "Hisoblagich ko'rsatgichi"
+ * (`SubscriberSnapshot.meterReading`) bo'yicha:
  *
- * Yozuvlar maketdagidek: "0 kVt iste'moldagilar" va "50 kVt dan kam
- * iste'moldagilar". Abonent iste'moli kWh da yo'q (hisoblagich koeffitsienti
- * shablonda berilmagan, `domen.md`), ko'rsatkich farqi ham ishlamaydi -
- * reestr hozircha har oyga bir xil nusxalangan, farq doim 0. Shuning uchun
- * sonlar hisoblagich holatidan olinadi: aloqaga chiqmayotgan (0 kVt) va
- * sxemasi o'zgartirilgan (kam iste'mol) abonentlar.
+ *   - "0 kVt iste'moldagilar"        - ko'rsatgich aynan 0;
+ *   - "50 kVt dan kam iste'moldagilar" - 0 < ko'rsatgich < 50.
+ *
+ * Ikki guruh kesishmaydi. Katak bo'sh bo'lsa (hisoblagich o'qilmagan)
+ * abonent hech qaysi guruhga kirmaydi - o'qilmagan "0 iste'mol" degani
+ * emas (`malumotlar.md` 5-bo'lim: yo'q qiymat o'ylab topilmaydi).
  */
 export interface HomeSuspicious {
-  rows: { id: MeterStatus; caption: string; value: string }[];
+  rows: { id: "zero" | "low"; caption: string; value: string }[];
   /** Ro'yxat yuklanmagan bo'lsa - sabab. */
   note: string | null;
   href: string;
@@ -825,20 +826,23 @@ export async function loadHomeData(period: PeriodInfo, scope: HomeScope): Promis
   );
 
   /*
-   * "Shubhali iste'molchilar" - yozuvlar maketdagi kVt chegaralari, sonlar
-   * esa shablondagi "Holati" ustunidan: aloqaga chiqmayotgan va sxemasi
-   * o'zgartirilgan abonentlar (`HomeSuspicious` izohiga qarang).
+   * "Shubhali iste'molchilar" - shablondagi "Hisoblagich ko'rsatgichi"
+   * bo'yicha (`HomeSuspicious` izohiga qarang). Chegara `LOW_READING_KVT`,
+   * sonlar `scope.ts` da bitta joyda hisoblanadi.
    */
-  const SUSPICIOUS_ROWS: readonly { status: MeterStatus; caption: string }[] = [
-    { status: "NOT_RESPONDING", caption: "0 kVt iste’moldagilar" },
-    { status: "SCHEME_CHANGED", caption: "50 kVt dan kam iste’moldagilar" },
-  ];
   const suspicious: HomeSuspicious = {
-    rows: SUSPICIOUS_ROWS.map(({ status, caption }) => ({
-      id: status,
-      caption,
-      value: list.uploaded ? count(list.byStatus[status]) : NOT_UPLOADED,
-    })),
+    rows: [
+      {
+        id: "zero" as const,
+        caption: "0 kVt iste’moldagilar",
+        value: list.uploaded ? count(list.zeroReading) : NOT_UPLOADED,
+      },
+      {
+        id: "low" as const,
+        caption: `${LOW_READING_KVT} kVt dan kam iste’moldagilar`,
+        value: list.uploaded ? count(list.lowReading) : NOT_UPLOADED,
+      },
+    ],
     note: list.uploaded ? null : "Abonentlar ro’yxati yuklanmagan",
     href: scoped("/subscribers"),
   };
